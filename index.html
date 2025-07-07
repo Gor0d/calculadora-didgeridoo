@@ -473,12 +473,66 @@
             100% { transform: rotate(360deg); }
         }
 
-        .shape-canvas {
+        .shape-canvas,
+        .spectrum-canvas {
             width: 100%;
             height: 300px;
             border: 2px solid #ecf0f1;
             border-radius: 10px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+        }
+
+        .visualization-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .viz-tab {
+            flex: 1;
+            padding: 12px 15px;
+            background: none;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #7f8c8d;
+        }
+
+        .viz-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .viz-tab:hover:not(.active) {
+            background: #ecf0f1;
+        }
+
+        .visualization-view {
+            display: none;
+        }
+
+        .visualization-view.active {
+            display: block;
+        }
+
+        .spectrum-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .spectrum-info h4 {
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .spectrum-info p {
+            color: #7f8c8d;
+            margin: 0;
         }
 
         .results-table {
@@ -806,7 +860,31 @@
                     <p>Calculando frequências...</p>
                 </div>
                 
-                <canvas id="shapeCanvas" class="shape-canvas"></canvas>
+                <div class="visualization-tabs">
+                    <button class="viz-tab active" onclick="switchVisualization('shape')">📐 Geometria</button>
+                    <button class="viz-tab" onclick="switchVisualization('impedance')">📊 Impedância</button>
+                    <button class="viz-tab" onclick="switchVisualization('spectrum')">🎵 Espectro</button>
+                </div>
+
+                <div id="shapeView" class="visualization-view active">
+                    <canvas id="shapeCanvas" class="shape-canvas"></canvas>
+                </div>
+
+                <div id="impedanceView" class="visualization-view">
+                    <canvas id="impedanceCanvas" class="spectrum-canvas"></canvas>
+                    <div class="spectrum-info">
+                        <h4>🔬 Análise de Impedância</h4>
+                        <p>Picos indicam frequências de ressonância do tubo</p>
+                    </div>
+                </div>
+
+                <div id="spectrumView" class="visualization-view">
+                    <canvas id="spectrumCanvas" class="spectrum-canvas"></canvas>
+                    <div class="spectrum-info">
+                        <h4>🎵 Espectro Sonoro</h4>
+                        <p>Distribuição de energia entre os harmônicos</p>
+                    </div>
+                </div>
                 
                 <table class="results-table">
                     <thead>
@@ -855,7 +933,8 @@
             currentGeometry: [],
             analysisResults: [],
             isAnalyzing: false,
-            currentMode: 'analise'
+            currentMode: 'analise',
+            currentVisualization: 'shape'
         };
 
         // Formas pré-definidas
@@ -893,6 +972,34 @@
             const loading = document.getElementById('loadingIndicator');
             loading.classList.toggle('show', show);
             appState.isAnalyzing = show;
+        }
+
+        // Alternância entre visualizações
+        function switchVisualization(type) {
+            appState.currentVisualization = type;
+            
+            // Atualizar tabs
+            document.querySelectorAll('.viz-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Mostrar/esconder views
+            document.querySelectorAll('.visualization-view').forEach(view => view.classList.remove('active'));
+            document.getElementById(`${type}View`).classList.add('active');
+            
+            // Redesenhar a visualização atual
+            if (appState.currentGeometry.length > 0) {
+                switch(type) {
+                    case 'shape':
+                        drawShape();
+                        break;
+                    case 'impedance':
+                        drawImpedanceSpectrum();
+                        break;
+                    case 'spectrum':
+                        drawSoundSpectrum();
+                        break;
+                }
+            }
         }
 
         // Alternância entre modos
@@ -1051,6 +1158,299 @@
                 octave: closestOctave,
                 centDiff: Math.round(centDiff * 10) / 10
             };
+        }
+
+        // Desenho do espectro de impedância
+        function drawImpedanceSpectrum() {
+            const canvas = document.getElementById('impedanceCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Ajustar tamanho do canvas
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            const { width, height } = canvas;
+            const margin = 60;
+            
+            // Limpar canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            if (appState.analysisResults.length === 0) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Execute a análise para ver o espectro de impedância', width/2, height/2);
+                return;
+            }
+            
+            const maxFreq = 1000;
+            const scaleX = (width - margin * 2) / maxFreq;
+            const scaleY = height - margin * 2;
+            
+            // Desenhar eixos
+            ctx.strokeStyle = '#bdc3c7';
+            ctx.lineWidth = 2;
+            
+            // Eixo X
+            ctx.beginPath();
+            ctx.moveTo(margin, height - margin);
+            ctx.lineTo(width - margin, height - margin);
+            ctx.stroke();
+            
+            // Eixo Y
+            ctx.beginPath();
+            ctx.moveTo(margin, margin);
+            ctx.lineTo(margin, height - margin);
+            ctx.stroke();
+            
+            // Labels dos eixos
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Frequência (Hz)', width/2, height - 10);
+            
+            ctx.save();
+            ctx.translate(20, height/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('Impedância', 0, 0);
+            ctx.restore();
+            
+            // Marcações do eixo X
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '12px Arial';
+            for (let i = 0; i <= 5; i++) {
+                const freq = (maxFreq / 5) * i;
+                const x = margin + freq * scaleX;
+                
+                ctx.beginPath();
+                ctx.strokeStyle = '#ecf0f1';
+                ctx.moveTo(x, margin);
+                ctx.lineTo(x, height - margin);
+                ctx.stroke();
+                
+                ctx.fillText(freq.toString(), x, height - margin + 20);
+            }
+            
+            // Desenhar curva de impedância base
+            ctx.strokeStyle = '#95a5a6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            for (let freq = 0; freq <= maxFreq; freq += 5) {
+                const x = margin + freq * scaleX;
+                // Impedância base decresce com a frequência
+                const baseImpedance = Math.max(0.05, 0.3 * Math.exp(-freq / 400));
+                const y = height - margin - baseImpedance * scaleY;
+                
+                if (freq === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // Desenhar picos de ressonância
+            appState.analysisResults.forEach((result, index) => {
+                const freq = result.frequency;
+                const x = margin + freq * scaleX;
+                
+                if (freq <= maxFreq) {
+                    // Altura do pico baseada no harmônico (primeiros são mais altos)
+                    const peakHeight = Math.max(0.1, 1.0 / Math.sqrt(result.harmonic));
+                    const peakY = height - margin - peakHeight * scaleY;
+                    
+                    // Desenhar pico gaussiano
+                    ctx.strokeStyle = index === 0 ? '#e74c3c' : '#667eea';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    
+                    const bandwidth = 10; // Largura do pico
+                    for (let f = freq - bandwidth * 2; f <= freq + bandwidth * 2; f += 1) {
+                        if (f >= 0 && f <= maxFreq) {
+                            const xPeak = margin + f * scaleX;
+                            const gaussian = Math.exp(-Math.pow((f - freq) / bandwidth, 2));
+                            const baseImpedance = Math.max(0.05, 0.3 * Math.exp(-f / 400));
+                            const yPeak = height - margin - (baseImpedance + peakHeight * gaussian) * scaleY;
+                            
+                            if (f === freq - bandwidth * 2) {
+                                ctx.moveTo(xPeak, yPeak);
+                            } else {
+                                ctx.lineTo(xPeak, yPeak);
+                            }
+                        }
+                    }
+                    ctx.stroke();
+                    
+                    // Marcar frequência
+                    ctx.fillStyle = index === 0 ? '#e74c3c' : '#667eea';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${freq.toFixed(0)}`, x, peakY - 10);
+                }
+            });
+            
+            // Título
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Espectro de Impedância', width/2, 30);
+        }
+
+        // Desenho do espectro sonoro
+        function drawSoundSpectrum() {
+            const canvas = document.getElementById('spectrumCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Ajustar tamanho do canvas
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            const { width, height } = canvas;
+            const margin = 60;
+            
+            // Limpar canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            if (appState.analysisResults.length === 0) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Execute a análise para ver o espectro sonoro', width/2, height/2);
+                return;
+            }
+            
+            const maxFreq = 1000;
+            const scaleX = (width - margin * 2) / maxFreq;
+            const scaleY = height - margin * 2;
+            
+            // Desenhar eixos
+            ctx.strokeStyle = '#bdc3c7';
+            ctx.lineWidth = 2;
+            
+            // Eixo X
+            ctx.beginPath();
+            ctx.moveTo(margin, height - margin);
+            ctx.lineTo(width - margin, height - margin);
+            ctx.stroke();
+            
+            // Eixo Y
+            ctx.beginPath();
+            ctx.moveTo(margin, margin);
+            ctx.lineTo(margin, height - margin);
+            ctx.stroke();
+            
+            // Labels dos eixos
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Frequência (Hz)', width/2, height - 10);
+            
+            ctx.save();
+            ctx.translate(20, height/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('Amplitude', 0, 0);
+            ctx.restore();
+            
+            // Marcações do eixo X
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '12px Arial';
+            for (let i = 0; i <= 5; i++) {
+                const freq = (maxFreq / 5) * i;
+                const x = margin + freq * scaleX;
+                
+                ctx.beginPath();
+                ctx.strokeStyle = '#ecf0f1';
+                ctx.moveTo(x, margin);
+                ctx.lineTo(x, height - margin);
+                ctx.stroke();
+                
+                ctx.fillText(freq.toString(), x, height - margin + 20);
+            }
+            
+            // Desenhar espectro com ruído de fundo
+            ctx.strokeStyle = '#bdc3c7';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            
+            const noiseLevel = 0.1;
+            for (let freq = 0; freq <= maxFreq; freq += 2) {
+                const x = margin + freq * scaleX;
+                const noise = noiseLevel * (0.5 + 0.5 * Math.sin(freq * 0.1)) * Math.random();
+                const y = height - margin - noise * scaleY;
+                
+                if (freq === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // Desenhar harmônicos principais
+            appState.analysisResults.forEach((result, index) => {
+                const freq = result.frequency;
+                
+                if (freq <= maxFreq) {
+                    const x = margin + freq * scaleX;
+                    
+                    // Amplitude baseada no harmônico (fundamental é mais forte)
+                    let amplitude = 1.0 / Math.pow(result.harmonic, 0.7);
+                    
+                    // Adicionar variação timbral
+                    if (result.harmonic % 2 === 0) amplitude *= 0.6; // Harmônicos pares mais fracos
+                    if (result.harmonic > 5) amplitude *= 0.4; // Harmônicos altos mais fracos
+                    
+                    const y = height - margin - amplitude * scaleY * 0.8;
+                    
+                    // Desenhar pico como barra
+                    const barWidth = Math.max(2, freq * scaleX * 0.02);
+                    
+                    ctx.fillStyle = index === 0 ? '#e74c3c' : 
+                                  result.harmonic <= 3 ? '#667eea' : '#95a5a6';
+                    
+                    ctx.fillRect(x - barWidth/2, y, barWidth, height - margin - y);
+                    
+                    // Label do harmônico
+                    if (amplitude > 0.3) {
+                        ctx.fillStyle = '#2c3e50';
+                        ctx.font = '10px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${result.harmonic}º`, x, y - 5);
+                        ctx.fillText(result.note, x, y - 15);
+                    }
+                }
+            });
+            
+            // Adicionar harmônicos secundários (overtones)
+            appState.analysisResults.forEach((result, index) => {
+                if (index < 3) { // Apenas para os primeiros harmônicos
+                    const fundamentalFreq = result.frequency;
+                    
+                    // Adicionar overtones não-harmônicos (característicos de didgeridoo)
+                    for (let overtone = 1; overtone <= 3; overtone++) {
+                        const overtoneFreq = fundamentalFreq * (1 + overtone * 0.1 + Math.random() * 0.05);
+                        
+                        if (overtoneFreq <= maxFreq) {
+                            const x = margin + overtoneFreq * scaleX;
+                            const amplitude = 0.3 / (overtone + 1);
+                            const y = height - margin - amplitude * scaleY * 0.8;
+                            const barWidth = 1;
+                            
+                            ctx.fillStyle = '#f39c12';
+                            ctx.fillRect(x - barWidth/2, y, barWidth, height - margin - y);
+                        }
+                    }
+                }
+            });
+            
+            // Título
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Espectro Sonoro', width/2, 30);
         }
 
         // Desenho da forma
@@ -1253,6 +1653,13 @@
                 
                 // Exibir resultados
                 displayResults();
+                
+                // Redesenhar visualizações se necessário
+                if (appState.currentVisualization === 'impedance') {
+                    drawImpedanceSpectrum();
+                } else if (appState.currentVisualization === 'spectrum') {
+                    drawSoundSpectrum();
+                }
                 
                 showMessage(`✅ Análise concluída! ${appState.analysisResults.length} frequências calculadas`);
                 
@@ -1629,7 +2036,17 @@
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     if (appState.currentGeometry.length > 0) {
-                        drawShape();
+                        switch(appState.currentVisualization) {
+                            case 'shape':
+                                drawShape();
+                                break;
+                            case 'impedance':
+                                drawImpedanceSpectrum();
+                                break;
+                            case 'spectrum':
+                                drawSoundSpectrum();
+                                break;
+                        }
                     }
                 }, 250);
             });
