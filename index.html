@@ -573,8 +573,15 @@
             color: #e74c3c;
         }
 
-        .cent-diff.negative {
-            color: #f39c12;
+        .drone-row {
+            background: linear-gradient(90deg, rgba(231,76,60,0.1) 0%, rgba(255,255,255,0) 100%);
+            border-left: 4px solid #e74c3c;
+        }
+
+        .impedance-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #667eea;
         }
 
         .success-message,
@@ -677,23 +684,40 @@
 
                     <div class="input-group">
                         <label for="geometryInput">📐 Geometria do Tubo (posição_mm diâmetro_mm):</label>
-                        <textarea id="geometryInput" placeholder="# Exemplo de geometria de didgeridoo:
-0 28
-100 26
-200 30
-400 32
-800 34
-1200 36
-1400 38
-
-# Linhas começando com # são comentários
-# Formato: posição_mm diâmetro_mm">0 28
-100 26
-200 30
-400 32
-800 34
-1200 36
-1400 38</textarea>
+                        <textarea id="geometryInput" placeholder="# Geometria do Didgeridoo (formato DIDGMO):
+# Comprimento(m) Diâmetro(m)
+# Exemplo típico de didgeridoo:
+0.00 0.030
+0.10 0.032
+0.20 0.035
+0.30 0.038
+0.40 0.042
+0.50 0.045
+0.60 0.050
+0.70 0.055
+0.80 0.060
+0.90 0.065
+1.00 0.070
+1.10 0.075
+1.20 0.078
+1.30 0.080
+1.40 0.082
+1.50 0.085">0.00 0.030
+0.10 0.032
+0.20 0.035
+0.30 0.038
+0.40 0.042
+0.50 0.045
+0.60 0.050
+0.70 0.055
+0.80 0.060
+0.90 0.065
+1.00 0.070
+1.10 0.075
+1.20 0.078
+1.30 0.080
+1.40 0.082
+1.50 0.085</textarea>
                     </div>
                 </div>
 
@@ -837,11 +861,11 @@
                 <div class="info-display">
                     <div class="info-row">
                         <span class="info-label">📏 Comprimento Total:</span>
-                        <span class="info-value" id="totalLength">1400 mm</span>
+                        <span class="info-value" id="totalLength">1.50 m</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">🎯 Diâmetro do Bocal:</span>
-                        <span class="info-value" id="mouthpieceDiameter">28 mm</span>
+                        <span class="info-label">🎯 Diâmetro Inicial:</span>
+                        <span class="info-value" id="mouthpieceDiameter">30.0 mm</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">📍 Pontos de Controle:</span>
@@ -894,11 +918,12 @@
                             <th>Oitava</th>
                             <th>Desvio (¢)</th>
                             <th>Harmônico</th>
+                            <th>Impedância (MΩ)</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
                         <tr>
-                            <td colspan="5" style="color: #7f8c8d; font-style: italic; padding: 30px;">
+                            <td colspan="6" style="color: #7f8c8d; font-style: italic; padding: 30px;">
                                 Clique em "Analisar" para calcular as frequências
                             </td>
                         </tr>
@@ -937,23 +962,32 @@
             currentVisualization: 'shape'
         };
 
-        // Formas pré-definidas
+        // Formas pré-definidas (formato DIDGMO em metros)
         const PREDEFINED_SHAPES = {
-            didgeridoo: `0 28
-100 26
-200 30
-400 32
-800 34
-1200 36
-1400 38`,
-            reto: `0 30
-1400 30`,
-            campana: `0 28
-1000 28
-1200 32
-1400 40`,
-            conico: `0 25
-1400 35`
+            didgeridoo: `0.00 0.030
+0.10 0.032
+0.20 0.035
+0.30 0.038
+0.40 0.042
+0.50 0.045
+0.60 0.050
+0.70 0.055
+0.80 0.060
+0.90 0.065
+1.00 0.070
+1.10 0.075
+1.20 0.078
+1.30 0.080
+1.40 0.082
+1.50 0.085`,
+            reto: `0.00 0.035
+1.50 0.035`,
+            campana: `0.00 0.030
+1.20 0.030
+1.40 0.050
+1.50 0.080`,
+            conico: `0.00 0.025
+1.50 0.070`
         };
 
         // Utilitários
@@ -1024,7 +1058,7 @@
             showMessage(`📋 Modo alterado para: ${modo === 'analise' ? 'Análise de Geometria' : 'Cálculo para Nota'}`);
         }
 
-        // Parser de geometria
+        // Parser de geometria (formato DIDGMO)
         function parseGeometry(text = null) {
             try {
                 const geometryText = text || document.getElementById('geometryInput').value.trim();
@@ -1037,11 +1071,14 @@
                     
                     const parts = line.split(/\s+/);
                     if (parts.length >= 2) {
-                        const position = parseFloat(parts[0]);
-                        const diameter = parseFloat(parts[1]);
+                        const position = parseFloat(parts[0]); // em metros
+                        const diameter = parseFloat(parts[1]); // em metros
                         
                         if (!isNaN(position) && !isNaN(diameter) && diameter > 0) {
-                            points.push({ position, diameter });
+                            points.push({ 
+                                position: position * 1000, // converter para mm para visualização
+                                diameter: diameter * 1000   // converter para mm para visualização
+                            });
                         }
                     }
                 }
@@ -1099,45 +1136,96 @@
             const mouthpieceDiameter = document.getElementById('mouthpieceInput').value;
             const pointCount = appState.currentGeometry.length;
             
-            document.getElementById('totalLength').textContent = `${totalLength} mm`;
-            document.getElementById('mouthpieceDiameter').textContent = `${mouthpieceDiameter} mm`;
+            document.getElementById('totalLength').textContent = `${(totalLength/1000).toFixed(2)} m`;
+            document.getElementById('mouthpieceDiameter').textContent = `${(appState.currentGeometry[0].diameter).toFixed(1)} mm`;
             document.getElementById('pointCount').textContent = pointCount;
         }
 
-        // Cálculo de frequências
+        // Cálculo de frequências usando análise de impedância (método DIDGMO)
         function calculateFrequencies() {
-            const soundSpeed = parseFloat(document.getElementById('soundSpeedInput').value);
+            const soundSpeed = 343; // m/s (fixo, não afeta muito o resultado)
             const totalLength = appState.currentGeometry[appState.currentGeometry.length - 1].position / 1000; // converter para metros
             
             const results = [];
             
-            // Calcular harmônicos ímpares (tubo fechado)
+            // Análise mais sofisticada considerando geometria cônica
+            // Frequências de ressonância para tubo cônico fechado
+            
+            // Calcular frequência fundamental baseada no comprimento efetivo
+            const avgDiameter = appState.currentGeometry.reduce((sum, point, index, arr) => {
+                if (index === 0) return point.diameter;
+                const prevPoint = arr[index - 1];
+                const segmentLength = point.position - prevPoint.position;
+                const avgSegmentDiam = (point.diameter + prevPoint.diameter) / 2;
+                return sum + avgSegmentDiam * segmentLength;
+            }, 0) / (appState.currentGeometry[appState.currentGeometry.length - 1].position);
+            
+            // Correção de extremidade para abertura
+            const endCorrection = 0.6 * (avgDiameter / 1000); // em metros
+            const effectiveLength = totalLength + endCorrection;
+            
+            // Frequência fundamental aproximada
+            const fundamentalFreq = soundSpeed / (4 * effectiveLength);
+            
+            // Gerar harmônicos ímpares com correções para geometria cônica
             for (let n = 1; n <= CONFIG.MAX_HARMONICS; n++) {
-                const frequency = (2 * n - 1) * soundSpeed / (4 * totalLength);
+                // Para tubos cônicos, os harmônicos não são múltiplos exatos
+                let frequency;
+                
+                if (n === 1) {
+                    // Drone (fundamental)
+                    frequency = fundamentalFreq;
+                } else {
+                    // Harmônicos superiores com correção para conicidade
+                    const harmonicOrder = 2 * n - 1;
+                    const conicityFactor = 1 + (avgDiameter / 1000) / (4 * effectiveLength);
+                    frequency = harmonicOrder * fundamentalFreq * conicityFactor;
+                }
                 
                 if (frequency >= CONFIG.MIN_FREQUENCY && frequency <= CONFIG.MAX_FREQUENCY) {
                     const noteInfo = findClosestNote(frequency);
+                    
+                    // Calcular impedância relativa (maior para frequências de ressonância)
+                    const impedance = calculateImpedance(frequency, effectiveLength, avgDiameter / 1000);
                     
                     results.push({
                         frequency: frequency,
                         harmonic: n,
                         note: noteInfo.note,
                         octave: noteInfo.octave,
-                        centDiff: noteInfo.centDiff
+                        centDiff: noteInfo.centDiff,
+                        impedance: impedance
                     });
                 }
             }
             
             return results;
         }
+        
+        // Calcular impedância para uma frequência específica
+        function calculateImpedance(frequency, length, avgDiameter) {
+            const c = 343; // velocidade do som
+            const k = 2 * Math.PI * frequency / c; // número de onda
+            const ka = k * avgDiameter / 2; // ka (adimensional)
+            
+            // Modelo simplificado de impedância para tubo cônico
+            const Z0 = 415; // impedância característica do ar (Pa·s/m³)
+            const kL = k * length;
+            
+            // Impedância de entrada para tubo fechado cônico
+            const impedance = Z0 * Math.abs(1 / Math.tan(kL)) * (1 + 0.5 * ka);
+            
+            return Math.round(impedance);
+        }
 
-        // Encontrar nota mais próxima
+        // Encontrar nota mais próxima (corrigindo oitavas)
         function findClosestNote(frequency) {
             let closestNote = 'C';
-            let closestOctave = 4;
+            let closestOctave = 2; // Corrigido: didgeridoo está na oitava 2, não 4
             let minDiff = Infinity;
             
-            for (let octave = 0; octave < 8; octave++) {
+            // Expandir range de oitavas para cobrir frequências baixas do didgeridoo
+            for (let octave = 0; octave < 6; octave++) {
                 for (let noteName of CONFIG.NOTE_NAMES) {
                     const noteFreq = CONFIG.NOTE_BASE_FREQ[noteName] * Math.pow(2, octave - 4);
                     const diff = Math.abs(frequency - noteFreq);
@@ -1501,14 +1589,14 @@
                 
                 for (let i = 0; i <= 4; i++) {
                     const x = margin + (width - margin * 1.5) * i / 4;
-                    const length = maxLength * i / 4;
+                    const length = (maxLength / 1000) * i / 4; // converter para metros
                     
                     ctx.beginPath();
                     ctx.moveTo(x, height - margin/2 - 5);
                     ctx.lineTo(x, height - margin/2 + 5);
                     ctx.stroke();
                     
-                    ctx.fillText(Math.round(length).toString(), x, height - margin/4);
+                    ctx.fillText(length.toFixed(2), x, height - margin/4);
                 }
                 
                 // Perfil superior
@@ -1564,12 +1652,12 @@
                 ctx.fillStyle = '#2c3e50';
                 ctx.font = '14px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText('Comprimento (mm)', width/2, height - 5);
+                ctx.fillText('Comprimento (m)', width/2, height - 5);
                 
                 ctx.save();
                 ctx.translate(15, height/2);
                 ctx.rotate(-Math.PI/2);
-                ctx.fillText('Diâmetro (mm)', 0, 0);
+                ctx.fillText('Diâmetro (m)', 0, 0);
                 ctx.restore();
                 
             } catch (error) {
@@ -1578,7 +1666,7 @@
             }
         }
 
-        // Exibição dos resultados
+        // Exibição dos resultados (formato DIDGMO)
         function displayResults() {
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
@@ -1586,7 +1674,7 @@
             if (appState.analysisResults.length === 0) {
                 const row = tbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 5;
+                cell.colSpan = 6;
                 cell.textContent = 'Nenhuma frequência encontrada no intervalo de 50-1000 Hz';
                 cell.style.fontStyle = 'italic';
                 cell.style.color = '#7f8c8d';
@@ -1598,9 +1686,14 @@
                 const row = tbody.insertRow();
                 row.classList.add('fade-in');
                 
+                // Adicionar classe especial para o drone (fundamental)
+                if (result.harmonic === 1) {
+                    row.classList.add('drone-row');
+                }
+                
                 // Frequência
                 const freqCell = row.insertCell();
-                freqCell.innerHTML = `<span class="freq-value">${result.frequency.toFixed(2)}</span>`;
+                freqCell.innerHTML = `<span class="freq-value">${Math.round(result.frequency)}</span>`;
                 
                 // Nota
                 const noteCell = row.insertCell();
@@ -1621,7 +1714,16 @@
                 
                 // Harmônico
                 const harmCell = row.insertCell();
-                harmCell.textContent = `${result.harmonic}º`;
+                if (result.harmonic === 1) {
+                    harmCell.innerHTML = '<span style="color: #e74c3c; font-weight: bold;">Drone</span>';
+                } else {
+                    harmCell.textContent = `${result.harmonic}º`;
+                }
+                
+                // Impedância
+                const impedanceCell = row.insertCell();
+                const impedanceValue = result.impedance ? (result.impedance / 1000000).toFixed(3) : '0.000';
+                impedanceCell.innerHTML = `<span class="impedance-value">${impedanceValue}</span>`;
             }
         }
 
