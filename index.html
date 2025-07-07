@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎺 Calculadora de Didgeridoo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #7f8c8d;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #f8f9fa;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .panel h2 {
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            color: #2c3e50;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .modo-content {
+            display: none;
+        }
+
+        .modo-content.active {
+            display: block;
+        }
+
+        .shape-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .shape-btn {
+            padding: 12px 15px;
+            border: 2px solid #bdc3c7;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .shape-btn:hover,
+        .shape-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .target-selector {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .ou-texto {
+            text-align: center;
+            font-weight: 600;
+            color: #7f8c8d;
+        }
+
+        .freq-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .tube-type-selector {
+            display: grid;
+            gap: 15px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .radio-option:hover {
+            border-color: #667eea;
+        }
+
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+
+        .radio-option input[type="radio"]:checked + .radio-custom {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
+        .radio-option input[type="radio"]:checked + .radio-custom::after {
+            opacity: 1;
+        }
+
+        .radio-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #bdc3c7;
+            border-radius: 50%;
+            margin-right: 15px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .radio-custom::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .radio-content strong {
+            display: block;
+            color: #2c3e50;
+        }
+
+        .radio-content small {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .construction-params {
+            display: grid;
+            gap: 15px;
+        }
+
+        .param-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .param-row label {
+            margin: 0;
+        }
+
+        .param-row input,
+        .param-row select {
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+            color: white;
+        }
+
+        .construction-results {
+            margin-top: 30px;
+            border-top: 2px solid #ecf0f1;
+            padding-top: 30px;
+        }
+
+        .result-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #ecf0f1;
+        }
+
+        .result-card.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .result-label {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+
+        .result-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .result-note {
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+
+        .harmonics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .harmonics-table th,
+        .harmonics-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .harmonics-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .harmonic-freq {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .harmonic-note {
+            font-weight: 600;
+            color: #e74c3c;
+        }
+
+        .construction-tips h4 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .tips-list {
+            list-style: none;
+        }
+
+        .tips-list li {
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .tips-list li::before {
+            content: '💡';
+            position: absolute;
+            left: 0;
+        }
+
+        .parameters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .parameter-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .parameter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .info-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .info-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .shape-canvas {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .freq-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .note-name {
+            font-weight: 600;
+            color: #e74c3c;
+            font-size: 1.1em;
+        }
+
+        .cent-diff.perfect {
+            color: #27ae60;
+        }
+
+        .cent-diff.positive {
+            color: #e74c3c;
+        }
+
+        .cent-diff.negative {
+            color: #f39c12;
+        }
+
+        .success-message,
+        .error-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .shape-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .target-selector {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .parameters {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .result-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎺 Calculadora de Didgeridoo</h1>
+            <p>Ferramenta profissional para análise acústica e construção de didgeridoos</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="alternarModo('analise')">🔍 Análise de Geometria</button>
+            <button class="tab-btn" onclick="alternarModo('construcao')">🔧 Cálculo para Nota</button>
+        </div>
+
+        <main class="main-content">
+            <section class="panel input-panel">
+                <h2>⚙️ Configurações</h2>
+
+                <!-- Modo Análise -->
+                <div id="modoAnalise" class="modo-content active">
+                    <div class="input-group">
+                        <label>🎯 Formas Pré-definidas:</label>
+                        <div class="shape-buttons">
+                            <button class="shape-btn" onclick="carregarForma('didgeridoo')">Didgeridoo</button>
+                            <button class="shape-btn" onclick="carregarForma('reto')">Tubo Reto</button>
+                            <button class="shape-btn" onclick="carregarForma('campana')">Campana</button>
+                            <button class="shape-btn" onclick="carregarForma('conico')">Cônico</button>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="geometryInput">📐 Geometria do Tubo (posição_mm diâmetro_mm):</label>
+                        <textarea id="geometryInput" placeholder="# Exemplo de geometria de didgeridoo:
+0 28
+100 26
+200 30
+400 32
+800 34
+1200 36
+1400 38
+
+# Linhas começando com # são comentários
+# Formato: posição_mm diâmetro_mm">0 28
+100 26
+200 30
+400 32
+800 34
+1200 36
+1400 38</textarea>
+                    </div>
+                </div>
+
+                <!-- Modo Construção -->
+                <div id="modoConstrucao" class="modo-content">
+                    <div class="input-group">
+                        <label>🎵 Nota Alvo:</label>
+                        <div class="target-selector">
+                            <select id="targetNote">
+                                <option value="">Selecione uma nota</option>
+                                <option value="392.00">G4 (392.00 Hz)</option>
+                                <option value="415.30">G#4 (415.30 Hz)</option>
+                                <option value="440.00">A4 (440.00 Hz)</option>
+                                <option value="466.16">A#4 (466.16 Hz)</option>
+                                <option value="493.88">B4 (493.88 Hz)</option>
+                            </select>
+                            <span class="ou-texto">ou</span>
+                            <input type="number" id="customTargetFreq" placeholder="Hz" step="0.01" class="freq-input">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>🔧 Tipo de Tubo:</label>
+                        <div class="tube-type-selector">
+                            <label class="radio-option">
+                                <input type="radio" name="tubeType" value="fechado" checked>
+                                <span class="radio-custom"></span>
+                                <div class="radio-content">
+                                    <strong>Tubo Fechado</strong>
+                                    <small>Uma extremidade fechada (como didgeridoo)</small>
+                                </div>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="tubeType" value="aberto">
+                                <span class="radio-custom"></span>
+                                <div class="radio-content">
+                                    <strong>Tubo Aberto</strong>
+                                    <small>Ambas extremidades abertas (como flauta)</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>📏 Configurações do Tubo:</label>
+                        <div class="construction-params">
+                            <div class="param-row">
+                                <label>Diâmetro (mm):</label>
+                                <input type="number" id="targetDiameter" value="30" min="10" max="100" step="0.5">
+                            </div>
+                            <div class="param-row">
+                                <label>Espessura da parede (mm):</label>
+                                <input type="number" id="wallThickness" value="3" min="1" max="20" step="0.1">
+                            </div>
+                            <div class="param-row">
+                                <label>Material:</label>
+                                <select id="materialType">
+                                    <option value="madeira">Madeira</option>
+                                    <option value="bambu">Bambu</option>
+                                    <option value="pvc">PVC</option>
+                                    <option value="metal">Metal</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="calcularParaNota()">
+                        <span>🎯</span> Calcular Dimensões
+                    </button>
+
+                    <!-- Resultados da Construção -->
+                    <div id="constructionResults" class="construction-results" style="display: none;">
+                        <h3>📐 Dimensões Calculadas</h3>
+                        <div class="result-cards">
+                            <div class="result-card primary">
+                                <div class="result-label">Comprimento Total</div>
+                                <div class="result-value" id="totalLengthResult">0 mm</div>
+                                <div class="result-note">Distância interna do bocal ao final</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="result-label">Diâmetro Externo</div>
+                                <div class="result-value" id="externalDiameterResult">0 mm</div>
+                                <div class="result-note">Incluindo espessura da parede</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="result-label">Volume Interno</div>
+                                <div class="result-value" id="internalVolumeResult">0 cm³</div>
+                                <div class="result-note">Volume de ar no tubo</div>
+                            </div>
+                        </div>
+
+                        <div class="harmonic-table">
+                            <h4>🎵 Harmônicos que o tubo produzirá:</h4>
+                            <table class="harmonics-table">
+                                <thead>
+                                    <tr>
+                                        <th>Harmônico</th>
+                                        <th>Frequência (Hz)</th>
+                                        <th>Nota</th>
+                                        <th>Comprimento (mm)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="harmonicsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="construction-tips">
+                            <h4>💡 Dicas de Construção:</h4>
+                            <div id="constructionTips"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parameters">
+                    <div class="parameter-group">
+                        <label for="mouthpieceInput">🎯 Diâmetro do Bocal (mm)</label>
+                        <input type="number" id="mouthpieceInput" value="28" min="10" max="50" step="0.1">
+                    </div>
+                    <div class="parameter-group">
+                        <label for="soundSpeedInput">🌡️ Velocidade do Som (m/s)</label>
+                        <input type="number" id="soundSpeedInput" value="343" min="300" max="400" step="1">
+                    </div>
+                </div>
+
+                <div class="controls" id="analysisControls">
+                    <button class="btn btn-primary" onclick="analisar()">
+                        <span>🔍</span> Analisar
+                    </button>
+                    <button class="btn btn-success" onclick="salvarArquivo()">
+                        <span>💾</span> Salvar
+                    </button>
+                    <button class="btn btn-secondary" onclick="carregarArquivo()">
+                        <span>📂</span> Carregar
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportarCSV()">
+                        <span>📊</span> Exportar CSV
+                    </button>
+                </div>
+
+                <div class="info-display">
+                    <div class="info-row">
+                        <span class="info-label">📏 Comprimento Total:</span>
+                        <span class="info-value" id="totalLength">1400 mm</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">🎯 Diâmetro do Bocal:</span>
+                        <span class="info-value" id="mouthpieceDiameter">28 mm</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">📍 Pontos de Controle:</span>
+                        <span class="info-value" id="pointCount">7</span>
+                    </div>
+                </div>
+
+                <div id="messageArea"></div>
+            </section>
+
+            <section class="panel visualization-panel">
+                <h2>📊 Visualização e Resultados</h2>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Calculando frequências...</p>
+                </div>
+                
+                <canvas id="shapeCanvas" class="shape-canvas"></canvas>
+                
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Frequência (Hz)</th>
+                            <th>Nota Musical</th>
+                            <th>Oitava</th>
+                            <th>Desvio (¢)</th>
+                            <th>Harmônico</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td colspan="5" style="color: #7f8c8d; font-style: italic; padding: 30px;">
+                                Clique em "Analisar" para calcular as frequências
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>🎵 Desenvolvido para músicos e luthiers</p>
+            <p>Baseado em princípios de acústica e física ondulatória</p>
+        </footer>
+    </div>
+
+    <script>
+        // Configurações globais
+        const CONFIG = {
+            MAX_HARMONICS: 8,
+            MIN_FREQUENCY: 50,
+            MAX_FREQUENCY: 1000,
+            CANVAS_MARGIN: 60,
+            NOTE_BASE_FREQ: {
+                'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13, 'E': 329.63,
+                'F': 349.23, 'F#': 369.99, 'G': 392.00, 'G#': 415.30, 'A': 440.00,
+                'A#': 466.16, 'B': 493.88
+            },
+            NOTE_NAMES: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        };
+
+        // Estado da aplicação
+        let appState = {
+            currentGeometry: [],
+            analysisResults: [],
+            isAnalyzing: false,
+            currentMode: 'analise'
+        };
+
+        // Formas pré-definidas
+        const PREDEFINED_SHAPES = {
+            didgeridoo: `0 28
+100 26
+200 30
+400 32
+800 34
+1200 36
+1400 38`,
+            reto: `0 30
+1400 30`,
+            campana: `0 28
+1000 28
+1200 32
+1400 40`,
+            conico: `0 25
+1400 35`
+        };
+
+        // Utilitários
+        function showMessage(text, type = 'info') {
+            const messageArea = document.getElementById('messageArea');
+            const messageClass = type === 'error' ? 'error-message' : 'success-message';
+            
+            messageArea.innerHTML = `<div class="${messageClass} fade-in">${text}</div>`;
+            
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+
+        function toggleLoading(show) {
+            const loading = document.getElementById('loadingIndicator');
+            loading.classList.toggle('show', show);
+            appState.isAnalyzing = show;
+        }
+
+        // Alternância entre modos
+        function alternarModo(modo) {
+            appState.currentMode = modo;
+            
+            // Atualizar tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Mostrar/esconder conteúdo
+            document.querySelectorAll('.modo-content').forEach(content => content.classList.remove('active'));
+            
+            if (modo === 'analise') {
+                document.getElementById('modoAnalise').classList.add('active');
+                document.getElementById('analysisControls').style.display = 'flex';
+            } else {
+                document.getElementById('modoConstrucao').classList.add('active');
+                document.getElementById('analysisControls').style.display = 'none';
+            }
+            
+            showMessage(`📋 Modo alterado para: ${modo === 'analise' ? 'Análise de Geometria' : 'Cálculo para Nota'}`);
+        }
+
+        // Parser de geometria
+        function parseGeometry(text = null) {
+            try {
+                const geometryText = text || document.getElementById('geometryInput').value.trim();
+                const lines = geometryText.split('\n');
+                const points = [];
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    if (line === '' || line.startsWith('#')) continue;
+                    
+                    const parts = line.split(/\s+/);
+                    if (parts.length >= 2) {
+                        const position = parseFloat(parts[0]);
+                        const diameter = parseFloat(parts[1]);
+                        
+                        if (!isNaN(position) && !isNaN(diameter) && diameter > 0) {
+                            points.push({ position, diameter });
+                        }
+                    }
+                }
+                
+                if (points.length < 2) {
+                    throw new Error('É necessário pelo menos 2 pontos de geometria');
+                }
+                
+                // Ordenar por posição
+                points.sort((a, b) => a.position - b.position);
+                
+                // Validar posições
+                if (points[0].position < 0) {
+                    throw new Error('A primeira posição deve ser maior ou igual a 0');
+                }
+                
+                return points;
+            } catch (error) {
+                console.error('Erro no parsing da geometria:', error);
+                throw error;
+            }
+        }
+
+        // Carregamento de formas pré-definidas
+        function carregarForma(shapeType) {
+            try {
+                const shapeData = PREDEFINED_SHAPES[shapeType];
+                if (!shapeData) {
+                    throw new Error('Forma não encontrada');
+                }
+                
+                document.getElementById('geometryInput').value = shapeData;
+                
+                // Atualizar botão ativo
+                document.querySelectorAll('.shape-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+                showMessage(`✅ Forma "${shapeType}" carregada com sucesso`);
+                
+                // Analisar automaticamente após 500ms
+                setTimeout(() => analisar(), 500);
+                
+            } catch (error) {
+                showMessage(`❌ Erro ao carregar forma: ${error.message}`, 'error');
+            }
+        }
+
+        // Atualização das informações
+        function updateInfo() {
+            if (appState.currentGeometry.length === 0) return;
+            
+            const totalLength = appState.currentGeometry[appState.currentGeometry.length - 1].position;
+            const mouthpieceDiameter = document.getElementById('mouthpieceInput').value;
+            const pointCount = appState.currentGeometry.length;
+            
+            document.getElementById('totalLength').textContent = `${totalLength} mm`;
+            document.getElementById('mouthpieceDiameter').textContent = `${mouthpieceDiameter} mm`;
+            document.getElementById('pointCount').textContent = pointCount;
+        }
+
+        // Cálculo de frequências
+        function calculateFrequencies() {
+            const soundSpeed = parseFloat(document.getElementById('soundSpeedInput').value);
+            const totalLength = appState.currentGeometry[appState.currentGeometry.length - 1].position / 1000; // converter para metros
+            
+            const results = [];
+            
+            // Calcular harmônicos ímpares (tubo fechado)
+            for (let n = 1; n <= CONFIG.MAX_HARMONICS; n++) {
+                const frequency = (2 * n - 1) * soundSpeed / (4 * totalLength);
+                
+                if (frequency >= CONFIG.MIN_FREQUENCY && frequency <= CONFIG.MAX_FREQUENCY) {
+                    const noteInfo = findClosestNote(frequency);
+                    
+                    results.push({
+                        frequency: frequency,
+                        harmonic: n,
+                        note: noteInfo.note,
+                        octave: noteInfo.octave,
+                        centDiff: noteInfo.centDiff
+                    });
+                }
+            }
+            
+            return results;
+        }
+
+        // Encontrar nota mais próxima
+        function findClosestNote(frequency) {
+            let closestNote = 'C';
+            let closestOctave = 4;
+            let minDiff = Infinity;
+            
+            for (let octave = 0; octave < 8; octave++) {
+                for (let noteName of CONFIG.NOTE_NAMES) {
+                    const noteFreq = CONFIG.NOTE_BASE_FREQ[noteName] * Math.pow(2, octave - 4);
+                    const diff = Math.abs(frequency - noteFreq);
+                    
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestNote = noteName;
+                        closestOctave = octave;
+                    }
+                }
+            }
+            
+            const exactFreq = CONFIG.NOTE_BASE_FREQ[closestNote] * Math.pow(2, closestOctave - 4);
+            const centDiff = 1200 * Math.log2(frequency / exactFreq);
+            
+            return {
+                note: closestNote,
+                octave: closestOctave,
+                centDiff: Math.round(centDiff * 10) / 10
+            };
+        }
+
+        // Desenho da forma
+        function drawShape() {
+            const canvas = document.getElementById('shapeCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Ajustar tamanho do canvas
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            const { width, height } = canvas;
+            
+            // Limpar canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            if (appState.currentGeometry.length < 2) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Clique em "Analisar" para ver a visualização', width/2, height/2);
+                return;
+            }
+            
+            try {
+                const margin = CONFIG.CANVAS_MARGIN;
+                const maxLength = appState.currentGeometry[appState.currentGeometry.length - 1].position;
+                const maxDiameter = Math.max(...appState.currentGeometry.map(p => p.diameter));
+                
+                const scaleX = (width - margin * 2) / maxLength;
+                const scaleY = (height - margin * 2) / maxDiameter;
+                
+                // Desenhar eixos
+                ctx.strokeStyle = '#bdc3c7';
+                ctx.lineWidth = 1;
+                
+                // Eixo X
+                ctx.beginPath();
+                ctx.moveTo(margin, height - margin/2);
+                ctx.lineTo(width - margin/2, height - margin/2);
+                ctx.stroke();
+                
+                // Marcações do eixo X
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                
+                for (let i = 0; i <= 4; i++) {
+                    const x = margin + (width - margin * 1.5) * i / 4;
+                    const length = maxLength * i / 4;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, height - margin/2 - 5);
+                    ctx.lineTo(x, height - margin/2 + 5);
+                    ctx.stroke();
+                    
+                    ctx.fillText(Math.round(length).toString(), x, height - margin/4);
+                }
+                
+                // Perfil superior
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                for (let i = 0; i < appState.currentGeometry.length; i++) {
+                    const point = appState.currentGeometry[i];
+                    const x = margin + point.position * scaleX;
+                    const y = height/2 - point.diameter/2 * scaleY;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                
+                // Perfil inferior
+                ctx.beginPath();
+                for (let i = 0; i < appState.currentGeometry.length; i++) {
+                    const point = appState.currentGeometry[i];
+                    const x = margin + point.position * scaleX;
+                    const y = height/2 + point.diameter/2 * scaleY;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                
+                // Pontos de controle
+                ctx.fillStyle = '#e74c3c';
+                for (let point of appState.currentGeometry) {
+                    const x = margin + point.position * scaleX;
+                    const y1 = height/2 - point.diameter/2 * scaleY;
+                    const y2 = height/2 + point.diameter/2 * scaleY;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y1, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y2, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Labels dos eixos
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Comprimento (mm)', width/2, height - 5);
+                
+                ctx.save();
+                ctx.translate(15, height/2);
+                ctx.rotate(-Math.PI/2);
+                ctx.fillText('Diâmetro (mm)', 0, 0);
+                ctx.restore();
+                
+            } catch (error) {
+                console.error('Erro no desenho:', error);
+                showMessage(`❌ Erro na visualização: ${error.message}`, 'error');
+            }
+        }
+
+        // Exibição dos resultados
+        function displayResults() {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            if (appState.analysisResults.length === 0) {
+                const row = tbody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 5;
+                cell.textContent = 'Nenhuma frequência encontrada no intervalo de 50-1000 Hz';
+                cell.style.fontStyle = 'italic';
+                cell.style.color = '#7f8c8d';
+                cell.style.padding = '30px';
+                return;
+            }
+            
+            for (let result of appState.analysisResults) {
+                const row = tbody.insertRow();
+                row.classList.add('fade-in');
+                
+                // Frequência
+                const freqCell = row.insertCell();
+                freqCell.innerHTML = `<span class="freq-value">${result.frequency.toFixed(2)}</span>`;
+                
+                // Nota
+                const noteCell = row.insertCell();
+                noteCell.innerHTML = `<span class="note-name">${result.note}</span>`;
+                
+                // Oitava
+                const octaveCell = row.insertCell();
+                octaveCell.textContent = result.octave;
+                
+                // Desvio em centavos
+                const centCell = row.insertCell();
+                let centClass = 'perfect';
+                if (Math.abs(result.centDiff) > 50) centClass = 'positive';
+                else if (Math.abs(result.centDiff) > 10) centClass = result.centDiff > 0 ? 'positive' : 'negative';
+                
+                const sign = result.centDiff > 0 ? '+' : '';
+                centCell.innerHTML = `<span class="cent-diff ${centClass}">${sign}${result.centDiff}</span>`;
+                
+                // Harmônico
+                const harmCell = row.insertCell();
+                harmCell.textContent = `${result.harmonic}º`;
+            }
+        }
+
+        // Função principal de análise
+        async function analisar() {
+            if (appState.isAnalyzing) {
+                showMessage('⏳ Análise já está em andamento...', 'error');
+                return;
+            }
+            
+            try {
+                toggleLoading(true);
+                showMessage('🔍 Iniciando análise...');
+                
+                // Parse da geometria
+                appState.currentGeometry = parseGeometry();
+                
+                // Pequena pausa para UX
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Atualizar informações
+                updateInfo();
+                
+                // Desenhar forma
+                drawShape();
+                
+                // Calcular frequências
+                appState.analysisResults = calculateFrequencies();
+                
+                // Exibir resultados
+                displayResults();
+                
+                showMessage(`✅ Análise concluída! ${appState.analysisResults.length} frequências calculadas`);
+                
+            } catch (error) {
+                console.error('Erro na análise:', error);
+                showMessage(`❌ Erro na análise: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Calculadora reversa - calcular dimensões para uma nota específica
+        function calcularParaNota() {
+            try {
+                // Obter dados de entrada
+                const targetNoteSelect = document.getElementById('targetNote');
+                const customTargetFreq = document.getElementById('customTargetFreq');
+                const tubeTypeRadios = document.getElementsByName('tubeType');
+                const targetDiameter = parseFloat(document.getElementById('targetDiameter').value);
+                const wallThickness = parseFloat(document.getElementById('wallThickness').value);
+                const materialType = document.getElementById('materialType').value;
+                const soundSpeed = parseFloat(document.getElementById('soundSpeedInput').value);
+
+                // Obter frequência alvo
+                let targetFrequency = 0;
+                if (customTargetFreq.value && customTargetFreq.value.trim() !== '') {
+                    targetFrequency = parseFloat(customTargetFreq.value);
+                } else if (targetNoteSelect.value && targetNoteSelect.value.trim() !== '') {
+                    targetFrequency = parseFloat(targetNoteSelect.value);
+                }
+
+                if (targetFrequency <= 0 || isNaN(targetFrequency)) {
+                    throw new Error('Por favor, selecione uma nota ou digite uma frequência válida!');
+                }
+
+                // Obter tipo de tubo
+                let tubeType = 'fechado';
+                for (let radio of tubeTypeRadios) {
+                    if (radio.checked) {
+                        tubeType = radio.value;
+                        break;
+                    }
+                }
+
+                // Calcular comprimento baseado no tipo de tubo
+                let length;
+                if (tubeType === 'fechado') {
+                    // Tubo fechado: L = v / (4f)
+                    length = soundSpeed / (4 * targetFrequency);
+                } else {
+                    // Tubo aberto: L = v / (2f)
+                    length = soundSpeed / (2 * targetFrequency);
+                }
+
+                const lengthMM = length * 1000; // converter para mm
+
+                // Calcular outras dimensões
+                const externalDiameter = targetDiameter + (wallThickness * 2);
+                const internalVolume = Math.PI * Math.pow(targetDiameter / 2, 2) * length / 1000; // em cm³
+
+                // Calcular harmônicos
+                const harmonics = [];
+                const maxHarmonics = tubeType === 'fechado' ? 8 : 6;
+                
+                for (let n = 1; n <= maxHarmonics; n++) {
+                    let harmonicFreq;
+                    let harmonicLength;
+                    
+                    if (tubeType === 'fechado') {
+                        // Apenas harmônicos ímpares
+                        harmonicFreq = (2 * n - 1) * targetFrequency;
+                        harmonicLength = soundSpeed / (4 * harmonicFreq) * 1000;
+                    } else {
+                        // Todos os harmônicos
+                        harmonicFreq = n * targetFrequency;
+                        harmonicLength = soundSpeed / (2 * harmonicFreq) * 1000;
+                    }
+
+                    if (harmonicFreq <= 1000) {
+                        const noteInfo = findClosestNote(harmonicFreq);
+                        harmonics.push({
+                            harmonic: tubeType === 'fechado' ? (2 * n - 1) : n,
+                            frequency: harmonicFreq,
+                            note: noteInfo.note,
+                            octave: noteInfo.octave,
+                            length: harmonicLength
+                        });
+                    }
+                }
+
+                // Exibir resultados
+                displayConstructionResults({
+                    targetFrequency,
+                    tubeType,
+                    length: lengthMM,
+                    diameter: targetDiameter,
+                    externalDiameter,
+                    wallThickness,
+                    internalVolume,
+                    material: materialType,
+                    harmonics,
+                    soundSpeed
+                });
+
+                showMessage(`✅ Dimensões calculadas para ${targetFrequency.toFixed(2)} Hz!`);
+
+            } catch (error) {
+                console.error('Erro no cálculo:', error);
+                showMessage(`❌ ${error.message}`, 'error');
+            }
+        }
+
+        // Exibir resultados da construção
+        function displayConstructionResults(data) {
+            // Atualizar valores principais
+            document.getElementById('totalLengthResult').textContent = `${data.length.toFixed(1)} mm`;
+            document.getElementById('externalDiameterResult').textContent = `${data.externalDiameter.toFixed(1)} mm`;
+            document.getElementById('internalVolumeResult').textContent = `${data.internalVolume.toFixed(1)} cm³`;
+
+            // Preencher tabela de harmônicos
+            const tbody = document.getElementById('harmonicsTableBody');
+            tbody.innerHTML = '';
+
+            for (let harmonic of data.harmonics) {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${harmonic.harmonic}º</td>
+                    <td class="harmonic-freq">${harmonic.frequency.toFixed(2)}</td>
+                    <td class="harmonic-note">${harmonic.note}${harmonic.octave}</td>
+                    <td>${harmonic.length.toFixed(1)}</td>
+                `;
+            }
+
+            // Gerar dicas de construção
+            const tips = generateConstructionTips(data);
+            document.getElementById('constructionTips').innerHTML = tips;
+
+            // Mostrar seção de resultados
+            document.getElementById('constructionResults').style.display = 'block';
+            document.getElementById('constructionResults').classList.add('fade-in');
+        }
+
+        // Gerar dicas de construção baseadas no material e dimensões
+        function generateConstructionTips(data) {
+            const tips = [];
+
+            // Dicas baseadas no material
+            switch (data.material) {
+                case 'madeira':
+                    tips.push('Use madeira seca e bem curada para evitar rachaduras');
+                    tips.push('Madeiras como eucalipto, bambu ou cedro são ideais');
+                    tips.push('Lixe bem o interior para reduzir a rugosidade');
+                    break;
+                case 'bambu':
+                    tips.push('Escolha bambu maduro com paredes espessas');
+                    tips.push('Remova todos os nós internos cuidadosamente');
+                    tips.push('Trate contra insetos antes de usar');
+                    break;
+                case 'pvc':
+                    tips.push('Use PVC de qualidade para evitar toxicidade');
+                    tips.push('Lixe levemente as juntas para melhor aderência');
+                    tips.push('PVC é ideal para protótipos e testes');
+                    break;
+                case 'metal':
+                    tips.push('Solde as juntas com cuidado para evitar vazamentos');
+                    tips.push('Use metal não tóxico (alumínio ou cobre)');
+                    tips.push('Polir o interior melhora a qualidade sonora');
+                    break;
+            }
+
+            // Dicas baseadas nas dimensões
+            if (data.length > 1500) {
+                tips.push('Tubo longo: considere fazer em seções para facilitar o transporte');
+            }
+
+            if (data.diameter < 25) {
+                tips.push('Diâmetro pequeno: o bocal será mais exigente tecnicamente');
+            } else if (data.diameter > 50) {
+                tips.push('Diâmetro grande: som mais grave e volume maior');
+            }
+
+            if (data.tubeType === 'fechado') {
+                tips.push('Tubo fechado: vede completamente uma das extremidades');
+                tips.push('A qualidade da vedação afeta diretamente a afinação');
+            } else {
+                tips.push('Tubo aberto: mantenha ambas as extremidades livres');
+                tips.push('Chanfre levemente as bordas para melhor sonoridade');
+            }
+
+            // Dicas de afinação
+            tips.push('Use um afinador para verificar a frequência real');
+            tips.push('Pequenos ajustes podem ser feitos alterando o comprimento');
+
+            // Converter para HTML
+            const tipsHTML = tips.map(tip => `<li>${tip}</li>`).join('');
+            return `<ul class="tips-list">${tipsHTML}</ul>`;
+        }
+
+        // Configurar listeners para o modo construção
+        function setupConstructionListeners() {
+            const targetNoteSelect = document.getElementById('targetNote');
+            const customTargetFreq = document.getElementById('customTargetFreq');
+
+            targetNoteSelect.addEventListener('change', function() {
+                if (this.value) {
+                    customTargetFreq.value = '';
+                }
+            });
+
+            customTargetFreq.addEventListener('input', function() {
+                if (this.value) {
+                    targetNoteSelect.value = '';
+                }
+            });
+        }
+
+        // Salvar arquivo
+        function salvarArquivo() {
+            try {
+                const data = {
+                    geometry: document.getElementById('geometryInput').value,
+                    mouthpiece: document.getElementById('mouthpieceInput').value,
+                    soundSpeed: document.getElementById('soundSpeedInput').value,
+                    results: appState.analysisResults,
+                    timestamp: new Date().toISOString(),
+                    version: '1.0'
+                };
+                
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `didgeridoo_${new Date().toISOString().slice(0, 10)}.json`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+                showMessage('💾 Arquivo salvo com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                showMessage(`❌ Erro ao salvar: ${error.message}`, 'error');
+            }
+        }
+
+        // Carregar arquivo
+        function carregarArquivo() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        // Validar estrutura do arquivo
+                        if (!data.geometry) {
+                            throw new Error('Arquivo inválido: geometria não encontrada');
+                        }
+                        
+                        // Restaurar dados
+                        document.getElementById('geometryInput').value = data.geometry || '';
+                        document.getElementById('mouthpieceInput').value = data.mouthpiece || '28';
+                        document.getElementById('soundSpeedInput').value = data.soundSpeed || '343';
+                        
+                        showMessage('📂 Arquivo carregado com sucesso!');
+                        
+                        // Analisar automaticamente
+                        setTimeout(() => analisar(), 500);
+                        
+                    } catch (error) {
+                        console.error('Erro ao carregar arquivo:', error);
+                        showMessage(`❌ Erro ao carregar arquivo: ${error.message}`, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        // Exportar dados
+        function exportarCSV() {
+            if (appState.currentMode === 'construcao') {
+                exportarConstrucaoCSV();
+                return;
+            }
+            
+            if (appState.analysisResults.length === 0) {
+                showMessage('❌ Nenhum resultado para exportar', 'error');
+                return;
+            }
+            
+            let csv = 'Frequência (Hz),Nota,Oitava,Desvio (centavos),Harmônico\n';
+            
+            appState.analysisResults.forEach(result => {
+                csv += `${result.frequency.toFixed(2)},${result.note},${result.octave},${result.centDiff},${result.harmonic}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `didgeridoo_resultados_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            showMessage('📊 Resultados exportados em CSV!');
+        }
+
+        function exportarConstrucaoCSV() {
+            const resultsDiv = document.getElementById('constructionResults');
+            if (resultsDiv.style.display === 'none') {
+                showMessage('❌ Calcule as dimensões primeiro', 'error');
+                return;
+            }
+
+            // Obter dados dos harmônicos
+            const harmonicsTable = document.getElementById('harmonicsTableBody');
+            const rows = harmonicsTable.getElementsByTagName('tr');
+            
+            if (rows.length === 0) {
+                showMessage('❌ Nenhum dado para exportar', 'error');
+                return;
+            }
+
+            let csv = 'Harmônico,Frequência (Hz),Nota,Comprimento (mm)\n';
+            
+            for (let row of rows) {
+                const cells = row.getElementsByTagName('td');
+                if (cells.length >= 4) {
+                    csv += `${cells[0].textContent},${cells[1].textContent},${cells[2].textContent},${cells[3].textContent}\n`;
+                }
+            }
+
+            // Adicionar informações do tubo
+            csv += '\n# Informações do Tubo\n';
+            csv += `Comprimento Total,${document.getElementById('totalLengthResult').textContent}\n`;
+            csv += `Diâmetro Externo,${document.getElementById('externalDiameterResult').textContent}\n`;
+            csv += `Volume Interno,${document.getElementById('internalVolumeResult').textContent}\n`;
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `construcao_tubo_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            showMessage('📊 Dados de construção exportados!');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎺 Calculadora de Didgeridoo iniciada');
+            
+            // Configurar listeners da construção
+            setupConstructionListeners();
+            
+            // Análise inicial
+            setTimeout(() => analisar(), 1000);
+            
+            // Redimensionar canvas quando necessário
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (appState.currentGeometry.length > 0) {
+                        drawShape();
+                    }
+                }, 250);
+            });
+            
+            // Atalhos de teclado
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key) {
+                        case 'Enter':
+                            e.preventDefault();
+                            if (appState.currentMode === 'analise') {
+                                analisar();
+                            } else {
+                                calcularParaNota();
+                            }
+                            break;
+                        case 's':
+                            e.preventDefault();
+                            salvarArquivo();
+                            break;
+                        case 'o':
+                            e.preventDefault();
+                            carregarArquivo();
+                            break;
+                        case '1':
+                            e.preventDefault();
+                            alternarModo('analise');
+                            break;
+                        case '2':
+                            e.preventDefault();
+                            alternarModo('construcao');
+                            break;
+                    }
+                }
+            });
+            
+            // Auto-salvar no localStorage
+            const textarea = document.getElementById('geometryInput');
+            textarea.addEventListener('input', function() {
+                localStorage.setItem('didgeridoo_geometry', this.value);
+            });
+            
+            // Restaurar do localStorage
+            const saved = localStorage.getItem('didgeridoo_geometry');
+            if (saved && saved.trim() !== textarea.value.trim()) {
+                textarea.value = saved;
+            }
+        });
+    </script>
+</body>
+</html>

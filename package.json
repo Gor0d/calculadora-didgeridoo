@@ -1,0 +1,40 @@
+{
+  "name": "calculadora-didgeridoo",
+  "version": "1.0.0",
+  "description": "Calculadora web para análise de geometria e frequências de didgeridoos e instrumentos de tubo",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000",
+    "build": "echo 'No build step required'",
+    "deploy:netlify": "netlify deploy --prod",
+    "deploy:vercel": "vercel --prod"
+  },
+  "keywords": [
+    "didgeridoo",
+    "music",
+    "acoustics",
+    "frequency",
+    "calculator",
+    "instrument",
+    "tube",
+    "resonance"
+  ],
+  "author": "Emerson Guimarães",
+  "license": "MIT",
+  "homepage": "https://calculadora-didgeridoo.netlify.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seu-usuario/calculadora-didgeridoo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/seu-usuario/calculadora-didgeridoo/issues"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0",
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
