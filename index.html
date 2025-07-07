@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎺 Calculadora de Didgeridoo</title>
+    <title>🎵 Calculadora Avançada de Didgeridoo</title>
     <style>
         * {
             margin: 0;
@@ -15,7 +15,8 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #2c3e50;
+            color: #333;
+            line-height: 1.6;
         }
 
         .container {
@@ -26,36 +27,37 @@
 
         .header {
             text-align: center;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .header h1 {
             font-size: 2.5em;
-            color: #2c3e50;
             margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffd700, #ffed4a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .header p {
-            color: #7f8c8d;
-            font-size: 1.1em;
+            font-size: 1.2em;
+            opacity: 0.9;
         }
 
-        .tabs {
+        .mode-tabs {
             display: flex;
             background: white;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
 
-        .tab-btn {
+        .mode-tab {
             flex: 1;
-            padding: 15px 20px;
+            padding: 15px 25px;
             background: none;
             border: none;
             font-size: 1.1em;
@@ -63,14 +65,18 @@
             cursor: pointer;
             transition: all 0.3s ease;
             color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        .tab-btn.active {
+        .mode-tab.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
 
-        .tab-btn:hover:not(.active) {
+        .mode-tab:hover:not(.active) {
             background: #f8f9fa;
         }
 
@@ -78,46 +84,66 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
+            margin-bottom: 30px;
         }
 
-        .panel {
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .mode-tabs {
+                flex-direction: column;
+            }
+        }
+
+        .card {
             background: white;
             border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .panel h2 {
-            font-size: 1.8em;
-            margin-bottom: 25px;
-            color: #2c3e50;
-            border-bottom: 3px solid #667eea;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            border-bottom: 2px solid #667eea;
             padding-bottom: 10px;
         }
 
-        .modo-content {
+        .mode-content {
             display: none;
         }
 
-        .modo-content.active {
+        .mode-content.active {
             display: block;
         }
 
         .shape-buttons {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 10px;
             margin-bottom: 20px;
         }
 
         .shape-btn {
             padding: 12px 15px;
-            border: 2px solid #bdc3c7;
+            border: 2px solid #e0e0e0;
             background: white;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
             font-weight: 600;
+            font-size: 14px;
         }
 
         .shape-btn:hover,
@@ -128,21 +154,21 @@
         }
 
         .input-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .input-group label {
             display: block;
-            font-weight: 600;
             margin-bottom: 8px;
-            color: #2c3e50;
+            font-weight: 600;
+            color: #555;
         }
 
         textarea {
             width: 100%;
-            height: 200px;
+            height: 300px;
             padding: 15px;
-            border: 2px solid #bdc3c7;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-family: 'Courier New', monospace;
             font-size: 14px;
@@ -151,8 +177,13 @@
         }
 
         textarea:focus {
-            outline: none;
             border-color: #667eea;
+            outline: none;
+        }
+
+        .construction-inputs {
+            display: grid;
+            gap: 15px;
         }
 
         .target-selector {
@@ -168,12 +199,18 @@
             color: #7f8c8d;
         }
 
-        .freq-input {
+        .freq-input, .construction-input {
             width: 100%;
             padding: 10px;
-            border: 2px solid #bdc3c7;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .freq-input:focus, .construction-input:focus {
+            border-color: #667eea;
+            outline: none;
         }
 
         .tube-type-selector {
@@ -185,7 +222,7 @@
             display: flex;
             align-items: center;
             padding: 15px;
-            border: 2px solid #bdc3c7;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -211,7 +248,7 @@
         .radio-custom {
             width: 20px;
             height: 20px;
-            border: 2px solid #bdc3c7;
+            border: 2px solid #e0e0e0;
             border-radius: 50%;
             margin-right: 15px;
             position: relative;
@@ -241,61 +278,306 @@
             font-size: 0.9em;
         }
 
-        .construction-params {
+        .param-grid {
             display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
         }
 
-        .param-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .param-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .param-group label {
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: inline-flex;
             align-items: center;
+            gap: 8px;
+            margin: 5px;
         }
 
-        .param-row label {
-            margin: 0;
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
         }
 
-        .param-row input,
-        .param-row select {
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .controls-section {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .project-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .project-name {
+            flex: 1;
             padding: 10px;
-            border: 2px solid #bdc3c7;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 14px;
         }
 
-        .btn {
-            padding: 15px 25px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
         }
 
-        .btn-primary {
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .visualization {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .freq-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .note-name {
+            font-weight: 600;
+            color: #e74c3c;
+            font-size: 1.1em;
+        }
+
+        .cent-diff.perfect {
+            color: #27ae60;
+        }
+
+        .cent-diff.positive {
+            color: #e74c3c;
+        }
+
+        .drone-row {
+            background: linear-gradient(90deg, rgba(231,76,60,0.1) 0%, rgba(255,255,255,0) 100%);
+            border-left: 4px solid #e74c3c;
+        }
+
+        .audio-controls {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
         }
 
-        .btn-primary:hover {
+        .audio-controls h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .audio-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .audio-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .audio-btn:hover {
+            background: rgba(255,255,255,0.3);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-            color: white;
+        .audio-btn.playing {
+            background: #28a745;
+            border-color: #28a745;
+            animation: pulse 1s infinite;
         }
 
-        .btn-secondary {
-            background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
-            color: white;
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .audio-controls-advanced {
+            display: grid;
+            gap: 15px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            min-width: 120px;
+            font-weight: 600;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .audio-info {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .audio-info.playing {
+            background: rgba(46, 204, 113, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .metric-card {
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .metric-card h3 {
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metric-unit {
+            font-size: 0.9em;
+            color: #666;
+            margin-left: 5px;
         }
 
         .construction-results {
@@ -342,35 +624,6 @@
             opacity: 0.7;
         }
 
-        .harmonics-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-
-        .harmonics-table th,
-        .harmonics-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .harmonics-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .harmonic-freq {
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .harmonic-note {
-            font-weight: 600;
-            color: #e74c3c;
-        }
-
         .construction-tips h4 {
             margin-bottom: 15px;
             color: #2c3e50;
@@ -392,69 +645,42 @@
             left: 0;
         }
 
-        .parameters {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+        .tooltip {
+            position: relative;
+            display: inline-block;
         }
 
-        .parameter-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #2c3e50;
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
         }
 
-        .parameter-group input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #bdc3c7;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .info-display {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .info-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .info-value {
-            color: #667eea;
-            font-weight: 600;
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
         }
 
         .loading {
             display: none;
             text-align: center;
-            padding: 40px;
+            padding: 20px;
+            color: #667eea;
         }
 
-        .loading.show {
+        .loading.active {
             display: block;
         }
 
@@ -471,217 +697,6 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-
-        .shape-canvas,
-        .spectrum-canvas {
-            width: 100%;
-            height: 300px;
-            border: 2px solid #ecf0f1;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .visualization-tabs {
-            display: flex;
-            margin-bottom: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .viz-tab {
-            flex: 1;
-            padding: 12px 15px;
-            background: none;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: #7f8c8d;
-        }
-
-        .viz-tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .viz-tab:hover:not(.active) {
-            background: #ecf0f1;
-        }
-
-        .visualization-view {
-            display: none;
-        }
-
-        .visualization-view.active {
-            display: block;
-        }
-
-        .spectrum-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .spectrum-info h4 {
-            margin-bottom: 8px;
-            color: #2c3e50;
-        }
-
-        .spectrum-info p {
-            color: #7f8c8d;
-            margin: 0;
-        }
-
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .results-table th,
-        .results-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .results-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .freq-value {
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .note-name {
-            font-weight: 600;
-            color: #e74c3c;
-            font-size: 1.1em;
-        }
-
-        .cent-diff.perfect {
-            color: #27ae60;
-        }
-
-        .cent-diff.positive {
-            color: #e74c3c;
-        }
-
-        .drone-row {
-            background: linear-gradient(90deg, rgba(231,76,60,0.1) 0%, rgba(255,255,255,0) 100%);
-            border-left: 4px solid #e74c3c;
-        }
-
-        .audio-controls {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-
-        .audio-controls h3 {
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .audio-buttons {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .audio-btn {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .audio-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-
-        .audio-btn:active, .audio-btn.playing {
-            background: rgba(255,255,255,0.4);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .audio-controls-advanced {
-            display: grid;
-            gap: 15px;
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .control-group label {
-            min-width: 120px;
-            font-weight: 600;
-        }
-
-        .slider {
-            flex: 1;
-            height: 6px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 3px;
-            outline: none;
-        }
-
-        .slider::-webkit-slider-thumb {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-        }
-
-        .audio-info {
-            background: rgba(255,255,255,0.1);
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            font-style: italic;
-        }
-
-        .audio-info.playing {
-            background: rgba(46, 204, 113, 0.3);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
         }
 
         .success-message,
@@ -713,6 +728,27 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-analyzing {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+
+        .status-ready {
+            background: #28a745;
+        }
+
+        .status-error {
+            background: #dc3545;
+        }
+
         .footer {
             text-align: center;
             padding: 30px;
@@ -721,121 +757,106 @@
             background: rgba(255,255,255,0.1);
             border-radius: 15px;
         }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-
-            .tabs {
-                flex-direction: column;
-            }
-
-            .shape-buttons {
-                grid-template-columns: 1fr;
-            }
-
-            .target-selector {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-
-            .parameters {
-                grid-template-columns: 1fr;
-            }
-
-            .controls {
-                flex-direction: column;
-            }
-
-            .result-cards {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>🎺 Calculadora de Didgeridoo</h1>
-            <p>Ferramenta profissional para análise acústica e construção de didgeridoos</p>
-        </header>
-
-        <div class="tabs">
-            <button class="tab-btn active" onclick="alternarModo('analise')">🔍 Análise de Geometria</button>
-            <button class="tab-btn" onclick="alternarModo('construcao')">🔧 Cálculo para Nota</button>
+        <div class="header">
+            <h1>🎵 Calculadora Avançada de Didgeridoo</h1>
+            <p>Ferramenta profissional para análise acústica, design e construção de didgeridoos</p>
         </div>
 
-        <main class="main-content">
-            <section class="panel input-panel">
-                <h2>⚙️ Configurações</h2>
+        <div class="mode-tabs">
+            <button class="mode-tab active" onclick="switchMode('analysis')">
+                🔍 Análise de Geometria
+            </button>
+            <button class="mode-tab" onclick="switchMode('construction')">
+                🔧 Cálculo para Nota
+            </button>
+        </div>
 
+        <div class="main-content">
+            <!-- Input Section -->
+            <div class="card">
+                <h2>⚙️ Configurações</h2>
+                
                 <!-- Modo Análise -->
-                <div id="modoAnalise" class="modo-content active">
+                <div id="analysisMode" class="mode-content active">
+                    <div class="project-controls">
+                        <input type="text" class="project-name" placeholder="Nome do projeto" value="Meu Didgeridoo">
+                        <button class="btn btn-secondary btn-small" onclick="saveProject()">💾 Salvar</button>
+                        <button class="btn btn-secondary btn-small" onclick="loadProject()">📁 Carregar</button>
+                    </div>
+
                     <div class="input-group">
                         <label>🎯 Formas Pré-definidas:</label>
                         <div class="shape-buttons">
-                            <button class="shape-btn" onclick="carregarForma('didgeridoo')">Didgeridoo</button>
-                            <button class="shape-btn" onclick="carregarForma('reto')">Tubo Reto</button>
-                            <button class="shape-btn" onclick="carregarForma('campana')">Campana</button>
-                            <button class="shape-btn" onclick="carregarForma('conico')">Cônico</button>
+                            <button class="shape-btn" onclick="loadShape('traditional')">🎺 Tradicional</button>
+                            <button class="shape-btn" onclick="loadShape('straight')">📏 Reto</button>
+                            <button class="shape-btn" onclick="loadShape('bell')">🔔 Campana</button>
+                            <button class="shape-btn" onclick="loadShape('conical')">📐 Cônico</button>
                         </div>
                     </div>
 
                     <div class="input-group">
-                        <label for="geometryInput">📐 Geometria do Tubo (posição_mm diâmetro_mm):</label>
-                        <textarea id="geometryInput" placeholder="# Geometria do Didgeridoo (formato DIDGMO):
-# Comprimento(m) Diâmetro(m)
-# Exemplo típico de didgeridoo:
-0.00 0.030
-0.10 0.032
-0.20 0.035
-0.30 0.038
-0.40 0.042
-0.50 0.045
-0.60 0.050
-0.70 0.055
-0.80 0.060
-0.90 0.065
-1.00 0.070
-1.10 0.075
-1.20 0.078
-1.30 0.080
-1.40 0.082
-1.50 0.085">0.00 0.030
-0.10 0.032
-0.20 0.035
-0.30 0.038
-0.40 0.042
-0.50 0.045
-0.60 0.050
-0.70 0.055
-0.80 0.060
-0.90 0.065
-1.00 0.070
-1.10 0.075
-1.20 0.078
-1.30 0.080
-1.40 0.082
-1.50 0.085</textarea>
+                        <label for="geometryInput">
+                            <div class="tooltip">
+                                📐 Geometria DIDGMO (posição[m] diâmetro[m])
+                                <span class="tooltiptext">Formato: comprimento em metros, diâmetro em metros. Ex: 0.00 0.030</span>
+                            </div>
+                        </label>
+                        <textarea id="geometryInput" placeholder="# Exemplo de didgeridoo tradicional
+# Formato: posição(m) diâmetro(m)
+0.00 0.030  # Bocal: 30mm
+0.10 0.032  # 10cm: 32mm
+0.20 0.035  # 20cm: 35mm
+0.50 0.045  # 50cm: 45mm
+1.00 0.060  # 100cm: 60mm
+1.50 0.080  # Final: 80mm"></textarea>
+                    </div>
+
+                    <div class="param-grid">
+                        <div class="param-group">
+                            <label for="soundSpeedInput">🌡️ Velocidade do Som (m/s)</label>
+                            <input type="number" id="soundSpeedInput" value="343" min="300" max="400" step="1" class="construction-input">
+                        </div>
+                        <div class="param-group">
+                            <label for="mouthpieceInput">🎯 Diâmetro do Bocal (mm)</label>
+                            <input type="number" id="mouthpieceInput" value="28" min="10" max="50" step="0.1" class="construction-input">
+                        </div>
+                    </div>
+
+                    <div class="controls-section">
+                        <button class="btn" onclick="analyzeGeometry()">
+                            <span class="status-indicator status-ready"></span>
+                            🔬 Analisar Geometria
+                        </button>
+                        <button class="btn btn-success" onclick="reverseCalculate()">
+                            <div class="tooltip">
+                                🎯 Calculadora Reversa
+                                <span class="tooltiptext">Calcula geometria para nota desejada</span>
+                            </div>
+                        </button>
                     </div>
                 </div>
 
                 <!-- Modo Construção -->
-                <div id="modoConstrucao" class="modo-content">
+                <div id="constructionMode" class="mode-content">
                     <div class="input-group">
                         <label>🎵 Nota Alvo:</label>
                         <div class="target-selector">
-                            <select id="targetNote">
+                            <select id="targetNote" class="construction-input">
                                 <option value="">Selecione uma nota</option>
-                                <option value="392.00">G4 (392.00 Hz)</option>
-                                <option value="415.30">G#4 (415.30 Hz)</option>
-                                <option value="440.00">A4 (440.00 Hz)</option>
-                                <option value="466.16">A#4 (466.16 Hz)</option>
-                                <option value="493.88">B4 (493.88 Hz)</option>
+                                <option value="69.30">C2 (69.30 Hz)</option>
+                                <option value="73.42">D2 (73.42 Hz)</option>
+                                <option value="82.41">E2 (82.41 Hz)</option>
+                                <option value="87.31">F2 (87.31 Hz)</option>
+                                <option value="98.00">G2 (98.00 Hz)</option>
+                                <option value="110.00">A2 (110.00 Hz)</option>
+                                <option value="123.47">B2 (123.47 Hz)</option>
                             </select>
                             <span class="ou-texto">ou</span>
-                            <input type="number" id="customTargetFreq" placeholder="Hz" step="0.01" class="freq-input">
+                            <input type="number" id="customTargetFreq" placeholder="Frequência (Hz)" step="0.01" class="freq-input">
                         </div>
                     </div>
 
@@ -847,7 +868,7 @@
                                 <span class="radio-custom"></span>
                                 <div class="radio-content">
                                     <strong>Tubo Fechado</strong>
-                                    <small>Uma extremidade fechada (como didgeridoo)</small>
+                                    <small>Uma extremidade fechada (didgeridoo típico)</small>
                                 </div>
                             </label>
                             <label class="radio-option">
@@ -855,40 +876,36 @@
                                 <span class="radio-custom"></span>
                                 <div class="radio-content">
                                     <strong>Tubo Aberto</strong>
-                                    <small>Ambas extremidades abertas (como flauta)</small>
+                                    <small>Ambas extremidades abertas</small>
                                 </div>
                             </label>
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <label>📏 Configurações do Tubo:</label>
-                        <div class="construction-params">
-                            <div class="param-row">
-                                <label>Diâmetro (mm):</label>
-                                <input type="number" id="targetDiameter" value="30" min="10" max="100" step="0.5">
-                            </div>
-                            <div class="param-row">
-                                <label>Espessura da parede (mm):</label>
-                                <input type="number" id="wallThickness" value="3" min="1" max="20" step="0.1">
-                            </div>
-                            <div class="param-row">
-                                <label>Material:</label>
-                                <select id="materialType">
-                                    <option value="madeira">Madeira</option>
-                                    <option value="bambu">Bambu</option>
-                                    <option value="pvc">PVC</option>
-                                    <option value="metal">Metal</option>
-                                </select>
-                            </div>
+                    <div class="param-grid">
+                        <div class="param-group">
+                            <label>📏 Diâmetro (mm):</label>
+                            <input type="number" id="targetDiameter" value="30" min="10" max="100" step="0.5" class="construction-input">
+                        </div>
+                        <div class="param-group">
+                            <label>🧱 Espessura (mm):</label>
+                            <input type="number" id="wallThickness" value="3" min="1" max="20" step="0.1" class="construction-input">
+                        </div>
+                        <div class="param-group">
+                            <label>🌳 Material:</label>
+                            <select id="materialType" class="construction-input">
+                                <option value="madeira">Madeira</option>
+                                <option value="bambu">Bambu</option>
+                                <option value="pvc">PVC</option>
+                                <option value="metal">Metal</option>
+                            </select>
                         </div>
                     </div>
 
-                    <button class="btn btn-primary" onclick="calcularParaNota()">
+                    <button class="btn" onclick="calculateForNote()">
                         <span>🎯</span> Calcular Dimensões
                     </button>
 
-                    <!-- Resultados da Construção -->
                     <div id="constructionResults" class="construction-results" style="display: none;">
                         <h3>📐 Dimensões Calculadas</h3>
                         <div class="result-cards">
@@ -909,22 +926,6 @@
                             </div>
                         </div>
 
-                        <div class="harmonic-table">
-                            <h4>🎵 Harmônicos que o tubo produzirá:</h4>
-                            <table class="harmonics-table">
-                                <thead>
-                                    <tr>
-                                        <th>Harmônico</th>
-                                        <th>Frequência (Hz)</th>
-                                        <th>Nota</th>
-                                        <th>Comprimento (mm)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="harmonicsTableBody">
-                                </tbody>
-                            </table>
-                        </div>
-
                         <div class="construction-tips">
                             <h4>💡 Dicas de Construção:</h4>
                             <div id="constructionTips"></div>
@@ -932,72 +933,31 @@
                     </div>
                 </div>
 
-                <div class="parameters">
-                    <div class="parameter-group">
-                        <label for="mouthpieceInput">🎯 Diâmetro do Bocal (mm)</label>
-                        <input type="number" id="mouthpieceInput" value="28" min="10" max="50" step="0.1">
-                    </div>
-                    <div class="parameter-group">
-                        <label for="soundSpeedInput">🌡️ Velocidade do Som (m/s)</label>
-                        <input type="number" id="soundSpeedInput" value="343" min="300" max="400" step="1">
-                    </div>
+                <div class="controls-section">
+                    <button class="btn btn-secondary" onclick="exportData()">📊 Exportar CSV</button>
                 </div>
 
-                <div class="controls" id="analysisControls">
-                    <button class="btn btn-primary" onclick="analisar()">
-                        <span>🔍</span> Analisar
-                    </button>
-                    <button class="btn btn-success" onclick="salvarArquivo()">
-                        <span>💾</span> Salvar
-                    </button>
-                    <button class="btn btn-secondary" onclick="carregarArquivo()">
-                        <span>📂</span> Carregar
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportarCSV()">
-                        <span>📊</span> Exportar CSV
-                    </button>
-                </div>
+                <div id="statusMessage"></div>
+            </div>
 
-                <div class="info-display">
-                    <div class="info-row">
-                        <span class="info-label">📏 Comprimento Total:</span>
-                        <span class="info-value" id="totalLength">1.50 m</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">🎯 Diâmetro Inicial:</span>
-                        <span class="info-value" id="mouthpieceDiameter">30.0 mm</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">📍 Pontos de Controle:</span>
-                        <span class="info-value" id="pointCount">7</span>
-                    </div>
-                </div>
-
-                <div id="messageArea"></div>
-            </section>
-
-            <section class="panel visualization-panel">
-                <h2>📊 Visualização e Resultados</h2>
-                
-                <div class="loading" id="loadingIndicator">
-                    <div class="spinner"></div>
-                    <p>Calculando frequências...</p>
-                </div>
+            <!-- Results Section -->
+            <div class="card">
+                <h2>📊 Resultados da Análise</h2>
                 
                 <div class="audio-controls">
                     <h3>🔊 Preview Sonoro</h3>
                     <div class="audio-buttons">
-                        <button class="btn btn-primary audio-btn" onclick="playDrone()" id="droneBtn">
-                            <span>🎵</span> Tocar Drone
+                        <button class="audio-btn" onclick="playDrone()">
+                            🎵 Drone
                         </button>
-                        <button class="btn btn-secondary audio-btn" onclick="playHarmonics()" id="harmonicsBtn">
-                            <span>🎺</span> Tocar Trombetas
+                        <button class="audio-btn" onclick="playHarmonics()">
+                            🎺 Trombetas
                         </button>
-                        <button class="btn btn-secondary audio-btn" onclick="playFullSpectrum()" id="spectrumBtn">
-                            <span>🎼</span> Espectro Completo
+                        <button class="audio-btn" onclick="playFullSpectrum()">
+                            🎼 Espectro Completo
                         </button>
-                        <button class="btn btn-secondary audio-btn" onclick="stopAllAudio()" id="stopBtn">
-                            <span>⏹️</span> Parar
+                        <button class="audio-btn" onclick="stopAllAudio()">
+                            ⏹️ Parar
                         </button>
                     </div>
                     
@@ -1025,53 +985,70 @@
                     </div>
                 </div>
 
-                <div class="visualization-tabs">
-                    <button class="viz-tab active" onclick="switchVisualization('shape')">📐 Geometria</button>
-                    <button class="viz-tab" onclick="switchVisualization('impedance')">📊 Impedância</button>
-                    <button class="viz-tab" onclick="switchVisualization('spectrum')">🎵 Espectro</button>
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('results')">📈 Resultados</button>
+                    <button class="tab" onclick="showTab('visualization')">📊 Visualização</button>
+                    <button class="tab" onclick="showTab('metrics')">📋 Métricas</button>
                 </div>
 
-                <div id="shapeView" class="visualization-view active">
-                    <canvas id="shapeCanvas" class="shape-canvas"></canvas>
+                <div id="results" class="tab-content active">
+                    <div class="loading" id="loadingIndicator">
+                        <div class="spinner"></div>
+                        <p>Analisando geometria...</p>
+                    </div>
+                    
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>Harmônico</th>
+                                <th>Freq. (Hz)</th>
+                                <th>Nota</th>
+                                <th>Oitava</th>
+                                <th>Cents</th>
+                                <th>Impedância</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #666; padding: 30px;">
+                                    Insira uma geometria e clique em "Analisar" para ver os resultados
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                <div id="impedanceView" class="visualization-view">
-                    <canvas id="impedanceCanvas" class="spectrum-canvas"></canvas>
-                    <div class="spectrum-info">
-                        <h4>🔬 Análise de Impedância</h4>
-                        <p>Picos indicam frequências de ressonância do tubo</p>
+                <div id="visualization" class="tab-content">
+                    <div class="tabs">
+                        <button class="tab active" onclick="showVisualization('geometry')">📐 Geometria</button>
+                        <button class="tab" onclick="showVisualization('impedance')">📊 Impedância</button>
+                        <button class="tab" onclick="showVisualization('spectrum')">🎵 Espectro</button>
+                    </div>
+                    <canvas id="visualizationCanvas" class="visualization"></canvas>
+                </div>
+
+                <div id="metrics" class="tab-content">
+                    <div id="metricsContainer">
+                        <div class="metric-card">
+                            <h3>📏 Comprimento Total</h3>
+                            <div class="metric-value">--<span class="metric-unit">mm</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>⭕ Diâmetro Médio</h3>
+                            <div class="metric-value">--<span class="metric-unit">mm</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>🎵 Nota Fundamental</h3>
+                            <div class="metric-value">--<span class="metric-unit">Hz</span></div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>🎯 Precisão</h3>
+                            <div class="metric-value">--</div>
+                        </div>
                     </div>
                 </div>
-
-                <div id="spectrumView" class="visualization-view">
-                    <canvas id="spectrumCanvas" class="spectrum-canvas"></canvas>
-                    <div class="spectrum-info">
-                        <h4>🎵 Espectro Sonoro</h4>
-                        <p>Distribuição de energia entre os harmônicos</p>
-                    </div>
-                </div>
-                
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th>Frequência (Hz)</th>
-                            <th>Nota Musical</th>
-                            <th>Oitava</th>
-                            <th>Desvio (¢)</th>
-                            <th>Harmônico</th>
-                            <th>Impedância (MΩ)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody">
-                        <tr>
-                            <td colspan="6" style="color: #7f8c8d; font-style: italic; padding: 30px;">
-                                Clique em "Analisar" para calcular as frequências
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-        </main>
+            </div>
+        </div>
 
         <footer class="footer">
             <p>🎵 Desenvolvido para músicos e luthiers</p>
@@ -1096,158 +1073,128 @@
 
         // Estado da aplicação
         let appState = {
+            currentMode: 'analysis',
             currentGeometry: [],
             analysisResults: [],
-            isAnalyzing: false,
-            currentMode: 'analise',
-            currentVisualization: 'shape',
+            currentVisualization: 'geometry',
             audioContext: null,
             oscillators: [],
-            isPlaying: false
+            isPlaying: false,
+            isAnalyzing: false
         };
 
         // Formas pré-definidas (formato DIDGMO em metros)
         const PREDEFINED_SHAPES = {
-            didgeridoo: `0.00 0.030
-0.10 0.032
-0.20 0.035
-0.30 0.038
-0.40 0.042
-0.50 0.045
-0.60 0.050
-0.70 0.055
-0.80 0.060
-0.90 0.065
-1.00 0.070
-1.10 0.075
-1.20 0.078
-1.30 0.080
-1.40 0.082
-1.50 0.085`,
-            reto: `0.00 0.035
-1.50 0.035`,
-            campana: `0.00 0.030
-1.20 0.030
-1.40 0.050
-1.50 0.080`,
-            conico: `0.00 0.025
-1.50 0.070`
+            traditional: `# Didgeridoo Tradicional Australiano
+# Formato: posição(m) diâmetro(m)
+0.00 0.030  # Bocal: 30mm
+0.10 0.032  # 10cm: ligeiro alargamento
+0.20 0.035  # 20cm: continuação suave
+0.50 0.045  # 50cm: meio do instrumento
+1.00 0.060  # 100cm: expansão gradual
+1.30 0.070  # 130cm: pré-campana
+1.50 0.080  # Final: campana 80mm`,
+            
+            straight: `# Tubo Reto Uniforme
+# Formato: posição(m) diâmetro(m)
+0.00 0.040  # Início: 40mm
+0.50 0.040  # Meio: 40mm
+1.00 0.040  # Três quartos: 40mm
+1.50 0.040  # Final: 40mm`,
+            
+            bell: `# Formato Campana (Bell)
+# Formato: posição(m) diâmetro(m)
+0.00 0.030  # Bocal: 30mm
+0.50 0.035  # Meio: pequeno aumento
+1.00 0.045  # Início da campana
+1.30 0.065  # Expansão da campana
+1.50 0.090  # Final: campana larga`,
+            
+            conical: `# Formato Cônico Linear
+# Formato: posição(m) diâmetro(m)
+0.00 0.025  # Bocal: 25mm (estreito)
+0.30 0.035  # 30cm: expansão gradual
+0.60 0.045  # 60cm: continuação
+0.90 0.055  # 90cm: expandindo
+1.20 0.065  # 120cm: quase no final
+1.50 0.075  # Final: 75mm`
         };
 
-        // Utilitários
-        function showMessage(text, type = 'info') {
-            const messageArea = document.getElementById('messageArea');
-            const messageClass = type === 'error' ? 'error-message' : 'success-message';
-            
-            messageArea.innerHTML = `<div class="${messageClass} fade-in">${text}</div>`;
-            
-            setTimeout(() => {
-                messageArea.innerHTML = '';
-            }, 5000);
-        }
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            setupAudioContext();
+            setupEventListeners();
+            loadDefaultGeometry();
+            setupAudioControls();
+        });
 
-        function toggleLoading(show) {
-            const loading = document.getElementById('loadingIndicator');
-            loading.classList.toggle('show', show);
-            appState.isAnalyzing = show;
-        }
-
-        // Alternância entre visualizações
-        function switchVisualization(type) {
-            appState.currentVisualization = type;
-            
-            // Atualizar tabs
-            document.querySelectorAll('.viz-tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Mostrar/esconder views
-            document.querySelectorAll('.visualization-view').forEach(view => view.classList.remove('active'));
-            document.getElementById(`${type}View`).classList.add('active');
-            
-            // Redesenhar a visualização atual
-            if (appState.currentGeometry.length > 0) {
-                switch(type) {
-                    case 'shape':
-                        drawShape();
-                        break;
-                    case 'impedance':
-                        drawImpedanceSpectrum();
-                        break;
-                    case 'spectrum':
-                        drawSoundSpectrum();
-                        break;
-                }
+        function setupAudioContext() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                appState.audioContext = audioContext;
+            } catch (e) {
+                console.warn('Web Audio API não suportada:', e);
             }
+        }
+
+        function setupEventListeners() {
+            // Auto-análise com debounce
+            let timeout;
+            document.getElementById('geometryInput').addEventListener('input', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(analyzeGeometry, 1000);
+            });
+
+            // Parar áudio quando mudança de geometria
+            document.getElementById('geometryInput').addEventListener('input', function() {
+                stopAllAudio();
+            });
+        }
+
+        function setupAudioControls() {
+            // Volume control
+            const volumeControl = document.getElementById('volumeControl');
+            const volumeValue = document.getElementById('volumeValue');
+            
+            volumeControl.addEventListener('input', function() {
+                volumeValue.textContent = this.value + '%';
+            });
+
+            // Duration control
+            const durationControl = document.getElementById('durationControl');
+            const durationValue = document.getElementById('durationValue');
+            
+            durationControl.addEventListener('input', function() {
+                durationValue.textContent = this.value + 's';
+            });
+        }
+
+        function loadDefaultGeometry() {
+            document.getElementById('geometryInput').value = PREDEFINED_SHAPES.traditional;
         }
 
         // Alternância entre modos
-        function alternarModo(modo) {
-            appState.currentMode = modo;
+        function switchMode(mode) {
+            appState.currentMode = mode;
             
             // Atualizar tabs
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.mode-tab').forEach(tab => tab.classList.remove('active'));
             event.target.classList.add('active');
             
             // Mostrar/esconder conteúdo
-            document.querySelectorAll('.modo-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.mode-content').forEach(content => content.classList.remove('active'));
             
-            if (modo === 'analise') {
-                document.getElementById('modoAnalise').classList.add('active');
-                document.getElementById('analysisControls').style.display = 'flex';
+            if (mode === 'analysis') {
+                document.getElementById('analysisMode').classList.add('active');
             } else {
-                document.getElementById('modoConstrucao').classList.add('active');
-                document.getElementById('analysisControls').style.display = 'none';
+                document.getElementById('constructionMode').classList.add('active');
             }
             
-            showMessage(`📋 Modo alterado para: ${modo === 'analise' ? 'Análise de Geometria' : 'Cálculo para Nota'}`);
+            showMessage(`📋 Modo alterado para: ${mode === 'analysis' ? 'Análise de Geometria' : 'Cálculo para Nota'}`);
         }
 
-        // Parser de geometria (formato DIDGMO)
-        function parseGeometry(text = null) {
-            try {
-                const geometryText = text || document.getElementById('geometryInput').value.trim();
-                const lines = geometryText.split('\n');
-                const points = [];
-                
-                for (let line of lines) {
-                    line = line.trim();
-                    if (line === '' || line.startsWith('#')) continue;
-                    
-                    const parts = line.split(/\s+/);
-                    if (parts.length >= 2) {
-                        const position = parseFloat(parts[0]); // em metros
-                        const diameter = parseFloat(parts[1]); // em metros
-                        
-                        if (!isNaN(position) && !isNaN(diameter) && diameter > 0) {
-                            points.push({ 
-                                position: position * 1000, // converter para mm para visualização
-                                diameter: diameter * 1000   // converter para mm para visualização
-                            });
-                        }
-                    }
-                }
-                
-                if (points.length < 2) {
-                    throw new Error('É necessário pelo menos 2 pontos de geometria');
-                }
-                
-                // Ordenar por posição
-                points.sort((a, b) => a.position - b.position);
-                
-                // Validar posições
-                if (points[0].position < 0) {
-                    throw new Error('A primeira posição deve ser maior ou igual a 0');
-                }
-                
-                return points;
-            } catch (error) {
-                console.error('Erro no parsing da geometria:', error);
-                throw error;
-            }
-        }
-
-        // Carregamento de formas pré-definidas
-        function carregarForma(shapeType) {
+        // Carregar formas pré-definidas
+        function loadShape(shapeType) {
             try {
                 const shapeData = PREDEFINED_SHAPES[shapeType];
                 if (!shapeData) {
@@ -1265,35 +1212,58 @@
                 showMessage(`✅ Forma "${shapeType}" carregada com sucesso`);
                 
                 // Analisar automaticamente após 500ms
-                setTimeout(() => analisar(), 500);
+                setTimeout(() => analyzeGeometry(), 500);
                 
             } catch (error) {
                 showMessage(`❌ Erro ao carregar forma: ${error.message}`, 'error');
             }
         }
 
-        // Atualização das informações
-        function updateInfo() {
-            if (appState.currentGeometry.length === 0) return;
-            
-            const totalLength = appState.currentGeometry[appState.currentGeometry.length - 1].position;
-            const mouthpieceDiameter = document.getElementById('mouthpieceInput').value;
-            const pointCount = appState.currentGeometry.length;
-            
-            document.getElementById('totalLength').textContent = `${(totalLength/1000).toFixed(2)} m`;
-            document.getElementById('mouthpieceDiameter').textContent = `${(appState.currentGeometry[0].diameter).toFixed(1)} mm`;
-            document.getElementById('pointCount').textContent = pointCount;
+        // Parser de geometria (formato DIDGMO)
+        function parseGeometry(input) {
+            try {
+                const geometryText = input || document.getElementById('geometryInput').value.trim();
+                const lines = geometryText.split('\n');
+                const points = [];
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    if (line === '' || line.startsWith('#')) continue;
+                    
+                    const parts = line.split(/\s+/);
+                    if (parts.length >= 2) {
+                        const position = parseFloat(parts[0]); // em metros
+                        const diameter = parseFloat(parts[1]); // em metros
+                        
+                        if (!isNaN(position) && !isNaN(diameter) && diameter > 0) {
+                            points.push({ 
+                                position: position * 1000, // converter para mm
+                                diameter: diameter * 1000   // converter para mm
+                            });
+                        }
+                    }
+                }
+                
+                if (points.length < 2) {
+                    throw new Error('É necessário pelo menos 2 pontos de geometria');
+                }
+                
+                // Ordenar por posição
+                points.sort((a, b) => a.position - b.position);
+                
+                return points;
+            } catch (error) {
+                console.error('Erro no parsing da geometria:', error);
+                throw error;
+            }
         }
 
-        // Cálculo de frequências usando análise de impedância (método DIDGMO)
+        // Cálculo de frequências usando análise de impedância
         function calculateFrequencies() {
-            const soundSpeed = 343; // m/s (fixo, não afeta muito o resultado)
+            const soundSpeed = parseFloat(document.getElementById('soundSpeedInput').value) || 343;
             const totalLength = appState.currentGeometry[appState.currentGeometry.length - 1].position / 1000; // converter para metros
             
             const results = [];
-            
-            // Análise mais sofisticada considerando geometria cônica
-            // Frequências de ressonância para tubo cônico fechado
             
             // Calcular frequência fundamental baseada no comprimento efetivo
             const avgDiameter = appState.currentGeometry.reduce((sum, point, index, arr) => {
@@ -1311,9 +1281,8 @@
             // Frequência fundamental aproximada
             const fundamentalFreq = soundSpeed / (4 * effectiveLength);
             
-            // Gerar harmônicos ímpares com correções para geometria cônica
+            // Gerar harmônicos com correções para geometria cônica
             for (let n = 1; n <= CONFIG.MAX_HARMONICS; n++) {
-                // Para tubos cônicos, os harmônicos não são múltiplos exatos
                 let frequency;
                 
                 if (n === 1) {
@@ -1329,7 +1298,7 @@
                 if (frequency >= CONFIG.MIN_FREQUENCY && frequency <= CONFIG.MAX_FREQUENCY) {
                     const noteInfo = findClosestNote(frequency);
                     
-                    // Calcular impedância relativa (maior para frequências de ressonância)
+                    // Calcular impedância relativa
                     const impedance = calculateImpedance(frequency, effectiveLength, avgDiameter / 1000);
                     
                     results.push({
@@ -1338,275 +1307,13 @@
                         note: noteInfo.note,
                         octave: noteInfo.octave,
                         centDiff: noteInfo.centDiff,
-                        impedance: impedance
+                        impedance: impedance,
+                        type: n === 1 ? 'Drone' : 'Trombeta'
                     });
                 }
             }
             
             return results;
-        }
-        
-        // Inicializar contexto de áudio
-        function initAudioContext() {
-            if (!appState.audioContext) {
-                appState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            return appState.audioContext;
-        }
-
-        // Criar oscilador com envelope ADSR
-        function createOscillator(frequency, type = 'sawtooth', gain = 0.1) {
-            const audioCtx = initAudioContext();
-            
-            // Oscillator
-            const oscillator = audioCtx.createOscillator();
-            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-            oscillator.type = type;
-            
-            // Gain (volume)
-            const gainNode = audioCtx.createGain();
-            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-            
-            // Filter para simular timbre do didgeridoo
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(frequency * 3, audioCtx.currentTime);
-            filter.Q.setValueAtTime(2, audioCtx.currentTime);
-            
-            // Conectar: oscillator -> filter -> gain -> destination
-            oscillator.connect(filter);
-            filter.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            return { oscillator, gainNode, filter };
-        }
-
-        // Simular respiração circular (modulação de amplitude)
-        function addBreathingEffect(gainNode, audioCtx, duration) {
-            const breathingRate = 0.3; // Hz
-            const breathingDepth = 0.3;
-            
-            for (let t = 0; t < duration; t += 0.1) {
-                const time = audioCtx.currentTime + t;
-                const breathing = 1 + breathingDepth * Math.sin(2 * Math.PI * breathingRate * t);
-                gainNode.gain.linearRampToValueAtTime(
-                    gainNode.gain.value * breathing, 
-                    time
-                );
-            }
-        }
-
-        // Tocar drone (frequência fundamental)
-        function playDrone() {
-            if (appState.analysisResults.length === 0) {
-                showMessage('❌ Execute a análise primeiro!', 'error');
-                return;
-            }
-
-            stopAllAudio();
-
-            const droneFreq = appState.analysisResults[0].frequency;
-            const volume = document.getElementById('volumeControl').value / 100;
-            const duration = parseFloat(document.getElementById('durationControl').value);
-            const hasBreathing = document.getElementById('breathingControl').checked;
-
-            const audioCtx = initAudioContext();
-            
-            // Fundamental (drone)
-            const fundamental = createOscillator(droneFreq, 'sawtooth', volume * 0.8);
-            
-            // Harmônicos para riqueza timbral
-            const harmonics = [];
-            for (let i = 1; i < Math.min(4, appState.analysisResults.length); i++) {
-                const harmFreq = appState.analysisResults[i].frequency;
-                const harmGain = volume * 0.3 / (i + 1); // Harmônicos mais fracos
-                harmonics.push(createOscillator(harmFreq, 'sine', harmGain));
-            }
-
-            // Envelope ADSR
-            const attack = 0.1;
-            const decay = 0.3;
-            const sustain = 0.7;
-            const release = 0.5;
-
-            // Aplicar envelope ao fundamental
-            fundamental.gainNode.gain.linearRampToValueAtTime(volume * 0.8, audioCtx.currentTime + attack);
-            fundamental.gainNode.gain.linearRampToValueAtTime(volume * 0.8 * sustain, audioCtx.currentTime + attack + decay);
-            fundamental.gainNode.gain.setValueAtTime(volume * 0.8 * sustain, audioCtx.currentTime + duration - release);
-            fundamental.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
-
-            // Aplicar envelope aos harmônicos
-            harmonics.forEach((harmonic, index) => {
-                const harmVolume = volume * 0.3 / (index + 2);
-                harmonic.gainNode.gain.linearRampToValueAtTime(harmVolume, audioCtx.currentTime + attack);
-                harmonic.gainNode.gain.linearRampToValueAtTime(harmVolume * sustain, audioCtx.currentTime + attack + decay);
-                harmonic.gainNode.gain.setValueAtTime(harmVolume * sustain, audioCtx.currentTime + duration - release);
-                harmonic.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
-            });
-
-            // Adicionar respiração circular se selecionado
-            if (hasBreathing) {
-                addBreathingEffect(fundamental.gainNode, audioCtx, duration);
-                harmonics.forEach(harmonic => {
-                    addBreathingEffect(harmonic.gainNode, audioCtx, duration);
-                });
-            }
-
-            // Iniciar osciladores
-            fundamental.oscillator.start(audioCtx.currentTime);
-            fundamental.oscillator.stop(audioCtx.currentTime + duration);
-            
-            harmonics.forEach(harmonic => {
-                harmonic.oscillator.start(audioCtx.currentTime);
-                harmonic.oscillator.stop(audioCtx.currentTime + duration);
-            });
-
-            // Armazenar referências
-            appState.oscillators = [fundamental, ...harmonics];
-            appState.isPlaying = true;
-
-            // UI feedback
-            document.getElementById('droneBtn').classList.add('playing');
-            document.getElementById('audioInfo').innerHTML = `🎵 Tocando drone: ${Math.round(droneFreq)} Hz (${appState.analysisResults[0].note}${appState.analysisResults[0].octave})`;
-            document.getElementById('audioInfo').classList.add('playing');
-
-            // Limpar após término
-            setTimeout(() => {
-                stopAllAudio();
-            }, duration * 1000);
-        }
-
-        // Tocar harmônicos (trombetas)
-        function playHarmonics() {
-            if (appState.analysisResults.length < 2) {
-                showMessage('❌ Não há harmônicos suficientes!', 'error');
-                return;
-            }
-
-            stopAllAudio();
-
-            const volume = document.getElementById('volumeControl').value / 100;
-            const duration = parseFloat(document.getElementById('durationControl').value);
-            const audioCtx = initAudioContext();
-
-            const harmonicOscillators = [];
-
-            // Tocar harmônicos em sequência rápida (arpejo)
-            appState.analysisResults.slice(1, 6).forEach((result, index) => {
-                const delay = index * 0.3; // Atraso entre harmônicos
-                const harmDuration = 0.8; // Duração de cada harmônico
-                
-                setTimeout(() => {
-                    if (!appState.isPlaying) return; // Verificar se ainda está tocando
-                    
-                    const harmonic = createOscillator(result.frequency, 'triangle', volume * 0.6);
-                    
-                    // Envelope mais agressivo para trombetas
-                    harmonic.gainNode.gain.linearRampToValueAtTime(volume * 0.6, audioCtx.currentTime + 0.05);
-                    harmonic.gainNode.gain.linearRampToValueAtTime(volume * 0.4, audioCtx.currentTime + 0.2);
-                    harmonic.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + harmDuration);
-                    
-                    // Filtro mais agressivo
-                    harmonic.filter.frequency.setValueAtTime(result.frequency * 2, audioCtx.currentTime);
-                    
-                    harmonic.oscillator.start(audioCtx.currentTime);
-                    harmonic.oscillator.stop(audioCtx.currentTime + harmDuration);
-                    
-                    harmonicOscillators.push(harmonic);
-                }, delay * 1000);
-            });
-
-            appState.oscillators = harmonicOscillators;
-            appState.isPlaying = true;
-
-            // UI feedback
-            document.getElementById('harmonicsBtn').classList.add('playing');
-            document.getElementById('audioInfo').innerHTML = `🎺 Tocando trombetas: ${appState.analysisResults.slice(1, 6).length} harmônicos`;
-            document.getElementById('audioInfo').classList.add('playing');
-
-            // Limpar após término
-            setTimeout(() => {
-                stopAllAudio();
-            }, duration * 1000);
-        }
-
-        // Tocar espectro completo
-        function playFullSpectrum() {
-            if (appState.analysisResults.length === 0) {
-                showMessage('❌ Execute a análise primeiro!', 'error');
-                return;
-            }
-
-            stopAllAudio();
-
-            const volume = document.getElementById('volumeControl').value / 100;
-            const duration = parseFloat(document.getElementById('durationControl').value);
-            const hasBreathing = document.getElementById('breathingControl').checked;
-            const audioCtx = initAudioContext();
-
-            const allOscillators = [];
-
-            // Tocar todos os harmônicos simultaneamente com volumes proporcionais
-            appState.analysisResults.forEach((result, index) => {
-                const harmVolume = volume * Math.pow(0.6, index); // Volume decrescente
-                const oscillator = createOscillator(
-                    result.frequency, 
-                    index === 0 ? 'sawtooth' : 'sine', 
-                    harmVolume
-                );
-
-                // Envelope
-                oscillator.gainNode.gain.linearRampToValueAtTime(harmVolume, audioCtx.currentTime + 0.2);
-                oscillator.gainNode.gain.linearRampToValueAtTime(harmVolume * 0.8, audioCtx.currentTime + 0.5);
-                oscillator.gainNode.gain.setValueAtTime(harmVolume * 0.8, audioCtx.currentTime + duration - 0.3);
-                oscillator.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
-
-                if (hasBreathing) {
-                    addBreathingEffect(oscillator.gainNode, audioCtx, duration);
-                }
-
-                oscillator.oscillator.start(audioCtx.currentTime);
-                oscillator.oscillator.stop(audioCtx.currentTime + duration);
-
-                allOscillators.push(oscillator);
-            });
-
-            appState.oscillators = allOscillators;
-            appState.isPlaying = true;
-
-            // UI feedback
-            document.getElementById('spectrumBtn').classList.add('playing');
-            document.getElementById('audioInfo').innerHTML = `🎼 Tocando espectro completo: ${appState.analysisResults.length} frequências`;
-            document.getElementById('audioInfo').classList.add('playing');
-
-            // Limpar após término
-            setTimeout(() => {
-                stopAllAudio();
-            }, duration * 1000);
-        }
-
-        // Parar todo áudio
-        function stopAllAudio() {
-            if (appState.audioContext) {
-                // Parar todos os osciladores
-                appState.oscillators.forEach(osc => {
-                    try {
-                        if (osc.oscillator) {
-                            osc.oscillator.stop();
-                        }
-                    } catch (e) {
-                        // Oscilador já foi parado
-                    }
-                });
-            }
-
-            appState.oscillators = [];
-            appState.isPlaying = false;
-
-            // UI feedback
-            document.querySelectorAll('.audio-btn').forEach(btn => btn.classList.remove('playing'));
-            document.getElementById('audioInfo').classList.remove('playing');
-            document.getElementById('audioInfo').innerHTML = 'Preview sonoro parado';
         }
 
         // Calcular impedância para uma frequência específica
@@ -1622,13 +1329,13 @@
             // Impedância de entrada para tubo fechado cônico
             const impedance = Z0 * Math.abs(1 / Math.tan(kL)) * (1 + 0.5 * ka);
             
-            return Math.round(impedance);
+            return impedance / 1000000; // Converter para MΩ
         }
 
-        // Encontrar nota mais próxima (corrigindo oitavas)
+        // Encontrar nota mais próxima
         function findClosestNote(frequency) {
             let closestNote = 'C';
-            let closestOctave = 2; // Corrigido: didgeridoo está na oitava 2, não 4
+            let closestOctave = 2;
             let minDiff = Infinity;
             
             // Expandir range de oitavas para cobrir frequências baixas do didgeridoo
@@ -1655,494 +1362,15 @@
             };
         }
 
-        // Desenho do espectro de impedância
-        function drawImpedanceSpectrum() {
-            const canvas = document.getElementById('impedanceCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Ajustar tamanho do canvas
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            
-            const { width, height } = canvas;
-            const margin = 60;
-            
-            // Limpar canvas
-            ctx.clearRect(0, 0, width, height);
-            
-            if (appState.analysisResults.length === 0) {
-                ctx.fillStyle = '#7f8c8d';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Execute a análise para ver o espectro de impedância', width/2, height/2);
-                return;
-            }
-            
-            const maxFreq = 1000;
-            const scaleX = (width - margin * 2) / maxFreq;
-            const scaleY = height - margin * 2;
-            
-            // Desenhar eixos
-            ctx.strokeStyle = '#bdc3c7';
-            ctx.lineWidth = 2;
-            
-            // Eixo X
-            ctx.beginPath();
-            ctx.moveTo(margin, height - margin);
-            ctx.lineTo(width - margin, height - margin);
-            ctx.stroke();
-            
-            // Eixo Y
-            ctx.beginPath();
-            ctx.moveTo(margin, margin);
-            ctx.lineTo(margin, height - margin);
-            ctx.stroke();
-            
-            // Labels dos eixos
-            ctx.fillStyle = '#2c3e50';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Frequência (Hz)', width/2, height - 10);
-            
-            ctx.save();
-            ctx.translate(20, height/2);
-            ctx.rotate(-Math.PI/2);
-            ctx.fillText('Impedância', 0, 0);
-            ctx.restore();
-            
-            // Marcações do eixo X
-            ctx.fillStyle = '#7f8c8d';
-            ctx.font = '12px Arial';
-            for (let i = 0; i <= 5; i++) {
-                const freq = (maxFreq / 5) * i;
-                const x = margin + freq * scaleX;
-                
-                ctx.beginPath();
-                ctx.strokeStyle = '#ecf0f1';
-                ctx.moveTo(x, margin);
-                ctx.lineTo(x, height - margin);
-                ctx.stroke();
-                
-                ctx.fillText(freq.toString(), x, height - margin + 20);
-            }
-            
-            // Desenhar curva de impedância base
-            ctx.strokeStyle = '#95a5a6';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            
-            for (let freq = 0; freq <= maxFreq; freq += 5) {
-                const x = margin + freq * scaleX;
-                // Impedância base decresce com a frequência
-                const baseImpedance = Math.max(0.05, 0.3 * Math.exp(-freq / 400));
-                const y = height - margin - baseImpedance * scaleY;
-                
-                if (freq === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.stroke();
-            
-            // Desenhar picos de ressonância
-            appState.analysisResults.forEach((result, index) => {
-                const freq = result.frequency;
-                const x = margin + freq * scaleX;
-                
-                if (freq <= maxFreq) {
-                    // Altura do pico baseada no harmônico (primeiros são mais altos)
-                    const peakHeight = Math.max(0.1, 1.0 / Math.sqrt(result.harmonic));
-                    const peakY = height - margin - peakHeight * scaleY;
-                    
-                    // Desenhar pico gaussiano
-                    ctx.strokeStyle = index === 0 ? '#e74c3c' : '#667eea';
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    
-                    const bandwidth = 10; // Largura do pico
-                    for (let f = freq - bandwidth * 2; f <= freq + bandwidth * 2; f += 1) {
-                        if (f >= 0 && f <= maxFreq) {
-                            const xPeak = margin + f * scaleX;
-                            const gaussian = Math.exp(-Math.pow((f - freq) / bandwidth, 2));
-                            const baseImpedance = Math.max(0.05, 0.3 * Math.exp(-f / 400));
-                            const yPeak = height - margin - (baseImpedance + peakHeight * gaussian) * scaleY;
-                            
-                            if (f === freq - bandwidth * 2) {
-                                ctx.moveTo(xPeak, yPeak);
-                            } else {
-                                ctx.lineTo(xPeak, yPeak);
-                            }
-                        }
-                    }
-                    ctx.stroke();
-                    
-                    // Marcar frequência
-                    ctx.fillStyle = index === 0 ? '#e74c3c' : '#667eea';
-                    ctx.font = '10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`${freq.toFixed(0)}`, x, peakY - 10);
-                }
-            });
-            
-            // Título
-            ctx.fillStyle = '#2c3e50';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Espectro de Impedância', width/2, 30);
-        }
-
-        // Desenho do espectro sonoro
-        function drawSoundSpectrum() {
-            const canvas = document.getElementById('spectrumCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Ajustar tamanho do canvas
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            
-            const { width, height } = canvas;
-            const margin = 60;
-            
-            // Limpar canvas
-            ctx.clearRect(0, 0, width, height);
-            
-            if (appState.analysisResults.length === 0) {
-                ctx.fillStyle = '#7f8c8d';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Execute a análise para ver o espectro sonoro', width/2, height/2);
-                return;
-            }
-            
-            const maxFreq = 1000;
-            const scaleX = (width - margin * 2) / maxFreq;
-            const scaleY = height - margin * 2;
-            
-            // Desenhar eixos
-            ctx.strokeStyle = '#bdc3c7';
-            ctx.lineWidth = 2;
-            
-            // Eixo X
-            ctx.beginPath();
-            ctx.moveTo(margin, height - margin);
-            ctx.lineTo(width - margin, height - margin);
-            ctx.stroke();
-            
-            // Eixo Y
-            ctx.beginPath();
-            ctx.moveTo(margin, margin);
-            ctx.lineTo(margin, height - margin);
-            ctx.stroke();
-            
-            // Labels dos eixos
-            ctx.fillStyle = '#2c3e50';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Frequência (Hz)', width/2, height - 10);
-            
-            ctx.save();
-            ctx.translate(20, height/2);
-            ctx.rotate(-Math.PI/2);
-            ctx.fillText('Amplitude', 0, 0);
-            ctx.restore();
-            
-            // Marcações do eixo X
-            ctx.fillStyle = '#7f8c8d';
-            ctx.font = '12px Arial';
-            for (let i = 0; i <= 5; i++) {
-                const freq = (maxFreq / 5) * i;
-                const x = margin + freq * scaleX;
-                
-                ctx.beginPath();
-                ctx.strokeStyle = '#ecf0f1';
-                ctx.moveTo(x, margin);
-                ctx.lineTo(x, height - margin);
-                ctx.stroke();
-                
-                ctx.fillText(freq.toString(), x, height - margin + 20);
-            }
-            
-            // Desenhar espectro com ruído de fundo
-            ctx.strokeStyle = '#bdc3c7';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            
-            const noiseLevel = 0.1;
-            for (let freq = 0; freq <= maxFreq; freq += 2) {
-                const x = margin + freq * scaleX;
-                const noise = noiseLevel * (0.5 + 0.5 * Math.sin(freq * 0.1)) * Math.random();
-                const y = height - margin - noise * scaleY;
-                
-                if (freq === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.stroke();
-            
-            // Desenhar harmônicos principais
-            appState.analysisResults.forEach((result, index) => {
-                const freq = result.frequency;
-                
-                if (freq <= maxFreq) {
-                    const x = margin + freq * scaleX;
-                    
-                    // Amplitude baseada no harmônico (fundamental é mais forte)
-                    let amplitude = 1.0 / Math.pow(result.harmonic, 0.7);
-                    
-                    // Adicionar variação timbral
-                    if (result.harmonic % 2 === 0) amplitude *= 0.6; // Harmônicos pares mais fracos
-                    if (result.harmonic > 5) amplitude *= 0.4; // Harmônicos altos mais fracos
-                    
-                    const y = height - margin - amplitude * scaleY * 0.8;
-                    
-                    // Desenhar pico como barra
-                    const barWidth = Math.max(2, freq * scaleX * 0.02);
-                    
-                    ctx.fillStyle = index === 0 ? '#e74c3c' : 
-                                  result.harmonic <= 3 ? '#667eea' : '#95a5a6';
-                    
-                    ctx.fillRect(x - barWidth/2, y, barWidth, height - margin - y);
-                    
-                    // Label do harmônico
-                    if (amplitude > 0.3) {
-                        ctx.fillStyle = '#2c3e50';
-                        ctx.font = '10px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`${result.harmonic}º`, x, y - 5);
-                        ctx.fillText(result.note, x, y - 15);
-                    }
-                }
-            });
-            
-            // Adicionar harmônicos secundários (overtones)
-            appState.analysisResults.forEach((result, index) => {
-                if (index < 3) { // Apenas para os primeiros harmônicos
-                    const fundamentalFreq = result.frequency;
-                    
-                    // Adicionar overtones não-harmônicos (característicos de didgeridoo)
-                    for (let overtone = 1; overtone <= 3; overtone++) {
-                        const overtoneFreq = fundamentalFreq * (1 + overtone * 0.1 + Math.random() * 0.05);
-                        
-                        if (overtoneFreq <= maxFreq) {
-                            const x = margin + overtoneFreq * scaleX;
-                            const amplitude = 0.3 / (overtone + 1);
-                            const y = height - margin - amplitude * scaleY * 0.8;
-                            const barWidth = 1;
-                            
-                            ctx.fillStyle = '#f39c12';
-                            ctx.fillRect(x - barWidth/2, y, barWidth, height - margin - y);
-                        }
-                    }
-                }
-            });
-            
-            // Título
-            ctx.fillStyle = '#2c3e50';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Espectro Sonoro', width/2, 30);
-        }
-
-        // Desenho da forma
-        function drawShape() {
-            const canvas = document.getElementById('shapeCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Ajustar tamanho do canvas
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            
-            const { width, height } = canvas;
-            
-            // Limpar canvas
-            ctx.clearRect(0, 0, width, height);
-            
-            if (appState.currentGeometry.length < 2) {
-                ctx.fillStyle = '#7f8c8d';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Clique em "Analisar" para ver a visualização', width/2, height/2);
-                return;
-            }
-            
-            try {
-                const margin = CONFIG.CANVAS_MARGIN;
-                const maxLength = appState.currentGeometry[appState.currentGeometry.length - 1].position;
-                const maxDiameter = Math.max(...appState.currentGeometry.map(p => p.diameter));
-                
-                const scaleX = (width - margin * 2) / maxLength;
-                const scaleY = (height - margin * 2) / maxDiameter;
-                
-                // Desenhar eixos
-                ctx.strokeStyle = '#bdc3c7';
-                ctx.lineWidth = 1;
-                
-                // Eixo X
-                ctx.beginPath();
-                ctx.moveTo(margin, height - margin/2);
-                ctx.lineTo(width - margin/2, height - margin/2);
-                ctx.stroke();
-                
-                // Marcações do eixo X
-                ctx.fillStyle = '#7f8c8d';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                
-                for (let i = 0; i <= 4; i++) {
-                    const x = margin + (width - margin * 1.5) * i / 4;
-                    const length = (maxLength / 1000) * i / 4; // converter para metros
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(x, height - margin/2 - 5);
-                    ctx.lineTo(x, height - margin/2 + 5);
-                    ctx.stroke();
-                    
-                    ctx.fillText(length.toFixed(2), x, height - margin/4);
-                }
-                
-                // Perfil superior
-                ctx.strokeStyle = '#2c3e50';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                
-                for (let i = 0; i < appState.currentGeometry.length; i++) {
-                    const point = appState.currentGeometry[i];
-                    const x = margin + point.position * scaleX;
-                    const y = height/2 - point.diameter/2 * scaleY;
-                    
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-                ctx.stroke();
-                
-                // Perfil inferior
-                ctx.beginPath();
-                for (let i = 0; i < appState.currentGeometry.length; i++) {
-                    const point = appState.currentGeometry[i];
-                    const x = margin + point.position * scaleX;
-                    const y = height/2 + point.diameter/2 * scaleY;
-                    
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-                ctx.stroke();
-                
-                // Pontos de controle
-                ctx.fillStyle = '#e74c3c';
-                for (let point of appState.currentGeometry) {
-                    const x = margin + point.position * scaleX;
-                    const y1 = height/2 - point.diameter/2 * scaleY;
-                    const y2 = height/2 + point.diameter/2 * scaleY;
-                    
-                    ctx.beginPath();
-                    ctx.arc(x, y1, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.arc(x, y2, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                // Labels dos eixos
-                ctx.fillStyle = '#2c3e50';
-                ctx.font = '14px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Comprimento (m)', width/2, height - 5);
-                
-                ctx.save();
-                ctx.translate(15, height/2);
-                ctx.rotate(-Math.PI/2);
-                ctx.fillText('Diâmetro (m)', 0, 0);
-                ctx.restore();
-                
-            } catch (error) {
-                console.error('Erro no desenho:', error);
-                showMessage(`❌ Erro na visualização: ${error.message}`, 'error');
-            }
-        }
-
-        // Exibição dos resultados (formato DIDGMO)
-        function displayResults() {
-            const tbody = document.getElementById('resultsBody');
-            tbody.innerHTML = '';
-            
-            if (appState.analysisResults.length === 0) {
-                const row = tbody.insertRow();
-                const cell = row.insertCell();
-                cell.colSpan = 6;
-                cell.textContent = 'Nenhuma frequência encontrada no intervalo de 50-1000 Hz';
-                cell.style.fontStyle = 'italic';
-                cell.style.color = '#7f8c8d';
-                cell.style.padding = '30px';
-                return;
-            }
-            
-            for (let result of appState.analysisResults) {
-                const row = tbody.insertRow();
-                row.classList.add('fade-in');
-                
-                // Adicionar classe especial para o drone (fundamental)
-                if (result.harmonic === 1) {
-                    row.classList.add('drone-row');
-                }
-                
-                // Frequência
-                const freqCell = row.insertCell();
-                freqCell.innerHTML = `<span class="freq-value">${Math.round(result.frequency)}</span>`;
-                
-                // Nota
-                const noteCell = row.insertCell();
-                noteCell.innerHTML = `<span class="note-name">${result.note}</span>`;
-                
-                // Oitava
-                const octaveCell = row.insertCell();
-                octaveCell.textContent = result.octave;
-                
-                // Desvio em centavos
-                const centCell = row.insertCell();
-                let centClass = 'perfect';
-                if (Math.abs(result.centDiff) > 50) centClass = 'positive';
-                else if (Math.abs(result.centDiff) > 10) centClass = result.centDiff > 0 ? 'positive' : 'negative';
-                
-                const sign = result.centDiff > 0 ? '+' : '';
-                centCell.innerHTML = `<span class="cent-diff ${centClass}">${sign}${result.centDiff}</span>`;
-                
-                // Harmônico
-                const harmCell = row.insertCell();
-                if (result.harmonic === 1) {
-                    harmCell.innerHTML = '<span style="color: #e74c3c; font-weight: bold;">Drone</span>';
-                } else {
-                    harmCell.textContent = `${result.harmonic}º`;
-                }
-                
-                // Impedância
-                const impedanceCell = row.insertCell();
-                const impedanceValue = result.impedance ? (result.impedance / 1000000).toFixed(3) : '0.000';
-                impedanceCell.innerHTML = `<span class="impedance-value">${impedanceValue}</span>`;
-            }
-        }
-
         // Função principal de análise
-        async function analisar() {
+        async function analyzeGeometry() {
             if (appState.isAnalyzing) {
                 showMessage('⏳ Análise já está em andamento...', 'error');
                 return;
             }
             
             try {
-                toggleLoading(true);
+                showLoading(true);
                 showMessage('🔍 Iniciando análise...');
                 
                 // Parse da geometria
@@ -2151,27 +1379,14 @@
                 // Pequena pausa para UX
                 await new Promise(resolve => setTimeout(resolve, 300));
                 
-                // Atualizar informações
-                updateInfo();
-                
-                // Desenhar forma
-                drawShape();
-                
                 // Calcular frequências
                 appState.analysisResults = calculateFrequencies();
                 
                 // Exibir resultados
-                displayResults();
-                
-                // Atualizar info de áudio
+                displayResults(appState.analysisResults);
+                displayMetrics(appState.currentGeometry, appState.analysisResults);
+                updateVisualization();
                 updateAudioInfo();
-                
-                // Redesenhar visualizações se necessário
-                if (appState.currentVisualization === 'impedance') {
-                    drawImpedanceSpectrum();
-                } else if (appState.currentVisualization === 'spectrum') {
-                    drawSoundSpectrum();
-                }
                 
                 showMessage(`✅ Análise concluída! ${appState.analysisResults.length} frequências calculadas`);
                 
@@ -2179,12 +1394,53 @@
                 console.error('Erro na análise:', error);
                 showMessage(`❌ Erro na análise: ${error.message}`, 'error');
             } finally {
-                toggleLoading(false);
+                showLoading(false);
             }
         }
 
-        // Calculadora reversa - calcular dimensões para uma nota específica
-        function calcularParaNota() {
+        // Calculadora reversa
+        function reverseCalculate() {
+            const targetNote = prompt('Digite a nota desejada (ex: D2, A3):');
+            if (!targetNote) return;
+            
+            const noteMap = {
+                'C': 16.35, 'C#': 17.32, 'D': 18.35, 'D#': 19.45,
+                'E': 20.60, 'F': 21.83, 'F#': 23.12, 'G': 24.50,
+                'G#': 25.96, 'A': 27.50, 'A#': 29.14, 'B': 30.87
+            };
+            
+            const match = targetNote.match(/([A-G]#?)(\d+)/);
+            if (!match) {
+                alert('Formato inválido. Use formato como D2, A3, etc.');
+                return;
+            }
+            
+            const noteName = match[1];
+            const octave = parseInt(match[2]);
+            const baseFreq = noteMap[noteName];
+            const targetFreq = baseFreq * Math.pow(2, octave);
+            
+            // Calcular comprimento necessário
+            const soundSpeed = parseFloat(document.getElementById('soundSpeedInput').value) || 343;
+            const targetLength = soundSpeed / (4 * targetFreq);
+            
+            // Gerar geometria para o comprimento calculado
+            const lengthMm = targetLength * 1000;
+            const geometry = `# Calculado para ${targetNote} (${targetFreq.toFixed(1)} Hz)
+# Formato: posição(m) diâmetro(m)
+0.00 0.030
+${(lengthMm * 0.1 / 1000).toFixed(3)} 0.032
+${(lengthMm * 0.3 / 1000).toFixed(3)} 0.038
+${(lengthMm * 0.6 / 1000).toFixed(3)} 0.050
+${(lengthMm * 0.9 / 1000).toFixed(3)} 0.065
+${(lengthMm / 1000).toFixed(3)} 0.080`;
+            
+            document.getElementById('geometryInput').value = geometry;
+            analyzeGeometry();
+        }
+
+        // Calcular dimensões para nota específica
+        function calculateForNote() {
             try {
                 // Obter dados de entrada
                 const targetNoteSelect = document.getElementById('targetNote');
@@ -2219,48 +1475,14 @@
                 // Calcular comprimento baseado no tipo de tubo
                 let length;
                 if (tubeType === 'fechado') {
-                    // Tubo fechado: L = v / (4f)
                     length = soundSpeed / (4 * targetFrequency);
                 } else {
-                    // Tubo aberto: L = v / (2f)
                     length = soundSpeed / (2 * targetFrequency);
                 }
 
-                const lengthMM = length * 1000; // converter para mm
-
-                // Calcular outras dimensões
+                const lengthMM = length * 1000;
                 const externalDiameter = targetDiameter + (wallThickness * 2);
-                const internalVolume = Math.PI * Math.pow(targetDiameter / 2, 2) * length / 1000; // em cm³
-
-                // Calcular harmônicos
-                const harmonics = [];
-                const maxHarmonics = tubeType === 'fechado' ? 8 : 6;
-                
-                for (let n = 1; n <= maxHarmonics; n++) {
-                    let harmonicFreq;
-                    let harmonicLength;
-                    
-                    if (tubeType === 'fechado') {
-                        // Apenas harmônicos ímpares
-                        harmonicFreq = (2 * n - 1) * targetFrequency;
-                        harmonicLength = soundSpeed / (4 * harmonicFreq) * 1000;
-                    } else {
-                        // Todos os harmônicos
-                        harmonicFreq = n * targetFrequency;
-                        harmonicLength = soundSpeed / (2 * harmonicFreq) * 1000;
-                    }
-
-                    if (harmonicFreq <= 1000) {
-                        const noteInfo = findClosestNote(harmonicFreq);
-                        harmonics.push({
-                            harmonic: tubeType === 'fechado' ? (2 * n - 1) : n,
-                            frequency: harmonicFreq,
-                            note: noteInfo.note,
-                            octave: noteInfo.octave,
-                            length: harmonicLength
-                        });
-                    }
-                }
+                const internalVolume = Math.PI * Math.pow(targetDiameter / 2, 2) * length / 1000;
 
                 // Exibir resultados
                 displayConstructionResults({
@@ -2272,7 +1494,6 @@
                     wallThickness,
                     internalVolume,
                     material: materialType,
-                    harmonics,
                     soundSpeed
                 });
 
@@ -2286,24 +1507,9 @@
 
         // Exibir resultados da construção
         function displayConstructionResults(data) {
-            // Atualizar valores principais
             document.getElementById('totalLengthResult').textContent = `${data.length.toFixed(1)} mm`;
             document.getElementById('externalDiameterResult').textContent = `${data.externalDiameter.toFixed(1)} mm`;
             document.getElementById('internalVolumeResult').textContent = `${data.internalVolume.toFixed(1)} cm³`;
-
-            // Preencher tabela de harmônicos
-            const tbody = document.getElementById('harmonicsTableBody');
-            tbody.innerHTML = '';
-
-            for (let harmonic of data.harmonics) {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${harmonic.harmonic}º</td>
-                    <td class="harmonic-freq">${harmonic.frequency.toFixed(2)}</td>
-                    <td class="harmonic-note">${harmonic.note}${harmonic.octave}</td>
-                    <td>${harmonic.length.toFixed(1)}</td>
-                `;
-            }
 
             // Gerar dicas de construção
             const tips = generateConstructionTips(data);
@@ -2314,7 +1520,625 @@
             document.getElementById('constructionResults').classList.add('fade-in');
         }
 
-        // Atualizar informações de áudio
+        // Gerar dicas de construção
+        function generateConstructionTips(data) {
+            const tips = [];
+
+            switch (data.material) {
+                case 'madeira':
+                    tips.push('Use madeira seca e bem curada para evitar rachaduras');
+                    tips.push('Madeiras como eucalipto, bambu ou cedro são ideais');
+                    break;
+                case 'bambu':
+                    tips.push('Escolha bambu maduro com paredes espessas');
+                    tips.push('Remova todos os nós internos cuidadosamente');
+                    break;
+                case 'pvc':
+                    tips.push('Use PVC de qualidade para evitar toxicidade');
+                    tips.push('PVC é ideal para protótipos e testes');
+                    break;
+                case 'metal':
+                    tips.push('Use metal não tóxico (alumínio ou cobre)');
+                    tips.push('Polir o interior melhora a qualidade sonora');
+                    break;
+            }
+
+            if (data.length > 1500) {
+                tips.push('Tubo longo: considere fazer em seções para facilitar o transporte');
+            }
+
+            const tipsHTML = tips.map(tip => `<li>${tip}</li>`).join('');
+            return `<ul class="tips-list">${tipsHTML}</ul>`;
+        }
+
+        // Exibição dos resultados
+        function displayResults(results) {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            if (results.length === 0) {
+                const row = tbody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 6;
+                cell.textContent = 'Nenhuma frequência encontrada no intervalo de 50-1000 Hz';
+                cell.style.fontStyle = 'italic';
+                cell.style.color = '#7f8c8d';
+                cell.style.padding = '30px';
+                return;
+            }
+            
+            results.forEach(result => {
+                const row = tbody.insertRow();
+                row.classList.add('fade-in');
+                
+                if (result.harmonic === 1) {
+                    row.classList.add('drone-row');
+                }
+                
+                // Harmônico
+                const harmCell = row.insertCell();
+                if (result.harmonic === 1) {
+                    harmCell.innerHTML = '<span style="color: #e74c3c; font-weight: bold;">Drone</span>';
+                } else {
+                    harmCell.textContent = `${result.harmonic}º`;
+                }
+                
+                // Frequência
+                const freqCell = row.insertCell();
+                freqCell.innerHTML = `<span class="freq-value">${Math.round(result.frequency)}</span>`;
+                
+                // Nota
+                const noteCell = row.insertCell();
+                noteCell.innerHTML = `<span class="note-name">${result.note}</span>`;
+                
+                // Oitava
+                const octaveCell = row.insertCell();
+                octaveCell.textContent = result.octave;
+                
+                // Desvio em centavos
+                const centCell = row.insertCell();
+                let centClass = 'perfect';
+                if (Math.abs(result.centDiff) > 50) centClass = 'positive';
+                else if (Math.abs(result.centDiff) > 10) centClass = 'positive';
+                
+                const sign = result.centDiff > 0 ? '+' : '';
+                centCell.innerHTML = `<span class="cent-diff ${centClass}">${sign}${result.centDiff}</span>`;
+                
+                // Impedância
+                const impedanceCell = row.insertCell();
+                impedanceCell.innerHTML = `<span class="impedance-value">${result.impedance.toFixed(3)}</span>`;
+            });
+        }
+
+        function displayMetrics(geometry, results) {
+            const container = document.getElementById('metricsContainer');
+            if (!geometry.length || !results.length) return;
+            
+            const totalLength = geometry[geometry.length - 1].position;
+            const avgDiameter = geometry.reduce((sum, point) => sum + point.diameter, 0) / geometry.length;
+            const fundamental = results[0];
+            
+            container.innerHTML = `
+                <div class="metric-card">
+                    <h3>📏 Comprimento Total</h3>
+                    <div class="metric-value">${(totalLength / 10).toFixed(1)}<span class="metric-unit">cm</span></div>
+                </div>
+                <div class="metric-card">
+                    <h3>⭕ Diâmetro Médio</h3>
+                    <div class="metric-value">${avgDiameter.toFixed(1)}<span class="metric-unit">mm</span></div>
+                </div>
+                <div class="metric-card">
+                    <h3>🎵 Nota Fundamental</h3>
+                    <div class="metric-value">${fundamental.note}${fundamental.octave} <span class="metric-unit">(${fundamental.frequency.toFixed(1)} Hz)</span></div>
+                </div>
+                <div class="metric-card">
+                    <h3>🎯 Precisão</h3>
+                    <div class="metric-value">${Math.abs(fundamental.centDiff) < 10 ? '✅ Afinado' : Math.abs(fundamental.centDiff) < 30 ? '⚠️ Aceitável' : '❌ Desafinado'}</div>
+                </div>
+            `;
+        }
+
+        function showTab(tabName) {
+            document.querySelectorAll('#results, #visualization, #metrics').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'visualization') {
+                updateVisualization();
+            }
+        }
+
+        function showVisualization(type) {
+            appState.currentVisualization = type;
+            document.querySelectorAll('#visualization .tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            updateVisualization();
+        }
+
+        function updateVisualization() {
+            const canvas = document.getElementById('visualizationCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (appState.currentGeometry.length === 0) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Execute a análise para ver a visualização', canvas.width/2, canvas.height/2);
+                return;
+            }
+            
+            switch (appState.currentVisualization) {
+                case 'geometry':
+                    drawGeometry(ctx, canvas);
+                    break;
+                case 'impedance':
+                    drawImpedance(ctx, canvas);
+                    break;
+                case 'spectrum':
+                    drawSpectrum(ctx, canvas);
+                    break;
+            }
+        }
+
+        function drawGeometry(ctx, canvas) {
+            const geometry = appState.currentGeometry;
+            if (geometry.length < 2) return;
+            
+            const maxLength = geometry[geometry.length - 1].position;
+            const maxDiameter = Math.max(...geometry.map(p => p.diameter));
+            
+            const margin = 40;
+            const scaleX = (canvas.width - margin * 2) / maxLength;
+            const scaleY = (canvas.height - margin * 2) / maxDiameter;
+            
+            // Desenhar o contorno do didgeridoo
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            // Parte superior
+            for (let i = 0; i < geometry.length; i++) {
+                const x = margin + geometry[i].position * scaleX;
+                const y = canvas.height / 2 - geometry[i].diameter * scaleY / 2;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            
+            // Parte inferior (espelhada)
+            for (let i = geometry.length - 1; i >= 0; i--) {
+                const x = margin + geometry[i].position * scaleX;
+                const y = canvas.height / 2 + geometry[i].diameter * scaleY / 2;
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Preencher com gradiente
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, 'rgba(102, 126, 234, 0.3)');
+            gradient.addColorStop(1, 'rgba(118, 75, 162, 0.3)');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Desenhar pontos de controle
+            ctx.fillStyle = '#dc3545';
+            geometry.forEach(point => {
+                const x = margin + point.position * scaleX;
+                const y = canvas.height / 2;
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            // Linha central
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(margin, canvas.height / 2);
+            ctx.lineTo(canvas.width - margin, canvas.height / 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Segoe UI';
+            ctx.fillText('Bocal', margin + 5, canvas.height / 2 - 10);
+            ctx.fillText('Campana', canvas.width - margin - 50, canvas.height / 2 - 10);
+        }
+
+        function drawImpedance(ctx, canvas) {
+            if (appState.analysisResults.length === 0) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Execute a análise para ver o espectro de impedância', canvas.width/2, canvas.height/2);
+                return;
+            }
+            
+            const margin = 60;
+            const maxFreq = 1000;
+            const scaleX = (canvas.width - margin * 2) / maxFreq;
+            const scaleY = canvas.height - margin * 2;
+            
+            // Desenhar eixos
+            ctx.strokeStyle = '#bdc3c7';
+            ctx.lineWidth = 2;
+            
+            // Eixo X
+            ctx.beginPath();
+            ctx.moveTo(margin, canvas.height - margin);
+            ctx.lineTo(canvas.width - margin, canvas.height - margin);
+            ctx.stroke();
+            
+            // Eixo Y
+            ctx.beginPath();
+            ctx.moveTo(margin, margin);
+            ctx.lineTo(margin, canvas.height - margin);
+            ctx.stroke();
+            
+            // Labels dos eixos
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Frequência (Hz)', canvas.width/2, canvas.height - 10);
+            
+            ctx.save();
+            ctx.translate(20, canvas.height/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('Impedância (MΩ)', 0, 0);
+            ctx.restore();
+            
+            // Desenhar picos de ressonância
+            appState.analysisResults.forEach((result, index) => {
+                const freq = result.frequency;
+                const x = margin + freq * scaleX;
+                
+                if (freq <= maxFreq) {
+                    const peakHeight = Math.max(0.1, 1.0 / Math.sqrt(result.harmonic));
+                    const peakY = canvas.height - margin - peakHeight * scaleY * 0.8;
+                    
+                    // Desenhar pico
+                    ctx.strokeStyle = index === 0 ? '#e74c3c' : '#667eea';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    
+                    const bandwidth = 15;
+                    for (let f = freq - bandwidth; f <= freq + bandwidth; f += 2) {
+                        if (f >= 0 && f <= maxFreq) {
+                            const xPeak = margin + f * scaleX;
+                            const gaussian = Math.exp(-Math.pow((f - freq) / (bandwidth/3), 2));
+                            const yPeak = canvas.height - margin - (0.1 + peakHeight * gaussian) * scaleY * 0.8;
+                            
+                            if (f === freq - bandwidth) {
+                                ctx.moveTo(xPeak, yPeak);
+                            } else {
+                                ctx.lineTo(xPeak, yPeak);
+                            }
+                        }
+                    }
+                    ctx.stroke();
+                    
+                    // Marcar frequência
+                    ctx.fillStyle = index === 0 ? '#e74c3c' : '#667eea';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${freq.toFixed(0)}`, x, peakY - 10);
+                }
+            });
+        }
+
+        function drawSpectrum(ctx, canvas) {
+            if (appState.analysisResults.length === 0) {
+                ctx.fillStyle = '#7f8c8d';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Execute a análise para ver o espectro sonoro', canvas.width/2, canvas.height/2);
+                return;
+            }
+            
+            const margin = 60;
+            const maxImpedance = Math.max(...appState.analysisResults.map(r => r.impedance));
+            const barWidth = (canvas.width - margin * 2) / appState.analysisResults.length;
+            
+            // Desenhar eixos
+            ctx.strokeStyle = '#bdc3c7';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(margin, canvas.height - margin);
+            ctx.lineTo(canvas.width - margin, canvas.height - margin);
+            ctx.moveTo(margin, margin);
+            ctx.lineTo(margin, canvas.height - margin);
+            ctx.stroke();
+            
+            appState.analysisResults.forEach((result, i) => {
+                const x = margin + i * barWidth;
+                const height = (result.impedance / maxImpedance) * (canvas.height - margin * 2) * 0.8;
+                const y = canvas.height - margin - height;
+                
+                // Cor baseada no tipo
+                const color = result.harmonic === 1 ? '#e74c3c' : '#667eea';
+                ctx.fillStyle = color;
+                ctx.fillRect(x + 2, y, barWidth - 4, height);
+                
+                // Labels
+                ctx.fillStyle = '#333';
+                ctx.font = '10px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${result.harmonic}°`, x + barWidth/2, canvas.height - margin + 15);
+                ctx.fillText(`${result.frequency.toFixed(0)}Hz`, x + barWidth/2, canvas.height - margin + 30);
+            });
+            
+            // Labels dos eixos
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Harmônicos', canvas.width/2, canvas.height - 10);
+            
+            ctx.save();
+            ctx.translate(20, canvas.height/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('Amplitude', 0, 0);
+            ctx.restore();
+        }
+
+        // Funções de áudio
+        function initAudioContext() {
+            if (!appState.audioContext) {
+                try {
+                    appState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Web Audio API não suportada:', e);
+                    return null;
+                }
+            }
+            return appState.audioContext;
+        }
+
+        function createOscillator(frequency, type = 'sawtooth', gain = 0.1) {
+            const audioCtx = initAudioContext();
+            if (!audioCtx) return null;
+            
+            const oscillator = audioCtx.createOscillator();
+            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            oscillator.type = type;
+            
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(frequency * 3, audioCtx.currentTime);
+            filter.Q.setValueAtTime(2, audioCtx.currentTime);
+            
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            return { oscillator, gainNode, filter };
+        }
+
+        function addBreathingEffect(gainNode, audioCtx, duration) {
+            const breathingRate = 0.3;
+            const breathingDepth = 0.3;
+            
+            for (let t = 0; t < duration; t += 0.1) {
+                const time = audioCtx.currentTime + t;
+                const breathing = 1 + breathingDepth * Math.sin(2 * Math.PI * breathingRate * t);
+                gainNode.gain.linearRampToValueAtTime(
+                    gainNode.gain.value * breathing, 
+                    time
+                );
+            }
+        }
+
+        function playDrone() {
+            if (appState.analysisResults.length === 0) {
+                showMessage('❌ Execute a análise primeiro!', 'error');
+                return;
+            }
+
+            stopAllAudio();
+
+            const droneFreq = appState.analysisResults[0].frequency;
+            const volume = document.getElementById('volumeControl').value / 100;
+            const duration = parseFloat(document.getElementById('durationControl').value);
+            const hasBreathing = document.getElementById('breathingControl').checked;
+
+            const audioCtx = initAudioContext();
+            if (!audioCtx) return;
+            
+            const fundamental = createOscillator(droneFreq, 'sawtooth', volume * 0.8);
+            if (!fundamental) return;
+            
+            const harmonics = [];
+            for (let i = 1; i < Math.min(4, appState.analysisResults.length); i++) {
+                const harmFreq = appState.analysisResults[i].frequency;
+                const harmGain = volume * 0.3 / (i + 1);
+                const harmonic = createOscillator(harmFreq, 'sine', harmGain);
+                if (harmonic) harmonics.push(harmonic);
+            }
+
+            // Envelope ADSR
+            const attack = 0.1;
+            const decay = 0.3;
+            const sustain = 0.7;
+            const release = 0.5;
+
+            fundamental.gainNode.gain.linearRampToValueAtTime(volume * 0.8, audioCtx.currentTime + attack);
+            fundamental.gainNode.gain.linearRampToValueAtTime(volume * 0.8 * sustain, audioCtx.currentTime + attack + decay);
+            fundamental.gainNode.gain.setValueAtTime(volume * 0.8 * sustain, audioCtx.currentTime + duration - release);
+            fundamental.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+
+            harmonics.forEach((harmonic, index) => {
+                const harmVolume = volume * 0.3 / (index + 2);
+                harmonic.gainNode.gain.linearRampToValueAtTime(harmVolume, audioCtx.currentTime + attack);
+                harmonic.gainNode.gain.linearRampToValueAtTime(harmVolume * sustain, audioCtx.currentTime + attack + decay);
+                harmonic.gainNode.gain.setValueAtTime(harmVolume * sustain, audioCtx.currentTime + duration - release);
+                harmonic.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+            });
+
+            if (hasBreathing) {
+                addBreathingEffect(fundamental.gainNode, audioCtx, duration);
+                harmonics.forEach(harmonic => {
+                    addBreathingEffect(harmonic.gainNode, audioCtx, duration);
+                });
+            }
+
+            fundamental.oscillator.start(audioCtx.currentTime);
+            fundamental.oscillator.stop(audioCtx.currentTime + duration);
+            
+            harmonics.forEach(harmonic => {
+                harmonic.oscillator.start(audioCtx.currentTime);
+                harmonic.oscillator.stop(audioCtx.currentTime + duration);
+            });
+
+            appState.oscillators = [fundamental, ...harmonics];
+            appState.isPlaying = true;
+
+            // UI feedback
+            document.querySelector('.audio-btn').classList.add('playing');
+            document.getElementById('audioInfo').innerHTML = `🎵 Tocando drone: ${Math.round(droneFreq)} Hz (${appState.analysisResults[0].note}${appState.analysisResults[0].octave})`;
+            document.getElementById('audioInfo').classList.add('playing');
+
+            setTimeout(() => {
+                stopAllAudio();
+            }, duration * 1000);
+        }
+
+        function playHarmonics() {
+            if (appState.analysisResults.length < 2) {
+                showMessage('❌ Não há harmônicos suficientes!', 'error');
+                return;
+            }
+
+            stopAllAudio();
+
+            const volume = document.getElementById('volumeControl').value / 100;
+            const duration = parseFloat(document.getElementById('durationControl').value);
+            const audioCtx = initAudioContext();
+            if (!audioCtx) return;
+
+            const harmonicOscillators = [];
+
+            appState.analysisResults.slice(1, 6).forEach((result, index) => {
+                const delay = index * 0.3;
+                const harmDuration = 0.8;
+                
+                setTimeout(() => {
+                    if (!appState.isPlaying) return;
+                    
+                    const harmonic = createOscillator(result.frequency, 'triangle', volume * 0.6);
+                    if (!harmonic) return;
+                    
+                    harmonic.gainNode.gain.linearRampToValueAtTime(volume * 0.6, audioCtx.currentTime + 0.05);
+                    harmonic.gainNode.gain.linearRampToValueAtTime(volume * 0.4, audioCtx.currentTime + 0.2);
+                    harmonic.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + harmDuration);
+                    
+                    harmonic.filter.frequency.setValueAtTime(result.frequency * 2, audioCtx.currentTime);
+                    
+                    harmonic.oscillator.start(audioCtx.currentTime);
+                    harmonic.oscillator.stop(audioCtx.currentTime + harmDuration);
+                    
+                    harmonicOscillators.push(harmonic);
+                }, delay * 1000);
+            });
+
+            appState.oscillators = harmonicOscillators;
+            appState.isPlaying = true;
+
+            document.querySelectorAll('.audio-btn')[1].classList.add('playing');
+            document.getElementById('audioInfo').innerHTML = `🎺 Tocando trombetas: ${appState.analysisResults.slice(1, 6).length} harmônicos`;
+            document.getElementById('audioInfo').classList.add('playing');
+
+            setTimeout(() => {
+                stopAllAudio();
+            }, duration * 1000);
+        }
+
+        function playFullSpectrum() {
+            if (appState.analysisResults.length === 0) {
+                showMessage('❌ Execute a análise primeiro!', 'error');
+                return;
+            }
+
+            stopAllAudio();
+
+            const volume = document.getElementById('volumeControl').value / 100;
+            const duration = parseFloat(document.getElementById('durationControl').value);
+            const hasBreathing = document.getElementById('breathingControl').checked;
+            const audioCtx = initAudioContext();
+            if (!audioCtx) return;
+
+            const allOscillators = [];
+
+            appState.analysisResults.forEach((result, index) => {
+                const harmVolume = volume * Math.pow(0.6, index);
+                const oscillator = createOscillator(
+                    result.frequency, 
+                    index === 0 ? 'sawtooth' : 'sine', 
+                    harmVolume
+                );
+
+                if (!oscillator) return;
+
+                oscillator.gainNode.gain.linearRampToValueAtTime(harmVolume, audioCtx.currentTime + 0.2);
+                oscillator.gainNode.gain.linearRampToValueAtTime(harmVolume * 0.8, audioCtx.currentTime + 0.5);
+                oscillator.gainNode.gain.setValueAtTime(harmVolume * 0.8, audioCtx.currentTime + duration - 0.3);
+                oscillator.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+
+                if (hasBreathing) {
+                    addBreathingEffect(oscillator.gainNode, audioCtx, duration);
+                }
+
+                oscillator.oscillator.start(audioCtx.currentTime);
+                oscillator.oscillator.stop(audioCtx.currentTime + duration);
+
+                allOscillators.push(oscillator);
+            });
+
+            appState.oscillators = allOscillators;
+            appState.isPlaying = true;
+
+            document.querySelectorAll('.audio-btn')[2].classList.add('playing');
+            document.getElementById('audioInfo').innerHTML = `🎼 Tocando espectro completo: ${appState.analysisResults.length} frequências`;
+            document.getElementById('audioInfo').classList.add('playing');
+
+            setTimeout(() => {
+                stopAllAudio();
+            }, duration * 1000);
+        }
+
+        function stopAllAudio() {
+            if (appState.audioContext) {
+                appState.oscillators.forEach(osc => {
+                    try {
+                        if (osc.oscillator) {
+                            osc.oscillator.stop();
+                        }
+                    } catch (e) {
+                        // Oscilador já foi parado
+                    }
+                });
+            }
+
+            appState.oscillators = [];
+            appState.isPlaying = false;
+
+            document.querySelectorAll('.audio-btn').forEach(btn => btn.classList.remove('playing'));
+            document.getElementById('audioInfo').classList.remove('playing');
+            document.getElementById('audioInfo').innerHTML = 'Preview sonoro parado';
+        }
+
         function updateAudioInfo() {
             const audioInfo = document.getElementById('audioInfo');
             
@@ -2333,127 +2157,23 @@
             `;
         }
 
-        // Event listeners para controles de áudio
-        function setupAudioControls() {
-            // Volume control
-            const volumeControl = document.getElementById('volumeControl');
-            const volumeValue = document.getElementById('volumeValue');
-            
-            volumeControl.addEventListener('input', function() {
-                volumeValue.textContent = this.value + '%';
-            });
-
-            // Duration control
-            const durationControl = document.getElementById('durationControl');
-            const durationValue = document.getElementById('durationValue');
-            
-            durationControl.addEventListener('input', function() {
-                durationValue.textContent = this.value + 's';
-            });
-
-            // Parar áudio quando mudança de geometria
-            document.getElementById('geometryInput').addEventListener('input', function() {
-                stopAllAudio();
-            });
-        }
-
-        // Gerar dicas de construção baseadas no material e dimensões
-        function generateConstructionTips(data) {
-            const tips = [];
-
-            // Dicas baseadas no material
-            switch (data.material) {
-                case 'madeira':
-                    tips.push('Use madeira seca e bem curada para evitar rachaduras');
-                    tips.push('Madeiras como eucalipto, bambu ou cedro são ideais');
-                    tips.push('Lixe bem o interior para reduzir a rugosidade');
-                    break;
-                case 'bambu':
-                    tips.push('Escolha bambu maduro com paredes espessas');
-                    tips.push('Remova todos os nós internos cuidadosamente');
-                    tips.push('Trate contra insetos antes de usar');
-                    break;
-                case 'pvc':
-                    tips.push('Use PVC de qualidade para evitar toxicidade');
-                    tips.push('Lixe levemente as juntas para melhor aderência');
-                    tips.push('PVC é ideal para protótipos e testes');
-                    break;
-                case 'metal':
-                    tips.push('Solde as juntas com cuidado para evitar vazamentos');
-                    tips.push('Use metal não tóxico (alumínio ou cobre)');
-                    tips.push('Polir o interior melhora a qualidade sonora');
-                    break;
-            }
-
-            // Dicas baseadas nas dimensões
-            if (data.length > 1500) {
-                tips.push('Tubo longo: considere fazer em seções para facilitar o transporte');
-            }
-
-            if (data.diameter < 25) {
-                tips.push('Diâmetro pequeno: o bocal será mais exigente tecnicamente');
-            } else if (data.diameter > 50) {
-                tips.push('Diâmetro grande: som mais grave e volume maior');
-            }
-
-            if (data.tubeType === 'fechado') {
-                tips.push('Tubo fechado: vede completamente uma das extremidades');
-                tips.push('A qualidade da vedação afeta diretamente a afinação');
-            } else {
-                tips.push('Tubo aberto: mantenha ambas as extremidades livres');
-                tips.push('Chanfre levemente as bordas para melhor sonoridade');
-            }
-
-            // Dicas de afinação
-            tips.push('Use um afinador para verificar a frequência real');
-            tips.push('Pequenos ajustes podem ser feitos alterando o comprimento');
-
-            // Converter para HTML
-            const tipsHTML = tips.map(tip => `<li>${tip}</li>`).join('');
-            return `<ul class="tips-list">${tipsHTML}</ul>`;
-        }
-
-        // Configurar listeners para o modo construção
-        function setupConstructionListeners() {
-            const targetNoteSelect = document.getElementById('targetNote');
-            const customTargetFreq = document.getElementById('customTargetFreq');
-
-            targetNoteSelect.addEventListener('change', function() {
-                if (this.value) {
-                    customTargetFreq.value = '';
-                }
-            });
-
-            customTargetFreq.addEventListener('input', function() {
-                if (this.value) {
-                    targetNoteSelect.value = '';
-                }
-            });
-        }
-
-        // Salvar arquivo
-        function salvarArquivo() {
+        // Gerenciamento de projetos
+        function saveProject() {
             try {
-                const data = {
+                const projectData = {
+                    name: document.querySelector('.project-name').value,
                     geometry: document.getElementById('geometryInput').value,
-                    mouthpiece: document.getElementById('mouthpieceInput').value,
                     soundSpeed: document.getElementById('soundSpeedInput').value,
+                    mouthpiece: document.getElementById('mouthpieceInput').value,
                     results: appState.analysisResults,
                     timestamp: new Date().toISOString(),
-                    version: '1.0'
+                    version: '2.0'
                 };
                 
-                const jsonString = JSON.stringify(data, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
+                const projectName = projectData.name || 'projeto_sem_nome';
+                localStorage.setItem(`didgeridoo_${projectName}`, JSON.stringify(projectData));
                 
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `didgeridoo_${new Date().toISOString().slice(0, 10)}.json`;
-                link.click();
-                
-                URL.revokeObjectURL(url);
-                showMessage('💾 Arquivo salvo com sucesso!');
+                showMessage('💾 Projeto salvo com sucesso!');
                 
             } catch (error) {
                 console.error('Erro ao salvar:', error);
@@ -2461,51 +2181,35 @@
             }
         }
 
-        // Carregar arquivo
-        function carregarArquivo() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
+        function loadProject() {
+            const projectName = prompt('Nome do projeto para carregar:');
+            if (!projectName) return;
             
-            input.onchange = function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
+            const projectData = localStorage.getItem(`didgeridoo_${projectName}`);
+            if (!projectData) {
+                showMessage('❌ Projeto não encontrado!', 'error');
+                return;
+            }
+            
+            try {
+                const data = JSON.parse(projectData);
                 
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        const data = JSON.parse(e.target.result);
-                        
-                        // Validar estrutura do arquivo
-                        if (!data.geometry) {
-                            throw new Error('Arquivo inválido: geometria não encontrada');
-                        }
-                        
-                        // Restaurar dados
-                        document.getElementById('geometryInput').value = data.geometry || '';
-                        document.getElementById('mouthpieceInput').value = data.mouthpiece || '28';
-                        document.getElementById('soundSpeedInput').value = data.soundSpeed || '343';
-                        
-                        showMessage('📂 Arquivo carregado com sucesso!');
-                        
-                        // Analisar automaticamente
-                        setTimeout(() => analisar(), 500);
-                        
-                    } catch (error) {
-                        console.error('Erro ao carregar arquivo:', error);
-                        showMessage(`❌ Erro ao carregar arquivo: ${error.message}`, 'error');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            
-            input.click();
+                document.querySelector('.project-name').value = data.name || projectName;
+                document.getElementById('geometryInput').value = data.geometry || '';
+                document.getElementById('soundSpeedInput').value = data.soundSpeed || '343';
+                document.getElementById('mouthpieceInput').value = data.mouthpiece || '28';
+                
+                showMessage('📁 Projeto carregado com sucesso!');
+                setTimeout(() => analyzeGeometry(), 500);
+                
+            } catch (e) {
+                showMessage('❌ Erro ao carregar projeto!', 'error');
+            }
         }
 
-        // Exportar dados
-        function exportarCSV() {
-            if (appState.currentMode === 'construcao') {
-                exportarConstrucaoCSV();
+        function exportData() {
+            if (appState.currentMode === 'construction') {
+                exportConstructionData();
                 return;
             }
             
@@ -2514,10 +2218,10 @@
                 return;
             }
             
-            let csv = 'Frequência (Hz),Nota,Oitava,Desvio (centavos),Harmônico\n';
+            let csv = 'Harmônico,Frequência (Hz),Nota,Oitava,Desvio (centavos),Impedância (MΩ)\n';
             
             appState.analysisResults.forEach(result => {
-                csv += `${result.frequency.toFixed(2)},${result.note},${result.octave},${result.centDiff},${result.harmonic}\n`;
+                csv += `${result.harmonic},${result.frequency.toFixed(2)},${result.note},${result.octave},${result.centDiff},${result.impedance.toFixed(3)}\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -2525,40 +2229,21 @@
             
             const link = document.createElement('a');
             link.href = url;
-            link.download = `didgeridoo_resultados_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.download = `didgeridoo_analise_${new Date().toISOString().slice(0, 10)}.csv`;
             link.click();
             
             URL.revokeObjectURL(url);
-            showMessage('📊 Resultados exportados em CSV!');
+            showMessage('📊 Dados exportados em CSV!');
         }
 
-        function exportarConstrucaoCSV() {
+        function exportConstructionData() {
             const resultsDiv = document.getElementById('constructionResults');
             if (resultsDiv.style.display === 'none') {
                 showMessage('❌ Calcule as dimensões primeiro', 'error');
                 return;
             }
 
-            // Obter dados dos harmônicos
-            const harmonicsTable = document.getElementById('harmonicsTableBody');
-            const rows = harmonicsTable.getElementsByTagName('tr');
-            
-            if (rows.length === 0) {
-                showMessage('❌ Nenhum dado para exportar', 'error');
-                return;
-            }
-
-            let csv = 'Harmônico,Frequência (Hz),Nota,Comprimento (mm)\n';
-            
-            for (let row of rows) {
-                const cells = row.getElementsByTagName('td');
-                if (cells.length >= 4) {
-                    csv += `${cells[0].textContent},${cells[1].textContent},${cells[2].textContent},${cells[3].textContent}\n`;
-                }
-            }
-
-            // Adicionar informações do tubo
-            csv += '\n# Informações do Tubo\n';
+            let csv = '# Dados de Construção\n';
             csv += `Comprimento Total,${document.getElementById('totalLengthResult').textContent}\n`;
             csv += `Diâmetro Externo,${document.getElementById('externalDiameterResult').textContent}\n`;
             csv += `Volume Interno,${document.getElementById('internalVolumeResult').textContent}\n`;
@@ -2568,92 +2253,40 @@
             
             const link = document.createElement('a');
             link.href = url;
-            link.download = `construcao_tubo_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.download = `construcao_didgeridoo_${new Date().toISOString().slice(0, 10)}.csv`;
             link.click();
             
             URL.revokeObjectURL(url);
             showMessage('📊 Dados de construção exportados!');
         }
 
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🎺 Calculadora de Didgeridoo iniciada');
+        // Utilitários
+        function showMessage(text, type = 'success') {
+            const statusElement = document.getElementById('statusMessage');
+            const messageClass = type === 'error' ? 'error-message' : 'success-message';
             
-            // Configurar listeners da construção
-            setupConstructionListeners();
+            statusElement.innerHTML = `<div class="${messageClass} fade-in">${text}</div>`;
             
-            // Configurar controles de áudio
-            setupAudioControls();
-            
-            // Análise inicial
-            setTimeout(() => analisar(), 1000);
-            
-            // Redimensionar canvas quando necessário
-            let resizeTimeout;
-            window.addEventListener('resize', function() {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    if (appState.currentGeometry.length > 0) {
-                        switch(appState.currentVisualization) {
-                            case 'shape':
-                                drawShape();
-                                break;
-                            case 'impedance':
-                                drawImpedanceSpectrum();
-                                break;
-                            case 'spectrum':
-                                drawSoundSpectrum();
-                                break;
-                        }
-                    }
-                }, 250);
-            });
-            
-            // Atalhos de teclado
-            document.addEventListener('keydown', function(e) {
-                if (e.ctrlKey || e.metaKey) {
-                    switch(e.key) {
-                        case 'Enter':
-                            e.preventDefault();
-                            if (appState.currentMode === 'analise') {
-                                analisar();
-                            } else {
-                                calcularParaNota();
-                            }
-                            break;
-                        case 's':
-                            e.preventDefault();
-                            salvarArquivo();
-                            break;
-                        case 'o':
-                            e.preventDefault();
-                            carregarArquivo();
-                            break;
-                        case '1':
-                            e.preventDefault();
-                            alternarModo('analise');
-                            break;
-                        case '2':
-                            e.preventDefault();
-                            alternarModo('construcao');
-                            break;
-                    }
-                }
-            });
-            
-            // Auto-salvar no localStorage
-            const textarea = document.getElementById('geometryInput');
-            textarea.addEventListener('input', function() {
-                localStorage.setItem('didgeridoo_geometry', this.value);
-                stopAllAudio(); // Parar áudio quando geometria muda
-            });
-            
-            // Restaurar do localStorage
-            const saved = localStorage.getItem('didgeridoo_geometry');
-            if (saved && saved.trim() !== textarea.value.trim()) {
-                textarea.value = saved;
-            }
+            setTimeout(() => {
+                statusElement.innerHTML = '';
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loadingIndicator');
+            loading.classList.toggle('active', show);
+            appState.isAnalyzing = show;
+        }
+
+        // Redimensionar canvas quando necessário
+        window.addEventListener('resize', function() {
+            setTimeout(updateVisualization, 100);
         });
+
+        // Auto-análise inicial
+        setTimeout(function() {
+            analyzeGeometry();
+        }, 1000);
     </script>
 </body>
 </html>
