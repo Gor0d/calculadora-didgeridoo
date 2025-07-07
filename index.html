@@ -578,10 +578,110 @@
             border-left: 4px solid #e74c3c;
         }
 
-        .impedance-value {
-            font-family: 'Courier New', monospace;
+        .audio-controls {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .audio-controls h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .audio-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .audio-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
             font-weight: 600;
-            color: #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .audio-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .audio-btn:active, .audio-btn.playing {
+            background: rgba(255,255,255,0.4);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .audio-controls-advanced {
+            display: grid;
+            gap: 15px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            min-width: 120px;
+            font-weight: 600;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .audio-info {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .audio-info.playing {
+            background: rgba(46, 204, 113, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
         }
 
         .success-message,
@@ -884,6 +984,47 @@
                     <p>Calculando frequências...</p>
                 </div>
                 
+                <div class="audio-controls">
+                    <h3>🔊 Preview Sonoro</h3>
+                    <div class="audio-buttons">
+                        <button class="btn btn-primary audio-btn" onclick="playDrone()" id="droneBtn">
+                            <span>🎵</span> Tocar Drone
+                        </button>
+                        <button class="btn btn-secondary audio-btn" onclick="playHarmonics()" id="harmonicsBtn">
+                            <span>🎺</span> Tocar Trombetas
+                        </button>
+                        <button class="btn btn-secondary audio-btn" onclick="playFullSpectrum()" id="spectrumBtn">
+                            <span>🎼</span> Espectro Completo
+                        </button>
+                        <button class="btn btn-secondary audio-btn" onclick="stopAllAudio()" id="stopBtn">
+                            <span>⏹️</span> Parar
+                        </button>
+                    </div>
+                    
+                    <div class="audio-controls-advanced">
+                        <div class="control-group">
+                            <label for="volumeControl">🔊 Volume:</label>
+                            <input type="range" id="volumeControl" min="0" max="100" value="30" class="slider">
+                            <span id="volumeValue">30%</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="durationControl">⏱️ Duração:</label>
+                            <input type="range" id="durationControl" min="1" max="10" value="3" class="slider">
+                            <span id="durationValue">3s</span>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="breathingControl">💨 Respiração Circular:</label>
+                            <input type="checkbox" id="breathingControl" checked>
+                        </div>
+                    </div>
+                    
+                    <div class="audio-info" id="audioInfo">
+                        <p>Execute a análise para gerar preview sonoro</p>
+                    </div>
+                </div>
+
                 <div class="visualization-tabs">
                     <button class="viz-tab active" onclick="switchVisualization('shape')">📐 Geometria</button>
                     <button class="viz-tab" onclick="switchVisualization('impedance')">📊 Impedância</button>
@@ -959,7 +1100,10 @@
             analysisResults: [],
             isAnalyzing: false,
             currentMode: 'analise',
-            currentVisualization: 'shape'
+            currentVisualization: 'shape',
+            audioContext: null,
+            oscillators: [],
+            isPlaying: false
         };
 
         // Formas pré-definidas (formato DIDGMO em metros)
@@ -1202,6 +1346,269 @@
             return results;
         }
         
+        // Inicializar contexto de áudio
+        function initAudioContext() {
+            if (!appState.audioContext) {
+                appState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return appState.audioContext;
+        }
+
+        // Criar oscilador com envelope ADSR
+        function createOscillator(frequency, type = 'sawtooth', gain = 0.1) {
+            const audioCtx = initAudioContext();
+            
+            // Oscillator
+            const oscillator = audioCtx.createOscillator();
+            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            oscillator.type = type;
+            
+            // Gain (volume)
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            
+            // Filter para simular timbre do didgeridoo
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(frequency * 3, audioCtx.currentTime);
+            filter.Q.setValueAtTime(2, audioCtx.currentTime);
+            
+            // Conectar: oscillator -> filter -> gain -> destination
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            return { oscillator, gainNode, filter };
+        }
+
+        // Simular respiração circular (modulação de amplitude)
+        function addBreathingEffect(gainNode, audioCtx, duration) {
+            const breathingRate = 0.3; // Hz
+            const breathingDepth = 0.3;
+            
+            for (let t = 0; t < duration; t += 0.1) {
+                const time = audioCtx.currentTime + t;
+                const breathing = 1 + breathingDepth * Math.sin(2 * Math.PI * breathingRate * t);
+                gainNode.gain.linearRampToValueAtTime(
+                    gainNode.gain.value * breathing, 
+                    time
+                );
+            }
+        }
+
+        // Tocar drone (frequência fundamental)
+        function playDrone() {
+            if (appState.analysisResults.length === 0) {
+                showMessage('❌ Execute a análise primeiro!', 'error');
+                return;
+            }
+
+            stopAllAudio();
+
+            const droneFreq = appState.analysisResults[0].frequency;
+            const volume = document.getElementById('volumeControl').value / 100;
+            const duration = parseFloat(document.getElementById('durationControl').value);
+            const hasBreathing = document.getElementById('breathingControl').checked;
+
+            const audioCtx = initAudioContext();
+            
+            // Fundamental (drone)
+            const fundamental = createOscillator(droneFreq, 'sawtooth', volume * 0.8);
+            
+            // Harmônicos para riqueza timbral
+            const harmonics = [];
+            for (let i = 1; i < Math.min(4, appState.analysisResults.length); i++) {
+                const harmFreq = appState.analysisResults[i].frequency;
+                const harmGain = volume * 0.3 / (i + 1); // Harmônicos mais fracos
+                harmonics.push(createOscillator(harmFreq, 'sine', harmGain));
+            }
+
+            // Envelope ADSR
+            const attack = 0.1;
+            const decay = 0.3;
+            const sustain = 0.7;
+            const release = 0.5;
+
+            // Aplicar envelope ao fundamental
+            fundamental.gainNode.gain.linearRampToValueAtTime(volume * 0.8, audioCtx.currentTime + attack);
+            fundamental.gainNode.gain.linearRampToValueAtTime(volume * 0.8 * sustain, audioCtx.currentTime + attack + decay);
+            fundamental.gainNode.gain.setValueAtTime(volume * 0.8 * sustain, audioCtx.currentTime + duration - release);
+            fundamental.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+
+            // Aplicar envelope aos harmônicos
+            harmonics.forEach((harmonic, index) => {
+                const harmVolume = volume * 0.3 / (index + 2);
+                harmonic.gainNode.gain.linearRampToValueAtTime(harmVolume, audioCtx.currentTime + attack);
+                harmonic.gainNode.gain.linearRampToValueAtTime(harmVolume * sustain, audioCtx.currentTime + attack + decay);
+                harmonic.gainNode.gain.setValueAtTime(harmVolume * sustain, audioCtx.currentTime + duration - release);
+                harmonic.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+            });
+
+            // Adicionar respiração circular se selecionado
+            if (hasBreathing) {
+                addBreathingEffect(fundamental.gainNode, audioCtx, duration);
+                harmonics.forEach(harmonic => {
+                    addBreathingEffect(harmonic.gainNode, audioCtx, duration);
+                });
+            }
+
+            // Iniciar osciladores
+            fundamental.oscillator.start(audioCtx.currentTime);
+            fundamental.oscillator.stop(audioCtx.currentTime + duration);
+            
+            harmonics.forEach(harmonic => {
+                harmonic.oscillator.start(audioCtx.currentTime);
+                harmonic.oscillator.stop(audioCtx.currentTime + duration);
+            });
+
+            // Armazenar referências
+            appState.oscillators = [fundamental, ...harmonics];
+            appState.isPlaying = true;
+
+            // UI feedback
+            document.getElementById('droneBtn').classList.add('playing');
+            document.getElementById('audioInfo').innerHTML = `🎵 Tocando drone: ${Math.round(droneFreq)} Hz (${appState.analysisResults[0].note}${appState.analysisResults[0].octave})`;
+            document.getElementById('audioInfo').classList.add('playing');
+
+            // Limpar após término
+            setTimeout(() => {
+                stopAllAudio();
+            }, duration * 1000);
+        }
+
+        // Tocar harmônicos (trombetas)
+        function playHarmonics() {
+            if (appState.analysisResults.length < 2) {
+                showMessage('❌ Não há harmônicos suficientes!', 'error');
+                return;
+            }
+
+            stopAllAudio();
+
+            const volume = document.getElementById('volumeControl').value / 100;
+            const duration = parseFloat(document.getElementById('durationControl').value);
+            const audioCtx = initAudioContext();
+
+            const harmonicOscillators = [];
+
+            // Tocar harmônicos em sequência rápida (arpejo)
+            appState.analysisResults.slice(1, 6).forEach((result, index) => {
+                const delay = index * 0.3; // Atraso entre harmônicos
+                const harmDuration = 0.8; // Duração de cada harmônico
+                
+                setTimeout(() => {
+                    if (!appState.isPlaying) return; // Verificar se ainda está tocando
+                    
+                    const harmonic = createOscillator(result.frequency, 'triangle', volume * 0.6);
+                    
+                    // Envelope mais agressivo para trombetas
+                    harmonic.gainNode.gain.linearRampToValueAtTime(volume * 0.6, audioCtx.currentTime + 0.05);
+                    harmonic.gainNode.gain.linearRampToValueAtTime(volume * 0.4, audioCtx.currentTime + 0.2);
+                    harmonic.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + harmDuration);
+                    
+                    // Filtro mais agressivo
+                    harmonic.filter.frequency.setValueAtTime(result.frequency * 2, audioCtx.currentTime);
+                    
+                    harmonic.oscillator.start(audioCtx.currentTime);
+                    harmonic.oscillator.stop(audioCtx.currentTime + harmDuration);
+                    
+                    harmonicOscillators.push(harmonic);
+                }, delay * 1000);
+            });
+
+            appState.oscillators = harmonicOscillators;
+            appState.isPlaying = true;
+
+            // UI feedback
+            document.getElementById('harmonicsBtn').classList.add('playing');
+            document.getElementById('audioInfo').innerHTML = `🎺 Tocando trombetas: ${appState.analysisResults.slice(1, 6).length} harmônicos`;
+            document.getElementById('audioInfo').classList.add('playing');
+
+            // Limpar após término
+            setTimeout(() => {
+                stopAllAudio();
+            }, duration * 1000);
+        }
+
+        // Tocar espectro completo
+        function playFullSpectrum() {
+            if (appState.analysisResults.length === 0) {
+                showMessage('❌ Execute a análise primeiro!', 'error');
+                return;
+            }
+
+            stopAllAudio();
+
+            const volume = document.getElementById('volumeControl').value / 100;
+            const duration = parseFloat(document.getElementById('durationControl').value);
+            const hasBreathing = document.getElementById('breathingControl').checked;
+            const audioCtx = initAudioContext();
+
+            const allOscillators = [];
+
+            // Tocar todos os harmônicos simultaneamente com volumes proporcionais
+            appState.analysisResults.forEach((result, index) => {
+                const harmVolume = volume * Math.pow(0.6, index); // Volume decrescente
+                const oscillator = createOscillator(
+                    result.frequency, 
+                    index === 0 ? 'sawtooth' : 'sine', 
+                    harmVolume
+                );
+
+                // Envelope
+                oscillator.gainNode.gain.linearRampToValueAtTime(harmVolume, audioCtx.currentTime + 0.2);
+                oscillator.gainNode.gain.linearRampToValueAtTime(harmVolume * 0.8, audioCtx.currentTime + 0.5);
+                oscillator.gainNode.gain.setValueAtTime(harmVolume * 0.8, audioCtx.currentTime + duration - 0.3);
+                oscillator.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+
+                if (hasBreathing) {
+                    addBreathingEffect(oscillator.gainNode, audioCtx, duration);
+                }
+
+                oscillator.oscillator.start(audioCtx.currentTime);
+                oscillator.oscillator.stop(audioCtx.currentTime + duration);
+
+                allOscillators.push(oscillator);
+            });
+
+            appState.oscillators = allOscillators;
+            appState.isPlaying = true;
+
+            // UI feedback
+            document.getElementById('spectrumBtn').classList.add('playing');
+            document.getElementById('audioInfo').innerHTML = `🎼 Tocando espectro completo: ${appState.analysisResults.length} frequências`;
+            document.getElementById('audioInfo').classList.add('playing');
+
+            // Limpar após término
+            setTimeout(() => {
+                stopAllAudio();
+            }, duration * 1000);
+        }
+
+        // Parar todo áudio
+        function stopAllAudio() {
+            if (appState.audioContext) {
+                // Parar todos os osciladores
+                appState.oscillators.forEach(osc => {
+                    try {
+                        if (osc.oscillator) {
+                            osc.oscillator.stop();
+                        }
+                    } catch (e) {
+                        // Oscilador já foi parado
+                    }
+                });
+            }
+
+            appState.oscillators = [];
+            appState.isPlaying = false;
+
+            // UI feedback
+            document.querySelectorAll('.audio-btn').forEach(btn => btn.classList.remove('playing'));
+            document.getElementById('audioInfo').classList.remove('playing');
+            document.getElementById('audioInfo').innerHTML = 'Preview sonoro parado';
+        }
+
         // Calcular impedância para uma frequência específica
         function calculateImpedance(frequency, length, avgDiameter) {
             const c = 343; // velocidade do som
@@ -1756,6 +2163,9 @@
                 // Exibir resultados
                 displayResults();
                 
+                // Atualizar info de áudio
+                updateAudioInfo();
+                
                 // Redesenhar visualizações se necessário
                 if (appState.currentVisualization === 'impedance') {
                     drawImpedanceSpectrum();
@@ -1902,6 +2312,49 @@
             // Mostrar seção de resultados
             document.getElementById('constructionResults').style.display = 'block';
             document.getElementById('constructionResults').classList.add('fade-in');
+        }
+
+        // Atualizar informações de áudio
+        function updateAudioInfo() {
+            const audioInfo = document.getElementById('audioInfo');
+            
+            if (appState.analysisResults.length === 0) {
+                audioInfo.innerHTML = 'Execute a análise para gerar preview sonoro';
+                return;
+            }
+
+            const drone = appState.analysisResults[0];
+            const harmonicsCount = appState.analysisResults.length - 1;
+            
+            audioInfo.innerHTML = `
+                🎵 <strong>Drone:</strong> ${Math.round(drone.frequency)} Hz (${drone.note}${drone.octave})<br>
+                🎺 <strong>Trombetas:</strong> ${harmonicsCount} harmônicos disponíveis<br>
+                💡 Clique nos botões acima para ouvir o preview
+            `;
+        }
+
+        // Event listeners para controles de áudio
+        function setupAudioControls() {
+            // Volume control
+            const volumeControl = document.getElementById('volumeControl');
+            const volumeValue = document.getElementById('volumeValue');
+            
+            volumeControl.addEventListener('input', function() {
+                volumeValue.textContent = this.value + '%';
+            });
+
+            // Duration control
+            const durationControl = document.getElementById('durationControl');
+            const durationValue = document.getElementById('durationValue');
+            
+            durationControl.addEventListener('input', function() {
+                durationValue.textContent = this.value + 's';
+            });
+
+            // Parar áudio quando mudança de geometria
+            document.getElementById('geometryInput').addEventListener('input', function() {
+                stopAllAudio();
+            });
         }
 
         // Gerar dicas de construção baseadas no material e dimensões
@@ -2129,6 +2582,9 @@
             // Configurar listeners da construção
             setupConstructionListeners();
             
+            // Configurar controles de áudio
+            setupAudioControls();
+            
             // Análise inicial
             setTimeout(() => analisar(), 1000);
             
@@ -2189,6 +2645,7 @@
             const textarea = document.getElementById('geometryInput');
             textarea.addEventListener('input', function() {
                 localStorage.setItem('didgeridoo_geometry', this.value);
+                stopAllAudio(); // Parar áudio quando geometria muda
             });
             
             // Restaurar do localStorage
