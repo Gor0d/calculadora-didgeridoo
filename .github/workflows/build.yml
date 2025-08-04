@@ -28,12 +28,17 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
           
       - name: Build APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           echo "Starting EAS build..."
+          echo "Token configured: $([ ! -z "$EXPO_TOKEN" ] && echo "YES" || echo "NO")"
           eas build --platform android --profile production-apk --non-interactive --wait
         
       - name: Get build info
         id: build_info
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           BUILD_INFO=$(eas build:list --platform android --limit 1 --json)
           BUILD_URL=$(echo $BUILD_INFO | jq -r '.[0].artifacts.buildUrl // empty')
