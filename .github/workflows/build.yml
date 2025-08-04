@@ -1,11 +1,8 @@
-name: Manual Release
+name: Auto Release
 on:
+  push:
+    branches: [main, master]
   workflow_dispatch:
-    inputs:
-      apk_url:
-        description: 'URL do APK (da build EAS local)'
-        required: true
-        type: string
 
 jobs:
   release:
@@ -14,11 +11,53 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Download APK
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm install --production
+        
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Get latest build
+        id: get_build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          curl -L -o calculadora-didgeridoo-v${{ github.run_number }}.apk "${{ github.event.inputs.apk_url }}"
+          echo "Getting latest build..."
+          BUILD_INFO=$(npx eas build:list --platform android --limit 1 --json --non-interactive)
+          BUILD_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl // empty')
+          BUILD_ID=$(echo "$BUILD_INFO" | jq -r '.[0].id // empty')
+          BUILD_STATUS=$(echo "$BUILD_INFO" | jq -r '.[0].status // empty')
+          
+          echo "Build Status: $BUILD_STATUS"
+          echo "Build URL: $BUILD_URL"
+          echo "Build ID: $BUILD_ID"
+          
+          if [ "$BUILD_STATUS" = "finished" ] && [ "$BUILD_URL" != "empty" ] && [ "$BUILD_URL" != "" ]; then
+            echo "build_url=$BUILD_URL" >> $GITHUB_OUTPUT
+            echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+            echo "build_ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_ready=false" >> $GITHUB_OUTPUT
+            echo "❌ No finished build available"
+          fi
+          
+      - name: Download APK
+        if: steps.get_build.outputs.build_ready == 'true'
+        run: |
+          echo "Downloading APK from: ${{ steps.get_build.outputs.build_url }}"
+          curl -L -o calculadora-didgeridoo-v${{ github.run_number }}.apk "${{ steps.get_build.outputs.build_url }}"
+          ls -la *.apk
           
       - name: Create Release
+        if: steps.get_build.outputs.build_ready == 'true' 
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ github.run_number }}
@@ -27,6 +66,7 @@ jobs:
             🎺 **Nova versão da Calculadora Didgeridoo**
             
             📱 **APK para Android**: Baixe o arquivo `.apk` abaixo
+            🔧 **Build ID**: ${{ steps.get_build.outputs.build_id }}
             📅 **Data**: ${{ github.event.head_commit.timestamp }}
             
             ### Como instalar:
@@ -35,8 +75,18 @@ jobs:
             3. Instale o APK
             
             ### Para desenvolvedores:
-            Build feito localmente com EAS e enviado manualmente
+            - Build automático com EAS
+            - Release automático no GitHub
+            - APK sempre atualizado
           files: |
             calculadora-didgeridoo-v${{ github.run_number }}.apk
           draft: false
           prerelease: false
+          
+      - name: No build available
+        if: steps.get_build.outputs.build_ready != 'true'
+        run: |
+          echo "⚠️  Nenhum build finalizado encontrado."
+          echo "Execute: npm run build:android:apk"
+          echo "Depois faça push novamente para criar release."
+          exit 1
