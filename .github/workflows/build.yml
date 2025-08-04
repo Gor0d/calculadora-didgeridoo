@@ -27,12 +27,19 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
           
+      - name: Initialize EAS project
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          echo "Initializing EAS project..."
+          eas project:info || echo "Project info not available"
+          
       - name: Build APK
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           echo "Starting EAS build..."
-          echo "Token configured: $([ ! -z "$EXPO_TOKEN" ] && echo "YES" || echo "NO")"
+          echo "Project ID: cad4f3a7-4b85-4cf7-bc47-f276f23ec2c6"
           eas build --platform android --profile production-apk --non-interactive --wait
         
       - name: Get build info
