@@ -1,8 +1,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import { View, Text, StyleSheet } from 'react-native';
-import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { View, StyleSheet } from 'react-native';
+import { getDeviceInfo, getTypography, getSpacing, getIconSizes } from '../utils/responsive';
+import { AppIcon } from '../components/IconSystem';
 import { localizationService } from '../services/i18n/LocalizationService';
 import { SimpleHomeScreen } from '../screens/SimpleHomeScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -11,10 +13,15 @@ const Tab = createBottomTabNavigator();
 const deviceInfo = getDeviceInfo();
 const typography = getTypography();
 const spacing = getSpacing();
+const iconSizes = getIconSizes();
 
-const TabIcon = ({ iconText, color, focused }) => (
-  <View style={styles.tabIconContainer}>
-    <Text style={[styles.tabIcon, { color }]}>{iconText}</Text>
+const TabIcon = ({ iconName, color, focused }) => (
+  <View style={[styles.tabIconContainer, focused && styles.tabIconFocused]}>
+    <AppIcon 
+      name={iconName} 
+      size={iconSizes.tabIcon} 
+      color={color} 
+    />
   </View>
 );
 
@@ -29,7 +36,8 @@ export const TabNavigator = ({
   onResetOnboarding
 }) => {
   return (
-    <NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
@@ -45,7 +53,7 @@ export const TabNavigator = ({
           options={{
             tabBarLabel: localizationService.t('home'),
             tabBarIcon: ({ color, focused }) => (
-              <TabIcon iconText="🏠" color={color} focused={focused} />
+              <TabIcon iconName="home" color={color} focused={focused} />
             ),
           }}
         >
@@ -65,7 +73,7 @@ export const TabNavigator = ({
           options={{
             tabBarLabel: localizationService.t('settings'),
             tabBarIcon: ({ color, focused }) => (
-              <TabIcon iconText="⚙️" color={color} focused={focused} />
+              <TabIcon iconName="settings" color={color} focused={focused} />
             ),
           }}
         >
@@ -84,22 +92,23 @@ export const TabNavigator = ({
           )}
         </Tab.Screen>
       </Tab.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E5E7EB',
-    paddingBottom: deviceInfo.safeAreaBottom,
+    paddingBottom: deviceInfo.safeAreaBottom + spacing.xs,
     paddingTop: spacing.sm,
-    height: 60 + deviceInfo.safeAreaBottom,
+    height: (deviceInfo.isTablet ? 70 : 60) + deviceInfo.safeAreaBottom,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 8,
   },
   tabBarLabel: {
@@ -113,8 +122,14 @@ const styles = StyleSheet.create({
   tabIconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    borderRadius: spacing.sm,
+    minWidth: 44, // Minimum touch target
+    minHeight: 44,
   },
-  tabIcon: {
-    fontSize: 22,
+  tabIconFocused: {
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    transform: [{ scale: 1.05 }],
   },
 });

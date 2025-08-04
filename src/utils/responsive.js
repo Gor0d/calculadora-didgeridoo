@@ -8,21 +8,34 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BASE_WIDTH = 390;
 const BASE_HEIGHT = 844;
 
-// Responsive scaling function
+// Responsive scaling function with device type awareness
 export const scale = (size) => {
   const scaleRatio = SCREEN_WIDTH / BASE_WIDTH;
-  return Math.round(PixelRatio.roundToNearestPixel(size * scaleRatio));
+  
+  // Apply more conservative scaling for larger devices
+  let adjustedRatio = scaleRatio;
+  if (SCREEN_WIDTH >= 768) {
+    adjustedRatio = Math.min(scaleRatio, 1.5); // Limit tablet scaling
+  } else if (SCREEN_WIDTH >= 414) {
+    adjustedRatio = Math.min(scaleRatio, 1.3); // Limit large phone scaling
+  }
+  
+  return Math.round(PixelRatio.roundToNearestPixel(size * adjustedRatio));
 };
 
-// Vertical scaling (for heights)
+// Vertical scaling (for heights) with intelligent limits
 export const verticalScale = (size) => {
   const scaleRatio = SCREEN_HEIGHT / BASE_HEIGHT;
-  return Math.round(PixelRatio.roundToNearestPixel(size * scaleRatio));
+  
+  // More conservative vertical scaling to prevent overly tall elements
+  const adjustedRatio = Math.min(scaleRatio, SCREEN_WIDTH >= 768 ? 1.3 : 1.4);
+  return Math.round(PixelRatio.roundToNearestPixel(size * adjustedRatio));
 };
 
 // Moderate scaling (for responsive design)
 export const moderateScale = (size, factor = 0.5) => {
-  return scale(size) + (scale(size) - size) * factor;
+  const scaledSize = scale(size);
+  return Math.round(PixelRatio.roundToNearestPixel(size + (scaledSize - size) * factor));
 };
 
 // Get device info for responsive design
@@ -196,6 +209,80 @@ export const getLayoutStyles = () => {
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
     },
+  };
+};
+
+// Breakpoints for responsive design
+export const getBreakpoints = () => ({
+  xs: 0,
+  sm: 576,
+  md: 768,
+  lg: 992,
+  xl: 1200,
+  xxl: 1400
+});
+
+// Function to get responsive values based on screen size
+export const useResponsiveValue = (values) => {
+  if (typeof values !== 'object') return values;
+  
+  const deviceInfo = getDeviceInfo();
+  
+  if (deviceInfo.isTablet && values.tablet) return values.tablet;
+  if (deviceInfo.isLargeDevice && values.large) return values.large;
+  if (deviceInfo.isMediumDevice && values.medium) return values.medium;
+  if (deviceInfo.isSmallDevice && values.small) return values.small;
+  
+  return values.default || values;
+};
+
+// Enhanced icon sizing system
+export const getIconSizes = () => {
+  const deviceInfo = getDeviceInfo();
+  
+  const baseScale = deviceInfo.isTablet ? 1.4 :
+                   deviceInfo.isLargeDevice ? 1.2 :
+                   deviceInfo.isMediumDevice ? 1.0 : 0.9;
+  
+  return {
+    xs: scale(12 * baseScale),
+    sm: scale(16 * baseScale),
+    md: scale(20 * baseScale),
+    lg: scale(24 * baseScale),
+    xl: scale(28 * baseScale),
+    xxl: scale(32 * baseScale),
+    xxxl: scale(40 * baseScale),
+    
+    // Specific use cases
+    tabIcon: scale(22 * baseScale),
+    buttonIcon: scale(18 * baseScale),
+    headerIcon: scale(26 * baseScale),
+    cardIcon: scale(20 * baseScale)
+  };
+};
+
+// Enhanced layout helpers with better island support
+export const getLayoutConstraints = () => {
+  const deviceInfo = getDeviceInfo();
+  
+  return {
+    // Maximum content width for readability
+    maxContentWidth: deviceInfo.isTablet ? scale(800) : SCREEN_WIDTH,
+    
+    // Minimum touch target size (following accessibility guidelines)
+    minTouchTarget: scale(44),
+    
+    // Recommended spacing for dynamic island
+    dynamicIslandSpacing: deviceInfo.hasDynamicIsland ? scale(16) : 0,
+    
+    // Safe scrollable height
+    safeScrollHeight: deviceInfo.usableHeight - scale(100),
+    
+    // Optimal card width for different screen sizes
+    cardWidth: deviceInfo.isTablet ? '45%' : '100%',
+    
+    // Grid system
+    gridCols: deviceInfo.isTablet ? 3 : deviceInfo.isLargeDevice ? 2 : 1
   };
 };
 

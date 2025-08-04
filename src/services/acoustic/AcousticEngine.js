@@ -1,6 +1,7 @@
 /**
  * Real Acoustic Calculations for Didgeridoo Analysis
  * Based on acoustic theory and empirical didgeridoo research
+ * Enhanced with offline capabilities
  */
 
 export class AcousticEngine {
@@ -20,13 +21,82 @@ export class AcousticEngine {
 
   /**
    * Calculate fundamental frequency and harmonics from geometry
+   * Enhanced with offline capability
    */
-  analyzeGeometry(points) {
+  async analyzeGeometry(points, offlineManager = null) {
     try {
       if (!points || points.length < 2) {
         throw new Error('Insufficient geometry points');
       }
 
+      // Try online analysis first
+      return await this.analyzeGeometryOnline(points);
+    } catch (error) {
+      console.warn('Online analysis failed, attempting offline analysis:', error);
+      
+      // Fallback to offline analysis if offline manager is available
+      if (offlineManager) {
+        try {
+          return await offlineManager.analyzeGeometryOffline(points);
+        } catch (offlineError) {
+          console.error('Offline analysis also failed:', offlineError);
+        }
+      }
+      
+      // Final fallback to simplified calculation
+      return await this.analyzeGeometrySimplified(points);
+    }
+  }
+
+  /**
+   * Simplified analysis method as final fallback
+   */
+  async analyzeGeometrySimplified(points) {
+    try {
+      // Calculate basic measurements
+      const totalLength = points[points.length - 1].position / 100; // cm to m
+      const avgDiameter = points.reduce((sum, p) => sum + p.diameter, 0) / points.length;
+      const avgRadius = avgDiameter / 2000; // mm to m
+      
+      // Simple frequency calculation
+      const fundamentalFreq = this.SPEED_OF_SOUND / (4 * totalLength);
+      
+      // Generate basic harmonic series
+      const harmonics = [];
+      for (let n = 1; n <= 6; n++) {
+        const freq = fundamentalFreq * (2 * n - 1); // odd harmonics
+        if (freq >= 20 && freq <= 2000) {
+          harmonics.push({
+            frequency: freq,
+            harmonic: n,
+            ...this.frequencyToNote(freq),
+            amplitude: 1 / Math.sqrt(n),
+            quality: Math.max(0.3, 1 - (freq - 60) / 400)
+          });
+        }
+      }
+      
+      return {
+        results: harmonics,
+        metadata: {
+          effectiveLength: totalLength * 100,
+          averageRadius: avgRadius * 1000,
+          volume: Math.PI * avgRadius * avgRadius * totalLength * 1000000,
+          isOfflineCalculation: true,
+          calculationMethod: 'simplified_fallback'
+        }
+      };
+    } catch (error) {
+      console.error('Even simplified analysis failed:', error);
+      throw new Error('Análise acústica falhou completamente');
+    }
+  }
+
+  /**
+   * Online analysis method (original logic)
+   */
+  async analyzeGeometryOnline(points) {
+    try {
       // Convert geometry to SI units and validate
       const segments = this.processGeometry(points);
       
@@ -50,21 +120,18 @@ export class AcousticEngine {
       }));
 
       return {
-        success: true,
         results,
         metadata: {
           effectiveLength: effectiveLength * 100, // Convert back to cm
           averageRadius: averageRadius * 1000, // Convert back to mm
           volume: this.calculateVolume(segments),
-          impedanceProfile: this.calculateImpedanceProfile(segments)
+          impedanceProfile: this.calculateImpedanceProfile(segments),
+          isOfflineCalculation: false,
+          calculationMethod: 'online_advanced'
         }
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-        results: []
-      };
+      throw error;
     }
   }
 

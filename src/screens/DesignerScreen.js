@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import GeometryVisualization from '../components/GeometryVisualization';
 
 export default function DesignerScreen() {
   const [projectName, setProjectName] = useState('Meu Didgeridoo');
@@ -258,6 +259,14 @@ ${(lengthMm / 1000).toFixed(3)} 0.080`;
             onChangeText={setGeometry}
             multiline
             placeholder="0.00 0.030&#10;0.50 0.045&#10;1.50 0.080"
+          />
+
+          {/* Geometry Visualization */}
+          <Text style={styles.sectionTitle}>🎯 Visualização Interativa</Text>
+          <GeometryVisualization 
+            geometry={geometry} 
+            width={320} 
+            height={250}
           />
 
           {/* Parameters */}

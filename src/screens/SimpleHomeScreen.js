@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,22 @@ import { AppHeader } from '../components/AppHeader';
 import { UnitSelector } from '../components/UnitSelector';
 import { GeometryInput } from '../components/GeometryInput';
 import { QuickExamples } from '../components/QuickExamples';
+import { ProjectManager } from '../components/ProjectManager';
+import { AdvancedExport } from '../components/AdvancedExport';
+import { TutorialOverlay } from '../components/TutorialOverlay';
+import { TipCard, FloatingTipManager } from '../components/TipCard';
+import { PerformanceSettings } from '../components/PerformanceSettings';
+import { OptimizedScrollView, OptimizedTouchableOpacity, OptimizedText } from '../components/OptimizedComponents';
+import { AppIcon } from '../components/IconSystem';
+import { useTutorial, useTips } from '../hooks/useTutorial';
 import { getDeviceInfo, getTypography, getSpacing, scale } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
 import { audioEngine } from '../services/audio/AudioEngine';
 import { acousticEngine } from '../services/acoustic/AcousticEngine';
 import { unitConverter } from '../services/units/UnitConverter';
 import { ProjectStorage } from '../services/storage/ProjectStorage';
+import { PerformanceManager } from '../services/performance/PerformanceManager';
+import { OfflineManager } from '../services/offline/OfflineManager';
 import { validateGeometryString, getGeometryStats } from '../utils/geometryValidator';
 import { SCREEN_WIDTH } from '../utils/responsive';
 
@@ -25,18 +35,24 @@ const deviceInfo = getDeviceInfo();
 const typography = getTypography();
 const spacing = getSpacing();
 
-// GeometryVisualization Component
+// Optimized GeometryVisualization Component with Performance Controls
 const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = 'metric' }) => {
+  // Skip rendering if not visible or animations disabled
+  if (!isVisible || !PerformanceManager.shouldEnableFeature('animations')) {
+    return null;
+  }
+
   const points = useMemo(() => {
-    if (!isVisible || !geometry || !geometry.trim()) return [];
+    if (!geometry || !geometry.trim()) return [];
     
+    // Use performance-aware debouncing for parsing
     try {
       return unitConverter.parseGeometry(geometry, currentUnit);
     } catch (error) {
       console.warn('Error parsing geometry for visualization:', error);
       return [];
     }
-  }, [geometry, isVisible, currentUnit]);
+  }, [geometry, currentUnit]);
 
   const { svgDimensions, pathData, outerWallPath, controlPoints } = useMemo(() => {
     if (!isVisible || !geometry || !geometry.trim() || points.length < 2) {
@@ -205,7 +221,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           
           {/* Measurement points with dimensions */}
           {controlPoints.map((point, index) => {
-            const pointData = validPoints[index];
+            const pointData = points[index];
             const isKeyPoint = index === 0 || index === controlPoints.length - 1 || index % 2 === 0;
             
             return (
@@ -536,6 +552,42 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
   const [geometryStats, setGeometryStats] = useState(null);
+  const [showProjectManager, setShowProjectManager] = useState(false);
+  const [showAdvancedExport, setShowAdvancedExport] = useState(false);
+  const [showPerformanceSettings, setShowPerformanceSettings] = useState(false);
+  const [currentProject, setCurrentProject] = useState(null);
+  const [performanceInitialized, setPerformanceInitialized] = useState(false);
+
+  // Tutorial system
+  const tutorial = useTutorial('basic_usage', {
+    hasResults: analysisResults.length > 0,
+    hasProject: !!currentProject,
+    hasGeometry: !!geometry.trim()
+  });
+  
+  const tips = useTips('analysis');
+
+  // Refs for tutorial targets
+  const appHeaderRef = useRef(null);
+  const quickExamplesRef = useRef(null);
+  const unitSelectorRef = useRef(null);
+  const geometryInputRef = useRef(null);
+  const analyzeButtonRef = useRef(null);
+  const visualizationToggleRef = useRef(null);
+  const manageProjectsRef = useRef(null);
+  const exportButtonRef = useRef(null);
+
+  // Register refs with tutorial system
+  useEffect(() => {
+    tutorial.registerRef('app_header', appHeaderRef);
+    tutorial.registerRef('quick_examples', quickExamplesRef);
+    tutorial.registerRef('unit_selector', unitSelectorRef);
+    tutorial.registerRef('geometry_input', geometryInputRef);
+    tutorial.registerRef('analyze_button', analyzeButtonRef);
+    tutorial.registerRef('visualization_toggle', visualizationToggleRef);
+    tutorial.registerRef('manage_projects_button', manageProjectsRef);
+    tutorial.registerRef('export_button', exportButtonRef);
+  }, []);
 
   // Initialize audio engine on component mount
   useEffect(() => {
@@ -548,6 +600,26 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
       }
     };
     initAudio();
+  }, []);
+
+  // Initialize performance optimizations
+  useEffect(() => {
+    const initPerformance = async () => {
+      try {
+        const result = await PerformanceManager.initializePerformanceOptimization();
+        setPerformanceInitialized(true);
+        console.log('Performance optimizations initialized:', result);
+      } catch (error) {
+        console.warn('Performance initialization failed:', error);
+      }
+    };
+
+    initPerformance();
+
+    // Cleanup on unmount
+    return () => {
+      PerformanceManager.cleanup();
+    };
   }, []);
 
   const handlePlaySound = async (type, data) => {
@@ -582,24 +654,31 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
     }
   };
 
-  const handleGeometryChange = (text) => {
-    const safeText = text || '';
-    setGeometry(safeText);
-    
-    if (safeText.trim()) {
-      const validation = unitConverter.validateGeometry(safeText, currentUnit);
-      setValidationErrors(validation.valid ? [] : [validation.errors[0]]);
-      
-      if (validation.valid && validation.points.length > 0) {
-        setGeometryStats(getGeometryStats(validation.points));
+  // Optimized geometry change handler with debouncing
+  const debouncedValidation = useMemo(
+    () => PerformanceManager.createOptimizedDebounce((text) => {
+      if (text.trim()) {
+        const validation = unitConverter.validateGeometry(text, currentUnit);
+        setValidationErrors(validation.valid ? [] : [validation.errors[0]]);
+        
+        if (validation.valid && validation.points.length > 0) {
+          setGeometryStats(getGeometryStats(validation.points));
+        } else {
+          setGeometryStats(null);
+        }
       } else {
+        setValidationErrors([]);
         setGeometryStats(null);
       }
-    } else {
-      setValidationErrors([]);
-      setGeometryStats(null);
-    }
-  };
+    }, 300),
+    [currentUnit]
+  );
+
+  const handleGeometryChange = useCallback((text) => {
+    const safeText = text || '';
+    setGeometry(safeText);
+    debouncedValidation(safeText);
+  }, [debouncedValidation]);
 
   const handleAnalyze = async () => {
     if (!geometry || !geometry.trim()) {
@@ -621,7 +700,7 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
 
     setIsAnalyzing(true);
     try {
-      const analysisResult = await acousticEngine.analyzeGeometry(validation.points);
+      const analysisResult = await acousticEngine.analyzeGeometry(validation.points, OfflineManager);
       
       // Extract the results array from the response object
       const resultsArray = analysisResult && analysisResult.results ? analysisResult.results : analysisResult;
@@ -630,6 +709,13 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
       setAnalysisResults(resultsArray);
       setAnalysisMetadata(metadata);
       setShowResults(true);
+      
+      // Show contextual tip for first analysis
+      if (resultsArray.length > 0 && !currentProject) {
+        setTimeout(() => {
+          tips.showTipForCategory('analysis');
+        }, 2000);
+      }
       
       // Auto-save analysis
       const projectName = currentFileName || `Analysis_${new Date().toISOString().slice(0,10)}`;
@@ -680,47 +766,108 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   };
 
   const handleLoadFile = async () => {
-    // Implement file loading logic if needed
-    Alert.alert(
-      localizationService.t('loadFile'),
-      localizationService.t('fileLoadingNotImplemented') || 'Carregamento de arquivo não implementado ainda'
-    );
+    setShowProjectManager(true);
+  };
+
+  const handleProjectSelect = (project) => {
+    setCurrentProject(project);
+    setGeometry(project.geometry || '');
+    setCurrentFileName(project.name || '');
+    
+    // Load analysis results if available
+    if (project.results) {
+      setAnalysisResults(project.results);
+      setAnalysisMetadata(project.metadata);
+      setShowResults(true);
+    } else {
+      setShowResults(false);
+    }
+    
+    // Validate geometry
+    if (project.geometry) {
+      const validation = unitConverter.validateGeometry(project.geometry, currentUnit);
+      if (validation.valid) {
+        setGeometryStats(getGeometryStats(validation.points));
+        setValidationErrors([]);
+      } else {
+        setValidationErrors(validation.errors);
+      }
+    }
+    
+    setShowVisualization(false);
+  };
+
+  const handleSaveCurrentProject = async () => {
+    if (!geometry.trim()) {
+      Alert.alert('Erro', 'Adicione geometria antes de salvar');
+      return;
+    }
+
+    try {
+      const projectData = {
+        ...currentProject,
+        name: currentFileName || `Projeto ${new Date().toLocaleDateString()}`,
+        geometry,
+        results: analysisResults,
+        metadata: analysisMetadata,
+        unit: currentUnit
+      };
+
+      const savedProject = await ProjectStorage.saveProject(projectData);
+      setCurrentProject(savedProject);
+      Alert.alert('Sucesso', 'Projeto salvo com sucesso!');
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao salvar projeto');
+    }
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      nestedScrollEnabled={true}
-      keyboardShouldPersistTaps="handled"
-    >
-      <AppHeader />
-      
-      <QuickExamples 
-        onSelectExample={handleSelectExample} 
-        onLoadFile={handleLoadFile}
-        currentUnit={currentUnit}
-      />
+    <FloatingTipManager category="general">
+      <OptimizedScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View ref={appHeaderRef}>
+          <AppHeader />
+        </View>
+        
+        <View ref={quickExamplesRef}>
+          <QuickExamples 
+            onSelectExample={handleSelectExample} 
+            onLoadFile={handleLoadFile}
+            currentUnit={currentUnit}
+          />
+        </View>
 
-      <UnitSelector
-        currentUnit={currentUnit}
-        onUnitChange={onUnitChange}
-        disabled={isAnalyzing}
-      />
-      
-      <GeometryInput
-        geometry={geometry}
-        onGeometryChange={handleGeometryChange}
-        onAnalyze={handleAnalyze}
-        isAnalyzing={isAnalyzing}
-        currentFileName={currentFileName}
-        onToggleVisualization={() => setShowVisualization(!showVisualization)}
-        showVisualization={showVisualization}
-        validationErrors={validationErrors}
-        geometryStats={geometryStats}
-        currentUnit={currentUnit}
-      />
+        <View ref={unitSelectorRef}>
+          <UnitSelector
+            currentUnit={currentUnit}
+            onUnitChange={onUnitChange}
+            disabled={isAnalyzing}
+          />
+        </View>
+        
+        <View ref={geometryInputRef}>
+          <GeometryInput
+            geometry={geometry}
+            onGeometryChange={handleGeometryChange}
+            onAnalyze={handleAnalyze}
+            isAnalyzing={isAnalyzing}
+            currentFileName={currentFileName}
+            onToggleVisualization={() => setShowVisualization(!showVisualization)}
+            showVisualization={showVisualization}
+            validationErrors={validationErrors}
+            geometryStats={geometryStats}
+            currentUnit={currentUnit}
+            tutorialRefs={{
+              analyzeButton: analyzeButtonRef,
+              visualizationToggle: visualizationToggleRef
+            }}
+          />
+        </View>
       
       <GeometryVisualization 
         geometry={geometry}
@@ -734,7 +881,73 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         onPlaySound={handlePlaySound}
         metadata={analysisMetadata}
       />
-    </ScrollView>
+
+      {/* Project Save Button */}
+      {(geometry.trim() || currentProject) && (
+        <View style={styles.saveProjectContainer}>
+          <TouchableOpacity
+            style={styles.saveProjectButton}
+            onPress={handleSaveCurrentProject}
+          >
+            <Text style={styles.saveProjectText}>
+              💾 {currentProject ? 'Atualizar Projeto' : 'Salvar Projeto'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            ref={manageProjectsRef}
+            style={styles.manageProjectsButton}
+            onPress={() => setShowProjectManager(true)}
+          >
+            <Text style={styles.manageProjectsText}>📁 Gerenciar</Text>
+          </TouchableOpacity>
+          
+          {currentProject && analysisResults.length > 0 && (
+            <TouchableOpacity
+              ref={exportButtonRef}
+              style={styles.exportButton}
+              onPress={() => setShowAdvancedExport(true)}
+            >
+              <Text style={styles.exportButtonText}>📤 Exportar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Project Manager Modal */}
+      <ProjectManager
+        visible={showProjectManager}
+        onClose={() => setShowProjectManager(false)}
+        onProjectSelect={handleProjectSelect}
+        currentProject={currentProject}
+      />
+
+      {/* Advanced Export Modal */}
+      <AdvancedExport
+        visible={showAdvancedExport}
+        onClose={() => setShowAdvancedExport(false)}
+        project={currentProject}
+      />
+
+      {/* Tutorial System */}
+      <TutorialOverlay
+        visible={tutorial.isVisible}
+        step={tutorial.currentStep}
+        elementBounds={tutorial.elementBounds}
+        onNext={tutorial.nextStep}
+        onPrevious={tutorial.previousStep}
+        onSkip={tutorial.skipTutorial}
+        onClose={tutorial.endTutorial}
+      />
+
+      {/* Contextual Tips */}
+      <TipCard
+        visible={!!tips.currentTip}
+        onClose={tips.clearTip}
+        category="analysis"
+      />
+    </OptimizedScrollView>
+    </FloatingTipManager>
   );
 };
 
@@ -1025,5 +1238,67 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontWeight: '700',
     marginTop: 2,
+  },
+
+  // Project management styles
+  saveProjectContainer: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  saveProjectButton: {
+    flex: 2,
+    backgroundColor: '#10B981',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saveProjectText: {
+    color: '#FFFFFF',
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+  manageProjectsButton: {
+    flex: 1,
+    backgroundColor: '#3B82F6',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  manageProjectsText: {
+    color: '#FFFFFF',
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+  exportButton: {
+    flex: 1,
+    backgroundColor: '#F59E0B',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  exportButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.body,
+    fontWeight: '700',
   },
 });

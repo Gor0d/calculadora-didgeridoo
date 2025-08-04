@@ -7,11 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "primaryColor": "#6366F1",
     "description": "Calculadora profissional de didgeridoo com análise acústica avançada, visualização de geometria e preview sonoro em tempo real.",
-    "keywords": ["didgeridoo", "music", "acoustic", "calculator", "analysis", "sound"],
-    "privacy": "public",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -29,14 +29,15 @@
         "NSMicrophoneUsageDescription": "Este app usa o microfone para análise acústica de didgeridoo (opcional).",
         "NSCameraUsageDescription": "Este app pode usar a câmera para capturar medidas (opcional)."
       },
-      "associatedDomains": ["applinks:didgemap.app"],
+      "associatedDomains": [
+        "applinks:didgemap.app"
+      ],
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.didgemap.app",
-      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6366F1"
@@ -70,7 +71,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "12345678-1234-1234-1234-123456789abc"
+        "projectId": "cad4f3a7-4b85-4cf7-bc47-f276f23ec2c6"
       }
     }
   }

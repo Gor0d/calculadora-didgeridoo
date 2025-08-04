@@ -6,6 +6,7 @@ import OnboardingScreen from './src/components/OnboardingScreen';
 import { unitConverter } from './src/services/units/UnitConverter';
 import { localizationService } from './src/services/i18n/LocalizationService';
 import { ProjectStorage } from './src/services/storage/ProjectStorage';
+import { OfflineManager } from './src/services/offline/OfflineManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -25,6 +26,10 @@ export default function App() {
         await localizationService.initialize();
         setCurrentLanguage(localizationService.getCurrentLanguage());
         setIsI18nInitialized(true);
+
+        // Initialize offline manager
+        console.log('Initializing offline manager...');
+        await OfflineManager.initialize();
 
         // Check if user has seen onboarding
         const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');

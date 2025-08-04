@@ -15,6 +15,14 @@
         "gradleCommand": ":app:assembleDebug"
       }
     },
+    "preview-unsigned": {
+      "extends": "preview",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "distribution": "internal"
+    },
     "preview": {
       "distribution": "internal",
       "ios": {
@@ -24,6 +32,13 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "test": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       }
     },
     "production": {

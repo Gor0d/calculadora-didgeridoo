@@ -11,8 +11,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
+import { AppIcon } from '../components/IconSystem';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { UnitSelector } from '../components/UnitSelector';
+import { OfflineSettings } from '../components/OfflineSettings';
+import { TutorialSettings } from '../components/TutorialSettings';
+import { PerformanceSettings } from '../components/PerformanceSettings';
 
 const deviceInfo = getDeviceInfo();
 const typography = getTypography();
@@ -31,6 +35,9 @@ export const SettingsScreen = ({
   const [hapticFeedback, setHapticFeedback] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showOfflineSettings, setShowOfflineSettings] = useState(false);
+  const [showTutorialSettings, setShowTutorialSettings] = useState(false);
+  const [showPerformanceSettings, setShowPerformanceSettings] = useState(false);
 
   const handleExportData = () => {
     Alert.alert(
@@ -80,7 +87,10 @@ export const SettingsScreen = ({
           colors={['#059669', '#10B981']}
           style={StyleSheet.absoluteFill}
         />
-        <Text style={styles.headerTitle}>⚙️ {localizationService.t('settings')}</Text>
+        <View style={styles.headerTitleContainer}>
+          <AppIcon name="settings" size={28} color="#FFFFFF" />
+          <Text style={styles.headerTitle}>{localizationService.t('settings')}</Text>
+        </View>
         <Text style={styles.headerSubtitle}>{localizationService.t('settingsDesc')}</Text>
       </View>
 
@@ -137,9 +147,39 @@ export const SettingsScreen = ({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{localizationService.t('dataManagement')}</Text>
         
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowTutorialSettings(true)}>
+          <View style={styles.actionContent}>
+            <AppIcon name="tutorial" size={24} color="#10B981" />
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Tutorial e Ajuda</Text>
+              <Text style={styles.actionDesc}>Configurar tutoriais e dicas</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowPerformanceSettings(true)}>
+          <View style={styles.actionContent}>
+            <AppIcon name="performance" size={24} color="#F59E0B" />
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Performance</Text>
+              <Text style={styles.actionDesc}>Otimizar para seu dispositivo</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowOfflineSettings(true)}>
+          <View style={styles.actionContent}>
+            <AppIcon name="offline" size={24} color="#6366F1" />
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Configurações Offline</Text>
+              <Text style={styles.actionDesc}>Gerenciar modo offline e cache</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.actionButton} onPress={handleExportData}>
           <View style={styles.actionContent}>
-            <Text style={styles.actionIcon}>📤</Text>
+            <AppIcon name="export" size={24} color="#059669" />
             <View style={styles.actionText}>
               <Text style={styles.actionTitle}>{localizationService.t('exportData')}</Text>
               <Text style={styles.actionDesc}>{localizationService.t('exportDataShort')}</Text>
@@ -149,7 +189,7 @@ export const SettingsScreen = ({
 
         <TouchableOpacity style={styles.actionButton} onPress={handleImportData}>
           <View style={styles.actionContent}>
-            <Text style={styles.actionIcon}>📥</Text>
+            <AppIcon name="import" size={24} color="#0891B2" />
             <View style={styles.actionText}>
               <Text style={styles.actionTitle}>{localizationService.t('importData')}</Text>
               <Text style={styles.actionDesc}>{localizationService.t('importDataShort')}</Text>
@@ -172,7 +212,7 @@ export const SettingsScreen = ({
           <View style={styles.advancedContent}>
             <TouchableOpacity style={styles.actionButton} onPress={onResetOnboarding}>
               <View style={styles.actionContent}>
-                <Text style={styles.actionIcon}>🎯</Text>
+                <AppIcon name="tutorial" size={24} color="#F59E0B" />
                 <View style={styles.actionText}>
                   <Text style={styles.actionTitle}>{localizationService.t('resetOnboarding')}</Text>
                   <Text style={styles.actionDesc}>{localizationService.t('resetOnboardingDesc')}</Text>
@@ -182,7 +222,7 @@ export const SettingsScreen = ({
             
             <TouchableOpacity style={[styles.actionButton, styles.dangerButton]} onPress={handleResetApp}>
               <View style={styles.actionContent}>
-                <Text style={styles.actionIcon}>🗑️</Text>
+                <AppIcon name="delete" size={24} color="#DC2626" />
                 <View style={styles.actionText}>
                   <Text style={[styles.actionTitle, styles.dangerText]}>{localizationService.t('resetApp')}</Text>
                   <Text style={styles.actionDesc}>{localizationService.t('resetAppShort')}</Text>
@@ -221,6 +261,24 @@ export const SettingsScreen = ({
           {localizationService.t('madeWith')} ❤️ {localizationService.t('forDidgeridoo')}
         </Text>
       </View>
+      
+      {/* Tutorial Settings Modal */}
+      <TutorialSettings
+        visible={showTutorialSettings}
+        onClose={() => setShowTutorialSettings(false)}
+      />
+      
+      {/* Performance Settings Modal */}
+      <PerformanceSettings
+        visible={showPerformanceSettings}
+        onClose={() => setShowPerformanceSettings(false)}
+      />
+      
+      {/* Offline Settings Modal */}
+      <OfflineSettings
+        visible={showOfflineSettings}
+        onClose={() => setShowOfflineSettings(false)}
+      />
     </ScrollView>
   );
 };
@@ -240,12 +298,17 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: spacing.xl,
     overflow: 'hidden',
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
   headerTitle: {
     fontSize: typography.h1,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: spacing.xs,
+    marginLeft: spacing.sm,
     textShadowColor: 'rgba(0,0,0,0.15)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
@@ -312,10 +375,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.lg,
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
+    gap: spacing.md,
   },
   actionText: {
     flex: 1,
