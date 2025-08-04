@@ -1,5 +1,5 @@
-import { Dimensions, PixelRatio, Platform } from 'react-native';
-import { getStatusBarHeight } from 'react-native-status-bar-height';
+import { Dimensions, PixelRatio, Platform, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Get device dimensions
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -40,7 +40,7 @@ export const moderateScale = (size, factor = 0.5) => {
 
 // Get device info for responsive design
 export const getDeviceInfo = () => {
-  const statusBarHeight = getStatusBarHeight();
+  const statusBarHeight = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 24;
   
   // Device type detection
   const isSmallDevice = SCREEN_WIDTH < 375;
