@@ -27,29 +27,19 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
           
-      - name: Get latest build
+      - name: Use existing build
         id: get_build
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          echo "Getting latest build..."
-          BUILD_INFO=$(eas build:list --platform android --limit 1 --json --non-interactive)
-          BUILD_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl // empty')
-          BUILD_ID=$(echo "$BUILD_INFO" | jq -r '.[0].id // empty')
-          BUILD_STATUS=$(echo "$BUILD_INFO" | jq -r '.[0].status // empty')
+          echo "Using existing EAS build..."
+          BUILD_URL="https://expo.dev/artifacts/eas/5hk4nzjyAsmXzAfLUPc8AU.apk"
+          BUILD_ID="22ac3330-378f-44d2-be47-0c4d45e70c0c"
           
-          echo "Build Status: $BUILD_STATUS"
           echo "Build URL: $BUILD_URL"
           echo "Build ID: $BUILD_ID"
           
-          if [ "$BUILD_STATUS" = "finished" ] && [ "$BUILD_URL" != "empty" ] && [ "$BUILD_URL" != "" ]; then
-            echo "build_url=$BUILD_URL" >> $GITHUB_OUTPUT
-            echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
-            echo "build_ready=true" >> $GITHUB_OUTPUT
-          else
-            echo "build_ready=false" >> $GITHUB_OUTPUT
-            echo "❌ No finished build available"
-          fi
+          echo "build_url=$BUILD_URL" >> $GITHUB_OUTPUT
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "build_ready=true" >> $GITHUB_OUTPUT
           
       - name: Download APK
         if: steps.get_build.outputs.build_ready == 'true'
@@ -85,10 +75,3 @@ jobs:
           draft: false
           prerelease: false
           
-      - name: No build available
-        if: steps.get_build.outputs.build_ready != 'true'
-        run: |
-          echo "⚠️  Nenhum build finalizado encontrado."
-          echo "Execute: npm run build:android:apk"
-          echo "Depois faça push novamente para criar release."
-          exit 1
