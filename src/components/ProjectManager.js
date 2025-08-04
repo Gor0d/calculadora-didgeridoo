@@ -297,14 +297,106 @@ export const ProjectManager = ({
   };
 
   const handleImportProject = async () => {
+    Alert.alert(
+      'Importar Projetos',
+      'Escolha o tipo de importação:',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Projeto Único',
+          onPress: () => importSingleProject()
+        },
+        {
+          text: 'Importação em Lote',
+          onPress: () => importMultipleProjects()
+        }
+      ]
+    );
+  };
+
+  const importSingleProject = async () => {
     try {
       const importedProject = await ProjectStorage.importProject();
       if (importedProject) {
         setProjects(prev => [importedProject, ...prev]);
-        Alert.alert('Sucesso', 'Projeto importado com sucesso!');
+        Alert.alert('Sucesso', `Projeto "${importedProject.name}" importado com sucesso!`);
       }
     } catch (error) {
-      Alert.alert('Erro', 'Falha ao importar projeto');
+      Alert.alert('Erro', `Falha ao importar projeto: ${error.message}`);
+    }
+  };
+
+  const importMultipleProjects = async () => {
+    try {
+      const result = await ProjectStorage.importMultipleProjects();
+      if (result) {
+        setProjects(prev => [...result.projects, ...prev]);
+        
+        let message = `${result.imported} de ${result.total} projetos importados com sucesso!`;
+        if (result.errors.length > 0) {
+          message += `\n\nErros encontrados:\n${result.errors.slice(0, 3).join('\n')}`;
+          if (result.errors.length > 3) {
+            message += `\n... e mais ${result.errors.length - 3} erros`;
+          }
+        }
+        
+        Alert.alert(
+          result.errors.length > 0 ? 'Importação Parcial' : 'Sucesso',
+          message
+        );
+      }
+    } catch (error) {
+      Alert.alert('Erro', `Falha na importação em lote: ${error.message}`);
+    }
+  };
+
+  const handleCleanupProjects = () => {
+    Alert.alert(
+      'Limpeza de Projetos',
+      'Esta ação removerá projetos não modificados há mais de 90 dias (exceto favoritos). Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Limpar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await ProjectStorage.cleanupOldProjects(90);
+              await loadData(); // Recarregar lista
+              Alert.alert(
+                'Limpeza Concluída',
+                `${result.deleted} projetos foram removidos de um total de ${result.total}.`
+              );
+            } catch (error) {
+              Alert.alert('Erro', 'Falha na limpeza de projetos');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleBackupAll = async () => {
+    try {
+      const result = await ProjectStorage.exportMultipleProjects(projects, 'json');
+      Alert.alert(
+        'Backup Criado',
+        `Backup de ${result.projectCount} projetos criado com sucesso!`
+      );
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao criar backup');
+    }
+  };
+
+  const exportAllProjectsCSV = async () => {
+    try {
+      const result = await ProjectStorage.exportMultipleProjects(filteredProjects, 'csv');
+      Alert.alert(
+        'CSV Exportado',
+        `${result.projectCount} projetos exportados para CSV!`
+      );
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao exportar CSV');
     }
   };
 
@@ -326,9 +418,21 @@ export const ProjectManager = ({
     <View style={styles.projectCard}>
       <View style={styles.projectHeader}>
         <View style={styles.projectInfo}>
-          <Text style={styles.projectName} numberOfLines={1}>
-            {project.name}
-          </Text>
+          <View style={styles.projectTitleRow}>
+            <Text style={styles.projectName} numberOfLines={1}>
+              {project.name}
+            </Text>
+            {project.isImported && (
+              <View style={styles.importedBadge}>
+                <Text style={styles.importedBadgeText}>📥</Text>
+              </View>
+            )}
+            {project.lastAutoSave && (
+              <View style={styles.autoSaveBadge}>
+                <Text style={styles.autoSaveBadgeText}>💾</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.projectCategory}>
             {categories[project.category] || project.category}
           </Text>
@@ -468,6 +572,29 @@ export const ProjectManager = ({
               disabled={filteredProjects.length === 0}
             >
               <Text style={styles.controlButtonText}>📤 Lote</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.controlRow}>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={handleCleanupProjects}
+            >
+              <Text style={styles.controlButtonText}>🧹 Limpar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={handleBackupAll}
+            >
+              <Text style={styles.controlButtonText}>💾 Backup</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={() => exportAllProjectsCSV()}
+            >
+              <Text style={styles.controlButtonText}>📊 CSV</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -777,11 +904,36 @@ const styles = StyleSheet.create({
   projectInfo: {
     flex: 1,
   },
+  projectTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   projectName: {
     fontSize: typography.h3,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 2,
+    flex: 1,
+  },
+  importedBadge: {
+    backgroundColor: '#DBEAFE',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  importedBadgeText: {
+    fontSize: 10,
+  },
+  autoSaveBadge: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  autoSaveBadgeText: {
+    fontSize: 10,
   },
   projectCategory: {
     fontSize: typography.caption,
