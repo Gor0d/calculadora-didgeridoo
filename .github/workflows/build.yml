@@ -1,0 +1,65 @@
+name: Build and Deploy
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          
+      - name: Build APK
+        run: eas build --platform android --profile production-apk --non-interactive
+        
+      - name: Get build info
+        id: build_info
+        run: |
+          BUILD_INFO=$(eas build:list --platform android --limit 1 --json)
+          BUILD_URL=$(echo $BUILD_INFO | jq -r '.[0].artifacts.buildUrl // empty')
+          BUILD_ID=$(echo $BUILD_INFO | jq -r '.[0].id // empty')
+          echo "build_url=$BUILD_URL" >> $GITHUB_OUTPUT
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          
+      - name: Download APK
+        if: steps.build_info.outputs.build_url != ''
+        run: |
+          curl -L -o calculadora-didgeridoo-v${{ github.run_number }}.apk "${{ steps.build_info.outputs.build_url }}"
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Calculadora Didgeridoo v${{ github.run_number }}
+          body: |
+            🎺 **Nova versão da Calculadora Didgeridoo**
+            
+            📱 **APK para Android**: Baixe o arquivo `.apk` abaixo
+            🔧 **Build ID**: ${{ steps.build_info.outputs.build_id }}
+            📅 **Data**: ${{ github.event.head_commit.timestamp }}
+            
+            ### Como instalar:
+            1. Baixe o arquivo `.apk`
+            2. Ative "Fontes desconhecidas" no Android
+            3. Instale o APK
+          files: |
+            calculadora-didgeridoo-v${{ github.run_number }}.apk
+          draft: false
+          prerelease: false
