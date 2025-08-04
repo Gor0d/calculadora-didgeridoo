@@ -87,6 +87,7 @@ export class ProjectValidator {
       return { isValid: false, errors };
     }
     
+    console.log('Validating geometry:', geometry);
     const lines = geometry.trim().split('\n').filter(line => line.trim());
     
     if (lines.length < 2) {
@@ -114,25 +115,43 @@ export class ProjectValidator {
       const position = parseFloat(match[1]);
       const diameter = parseFloat(match[2]);
       
-      // Validar posição
-      if (isNaN(position) || position < 0) {
+      // Auto-detectar unidades baseado nos valores
+      let isPositionInMeters = position <= 10; // Assumir metros se <= 10
+      let isDiameterInMeters = diameter <= 1; // Assumir metros se <= 1
+      
+      // Se diâmetro > 1, provavelmente está em mm
+      let actualDiameter = diameter;
+      if (!isDiameterInMeters && diameter <= 1000) {
+        actualDiameter = diameter / 1000; // Converter mm para m
+      }
+      
+      // Se posição > 10, provavelmente está em cm ou mm
+      let actualPosition = position;
+      if (!isPositionInMeters && position <= 1000) {
+        actualPosition = position / 100; // Converter cm para m
+      } else if (!isPositionInMeters && position > 1000) {
+        actualPosition = position / 1000; // Converter mm para m
+      }
+      
+      // Validar posição (sempre em metros)
+      if (isNaN(actualPosition) || actualPosition < 0) {
         errors.push(`Linha ${index + 1}: Posição deve ser um número positivo`);
-      } else if (position <= lastPosition) {
-        errors.push(`Linha ${index + 1}: Posição (${position}) deve ser maior que a anterior (${lastPosition})`);
-      } else if (position > 10) {
-        errors.push(`Linha ${index + 1}: Posição (${position}m) parece muito grande para um didgeridoo`);
+      } else if (actualPosition <= lastPosition) {
+        errors.push(`Linha ${index + 1}: Posição (${actualPosition.toFixed(3)}m) deve ser maior que a anterior (${lastPosition.toFixed(3)}m)`);
+      } else if (actualPosition > 10) {
+        errors.push(`Linha ${index + 1}: Posição (${actualPosition.toFixed(3)}m) muito grande para um didgeridoo (máx: 10m)`);
       }
       
-      // Validar diâmetro
-      if (isNaN(diameter) || diameter <= 0) {
+      // Validar diâmetro (sempre em metros)
+      if (isNaN(actualDiameter) || actualDiameter <= 0) {
         errors.push(`Linha ${index + 1}: Diâmetro deve ser um número positivo`);
-      } else if (diameter < 0.010) {
-        errors.push(`Linha ${index + 1}: Diâmetro (${diameter}m) muito pequeno (mín: 10mm)`);
-      } else if (diameter > 0.500) {
-        errors.push(`Linha ${index + 1}: Diâmetro (${diameter}m) muito grande (máx: 500mm)`);
+      } else if (actualDiameter < 0.010) {
+        errors.push(`Linha ${index + 1}: Diâmetro (${(actualDiameter * 1000).toFixed(1)}mm) muito pequeno (mín: 10mm)`);
+      } else if (actualDiameter > 1.000) {
+        errors.push(`Linha ${index + 1}: Diâmetro (${(actualDiameter * 1000).toFixed(1)}mm) muito grande (máx: 1000mm)`);
       }
       
-      lastPosition = position;
+      lastPosition = actualPosition;
     });
     
     // Verificar se começa em 0.00

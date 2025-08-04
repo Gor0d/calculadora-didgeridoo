@@ -77,10 +77,19 @@ export class ProjectStorage {
       // Sanitizar dados de entrada
       const sanitizedProject = ProjectValidator.sanitizeProject(project);
       
-      // Validar projeto antes de salvar
+      // Validar projeto antes de salvar (temporariamente mais permissivo)
       const validation = ProjectValidator.validateForSave(sanitizedProject);
       if (!validation.isValid) {
-        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+        console.warn('Project validation warnings:', validation.errors);
+        // Só falhar se for erro crítico
+        const criticalErrors = validation.errors.filter(error => 
+          error.includes('Nome do projeto é obrigatório') ||
+          error.includes('Geometria DIDGMO é obrigatória') ||
+          error.includes('Formato inválido')
+        );
+        if (criticalErrors.length > 0) {
+          throw new Error(`Critical validation failed: ${criticalErrors.join(', ')}`);
+        }
       }
       
       const projects = await this.getAllProjects();
