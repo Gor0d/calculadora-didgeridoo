@@ -17,7 +17,9 @@ jobs:
           node-version: '18'
           
       - name: Install dependencies
-        run: npm install --production
+        run: |
+          npm install --production
+          npm install -g @expo/cli eas-cli
         
       - name: Setup EAS
         uses: expo/expo-github-action@v8
@@ -31,7 +33,7 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           echo "Getting latest build..."
-          BUILD_INFO=$(npx eas build:list --platform android --limit 1 --json --non-interactive)
+          BUILD_INFO=$(eas build:list --platform android --limit 1 --json --non-interactive)
           BUILD_URL=$(echo "$BUILD_INFO" | jq -r '.[0].artifacts.buildUrl // empty')
           BUILD_ID=$(echo "$BUILD_INFO" | jq -r '.[0].id // empty')
           BUILD_STATUS=$(echo "$BUILD_INFO" | jq -r '.[0].status // empty')
