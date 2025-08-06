@@ -10,7 +10,8 @@
     "description": "Calculadora profissional de didgeridoo com análise acústica avançada, visualização de geometria e preview sonoro em tempo real.",
     "platforms": [
       "ios",
-      "android"
+      "android",
+      "web"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",

@@ -448,7 +448,7 @@ export class ProjectStorage {
     const project = { ...DEFAULT_PROJECT_TEMPLATE };
     
     let inGeometry = false;
-    let geometryLines = [];
+    const geometryLines = [];
     
     for (const line of lines) {
       const trimmed = line.trim();
@@ -498,8 +498,8 @@ export class ProjectStorage {
     
     let inGeometry = false;
     let inNotes = false;
-    let geometryLines = [];
-    let notesLines = [];
+    const geometryLines = [];
+    const notesLines = [];
     
     for (const line of lines) {
       const trimmed = line.trim();

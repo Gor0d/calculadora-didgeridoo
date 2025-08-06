@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TutorialManager } from '../services/tutorial/TutorialManager';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const deviceInfo = getDeviceInfo();
 const typography = getTypography();
 const spacing = getSpacing();
@@ -213,7 +213,11 @@ const TipContent = ({ tip, onClose, onNext, floating = false }) => {
 
         {/* Tip indicator */}
         <View style={styles.tipIndicator}>
-          <Text style={styles.tipIndicatorText}>💡 Dica Didgemap</Text>
+          <Text style={styles.tipIndicatorText}>
+            {tip.isDailyTip ? '📅 Dica do Dia' : 
+             tip.isWeeklyTip ? `📅 ${tip.dayName}` : 
+             '💡 Dica Didgemap'}
+          </Text>
         </View>
       </LinearGradient>
     </Animated.View>
@@ -278,6 +282,87 @@ export const TipTrigger = ({ category, children, style }) => {
   );
 };
 
+// Componente específico para Dica do Dia
+export const DailyTipCard = ({ visible, onClose, onNext, tip }) => {
+  if (!visible || !tip) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      hardwareAccelerated
+    >
+      <View style={styles.dailyTipOverlay}>
+        <BlurView intensity={15} style={StyleSheet.absoluteFill} />
+        
+        <TouchableOpacity 
+          style={styles.backgroundTouchable}
+          activeOpacity={1}
+          onPress={onClose}
+        >
+          <View style={styles.dailyTipContainer}>
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                style={styles.dailyTipGradient}
+              >
+                {/* Header com foco no fechamento */}
+                <View style={styles.dailyTipHeader}>
+                  <View style={styles.dailyTipBadge}>
+                    <Text style={styles.dailyTipBadgeText}>📅 Dica do Dia</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.dailyCloseButton} 
+                    onPress={onClose}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.dailyCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Conteúdo */}
+                <View style={styles.dailyTipContent}>
+                  <View style={styles.dailyTipIconContainer}>
+                    <Text style={styles.dailyTipIcon}>{tip.icon}</Text>
+                  </View>
+                  <Text style={styles.dailyTipTitle}>{tip.title}</Text>
+                  <Text style={styles.dailyTipDescription}>{tip.description}</Text>
+                </View>
+
+                {/* Ações com foco em fechar */}
+                <View style={styles.dailyTipActions}>
+                  <TouchableOpacity 
+                    style={styles.dailyGotItButton} 
+                    onPress={onClose}
+                  >
+                    <Text style={styles.dailyGotItButtonText}>✓ Entendi!</Text>
+                  </TouchableOpacity>
+                  
+                  {onNext && (
+                    <TouchableOpacity 
+                      style={styles.dailyNextButton} 
+                      onPress={onNext}
+                    >
+                      <Text style={styles.dailyNextButtonText}>💡 Próxima</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Dica para fechar */}
+                <View style={styles.closeHint}>
+                  <Text style={styles.closeHintText}>Toque fora para fechar</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+};
+
 const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
@@ -285,11 +370,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
   },
   modalContainer: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: SCREEN_WIDTH - (spacing.lg * 2),
+    minWidth: 280,
   },
   modalTipContainer: {
     width: '100%',
@@ -298,11 +385,12 @@ const styles = StyleSheet.create({
   // Floating styles
   floatingTip: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 120,
     left: spacing.md,
     right: spacing.md,
     zIndex: 1000,
     elevation: 10,
+    maxHeight: '70%',
   },
   floatingContainer: {
     width: '100%',
@@ -434,5 +522,157 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.small,
     fontWeight: '600',
+  },
+
+  // Daily Tip specific styles
+  dailyTipOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xl,
+  },
+  backgroundTouchable: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  dailyTipContainer: {
+    width: '90%',
+    maxWidth: Math.min(350, SCREEN_WIDTH - 40),
+    alignSelf: 'center',
+  },
+  dailyTipGradient: {
+    borderRadius: 20,
+    padding: spacing.md,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 15,
+    maxHeight: SCREEN_HEIGHT * 0.8,
+  },
+  dailyTipHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  dailyTipBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 12,
+  },
+  dailyTipBadgeText: {
+    color: '#FFFFFF',
+    fontSize: typography.caption,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dailyCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  dailyCloseButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.h4,
+    fontWeight: 'bold',
+    lineHeight: typography.h4,
+  },
+  dailyTipContent: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  dailyTipIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  dailyTipIcon: {
+    fontSize: 24,
+  },
+  dailyTipTitle: {
+    fontSize: typography.h4,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  dailyTipDescription: {
+    fontSize: typography.small,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 20,
+    opacity: 0.95,
+  },
+  dailyTipActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  dailyGotItButton: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 10,
+    flex: 1,
+    maxWidth: 130,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  dailyGotItButtonText: {
+    color: '#059669',
+    fontSize: typography.body,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  dailyNextButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  dailyNextButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.caption,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  closeHint: {
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  closeHintText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: typography.caption,
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
 });

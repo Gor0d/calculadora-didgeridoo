@@ -15,17 +15,23 @@ import { QuickExamples } from '../components/QuickExamples';
 import { ProjectManager } from '../components/ProjectManager';
 import { AdvancedExport } from '../components/AdvancedExport';
 import { TutorialOverlay } from '../components/TutorialOverlay';
-import { TipCard, FloatingTipManager } from '../components/TipCard';
+import { FirstRunTutorial } from '../components/FirstRunTutorial';
+import { TipCard, FloatingTipManager, DailyTipCard } from '../components/TipCard';
+import { TipsSettings } from '../components/TipsSettings';
 import { PerformanceSettings } from '../components/PerformanceSettings';
 import { OptimizedScrollView, OptimizedTouchableOpacity, OptimizedText } from '../components/OptimizedComponents';
 import { AppIcon } from '../components/IconSystem';
+import { Visualization3D } from '../components/Visualization3D';
+import { AIRecommendations } from '../components/AIRecommendations';
 import { useTutorial, useTips } from '../hooks/useTutorial';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceInfo, getTypography, getSpacing, scale } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
 import { audioEngine } from '../services/audio/AudioEngine';
 import { acousticEngine } from '../services/acoustic/AcousticEngine';
 import { unitConverter } from '../services/units/UnitConverter';
 import { ProjectStorage } from '../services/storage/ProjectStorage';
+import userPreferences from '../services/settings/UserPreferences';
 import { PerformanceManager } from '../services/performance/PerformanceManager';
 import { OfflineManager } from '../services/offline/OfflineManager';
 import { validateGeometryString, getGeometryStats } from '../utils/geometryValidator';
@@ -37,8 +43,8 @@ const spacing = getSpacing();
 
 // Optimized GeometryVisualization Component with Performance Controls
 const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = 'metric' }) => {
-  // Skip rendering if not visible or animations disabled
-  if (!isVisible || !PerformanceManager.shouldEnableFeature('animations')) {
+  // Skip rendering if not visible
+  if (!isVisible) {
     return null;
   }
 
@@ -55,7 +61,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
   }, [geometry, currentUnit]);
 
   const { svgDimensions, pathData, outerWallPath, controlPoints } = useMemo(() => {
-    if (!isVisible || !geometry || !geometry.trim() || points.length < 2) {
+    if (!geometry || !geometry.trim() || points.length < 2) {
       return { svgDimensions: null, pathData: null, outerWallPath: null, controlPoints: [] };
     }
 
@@ -166,7 +172,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       outerWallPath,
       controlPoints
     };
-  }, [points, isVisible, geometry]);
+  }, [points, geometry]);
 
   if (!isVisible || !geometry || !geometry.trim() || points.length < 2 || !svgDimensions) return null;
 
@@ -554,7 +560,15 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   const [geometryStats, setGeometryStats] = useState(null);
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showAdvancedExport, setShowAdvancedExport] = useState(false);
+  const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false);
+  const [firstRunStep, setFirstRunStep] = useState(0);
+  const [isFirstRun, setIsFirstRun] = useState(false);
+  const [userSettings, setUserSettings] = useState({});
+  const [shouldShowTips, setShouldShowTips] = useState(false);
   const [showPerformanceSettings, setShowPerformanceSettings] = useState(false);
+  const [showTipsSettings, setShowTipsSettings] = useState(false);
+  const [show3DVisualization, setShow3DVisualization] = useState(false);
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   const [currentProject, setCurrentProject] = useState(null);
   const [performanceInitialized, setPerformanceInitialized] = useState(false);
 
@@ -577,6 +591,21 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   const manageProjectsRef = useRef(null);
   const exportButtonRef = useRef(null);
 
+  // Initialize user preferences
+  useEffect(() => {
+    const initializePreferences = async () => {
+      try {
+        const preferences = await userPreferences.initialize();
+        setUserSettings(preferences);
+        setShouldShowTips(userPreferences.shouldShowDailyTips());
+      } catch (error) {
+        console.error('Failed to initialize user preferences:', error);
+      }
+    };
+    
+    initializePreferences();
+  }, []);
+
   // Register refs with tutorial system
   useEffect(() => {
     tutorial.registerRef('app_header', appHeaderRef);
@@ -587,6 +616,30 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
     tutorial.registerRef('visualization_toggle', visualizationToggleRef);
     tutorial.registerRef('manage_projects_button', manageProjectsRef);
     tutorial.registerRef('export_button', exportButtonRef);
+  }, []);
+
+  // Check for first run
+  useEffect(() => {
+    const checkFirstRun = async () => {
+      try {
+        const firstRunKey = '@didgemap_first_run_completed';
+        const completed = await AsyncStorage.getItem(firstRunKey);
+        
+        if (completed !== 'true') {
+          setIsFirstRun(true);
+          setShowFirstRunTutorial(true);
+        }
+      } catch (error) {
+        console.error('Error checking first run:', error);
+        // Default to showing tutorial on error
+        setIsFirstRun(true);
+        setShowFirstRunTutorial(true);
+      }
+    };
+
+    // Add small delay to ensure UI is mounted
+    const timer = setTimeout(checkFirstRun, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   // Initialize audio engine on component mount
@@ -911,6 +964,48 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
               <Text style={styles.exportButtonText}>📤 Exportar</Text>
             </TouchableOpacity>
           )}
+
+          {/* Novos Botões de Recursos */}
+          <View style={styles.newFeaturesContainer}>
+            <TouchableOpacity
+              style={styles.featureButton}
+              onPress={() => setShow3DVisualization(true)}
+            >
+              <Text style={styles.featureButtonText}>🎨 Visualização 3D</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.featureButton}
+              onPress={() => setShowAIRecommendations(true)}
+            >
+              <Text style={styles.featureButtonText}>🤖 Recomendações IA</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.featureButton}
+              onPress={() => setShowTipsSettings(true)}
+            >
+              <Text style={styles.featureButtonText}>⚙️ Config. Dicas</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Botão de Teste para Dica - Apenas se habilitado */}
+          {shouldShowTips && (
+            <TouchableOpacity
+              style={styles.testTipButton}
+              onPress={() => {
+                if (tips.currentTip) {
+                  tips.clearTip();
+                } else {
+                  tips.getTip();
+                }
+              }}
+            >
+              <Text style={styles.testTipButtonText}>
+                {tips.currentTip ? '❌ Fechar Dica' : '💡 Dica do Dia'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -940,11 +1035,108 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         onClose={tutorial.endTutorial}
       />
 
-      {/* Contextual Tips */}
-      <TipCard
-        visible={!!tips.currentTip}
-        onClose={tips.clearTip}
-        category="analysis"
+      {/* Dica do Dia - Apenas se usuário habilitou */}
+      {shouldShowTips && (
+        <DailyTipCard
+          visible={!!tips.currentTip}
+          tip={tips.currentTip}
+          onClose={tips.clearTip}
+        />
+      )}
+
+      {/* First Run Tutorial */}
+      <FirstRunTutorial
+        visible={showFirstRunTutorial}
+        currentStep={firstRunStep}
+        onStepChange={setFirstRunStep}
+        registeredRefs={tutorial.registeredRefs}
+        onComplete={async () => {
+          try {
+            const firstRunKey = '@didgemap_first_run_completed';
+            await AsyncStorage.setItem(firstRunKey, 'true');
+            setShowFirstRunTutorial(false);
+            setIsFirstRun(false);
+          } catch (error) {
+            console.error('Error marking first run completed:', error);
+            // Still close tutorial even on error
+            setShowFirstRunTutorial(false);
+            setIsFirstRun(false);
+          }
+        }}
+      />
+      {/* Tips Settings */}
+      <TipsSettings
+        visible={showTipsSettings}
+        onClose={() => {
+          setShowTipsSettings(false);
+          // Atualizar configurações de dicas
+          const checkTipsSettings = async () => {
+            const newSetting = userPreferences.shouldShowDailyTips();
+            setShouldShowTips(newSetting);
+          };
+          checkTipsSettings();
+        }}
+      />
+
+      {/* 3D Visualization */}
+      <Visualization3D
+        visible={show3DVisualization}
+        onClose={() => setShow3DVisualization(false)}
+        analysisData={{
+          frequencies: analysisResults.length > 0 ? {
+            fundamental: analysisResults[0]?.frequency || 146.83,
+            harmonics: analysisResults.slice(1, 6).map(r => r.frequency).filter(f => f)
+          } : null,
+          resonanceModes: analysisResults.length > 0 ? analysisResults.map(r => ({
+            frequency: r.frequency,
+            amplitude: r.amplitude || 1
+          })) : null
+        }}
+        geometry={geometry ? (() => {
+          try {
+            const parts = geometry.split(':')[1]?.split(',');
+            if (parts && parts.length > 1) {
+              return {
+                length: parseInt(parts[0]),
+                diameters: parts.slice(1).map(d => parseInt(d))
+              };
+            }
+          } catch (error) {
+            console.warn('Error parsing geometry for 3D:', error);
+          }
+          return null;
+        })() : null}
+      />
+
+      {/* AI Recommendations */}
+      <AIRecommendations
+        visible={showAIRecommendations}
+        onClose={() => setShowAIRecommendations(false)}
+        onSelectRecommendation={(recommendation) => {
+          // Aplicar recomendação da IA
+          if (recommendation.geometry) {
+            setGeometry(recommendation.geometry);
+            setCurrentProject({
+              id: `ai_${Date.now()}`,
+              name: recommendation.name,
+              geometry: recommendation.geometry,
+              source: 'ai_recommendation',
+              createdAt: new Date().toISOString()
+            });
+            
+            // Analisar automaticamente a nova geometria
+            if (recommendation.geometry.trim()) {
+              setTimeout(() => {
+                handleAnalyze(recommendation.geometry);
+              }, 500);
+            }
+          }
+        }}
+        initialPreferences={{
+          targetNote: 'D',
+          targetOctave: 2,
+          experience: 'beginner'
+        }}
       />
     </OptimizedScrollView>
     </FloatingTipManager>
@@ -1300,5 +1492,48 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.body,
     fontWeight: '700',
+  },
+  testTipButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    marginTop: spacing.sm,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  testTipButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.small,
+    fontWeight: '600',
+  },
+  newFeaturesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  featureButton: {
+    flex: 1,
+    backgroundColor: '#2563EB',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: 8,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  featureButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.caption,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

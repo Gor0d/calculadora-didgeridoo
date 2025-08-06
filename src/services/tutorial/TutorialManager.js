@@ -8,6 +8,82 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export class TutorialManager {
   static tutorialSteps = {
+    first_run: [
+      {
+        id: 'intro_1',
+        title: 'Bem-vindo ao Didgemap! 🎺',
+        description: 'Sua calculadora profissional para análise acústica de didgeridoos. Vamos fazer um tour rápido!',
+        icon: '👋',
+        type: 'intro',
+        target: 'app_header',
+        position: 'bottom',
+        highlightPadding: 12,
+        isSkippable: false
+      },
+      {
+        id: 'intro_2',
+        title: 'Exemplos Prontos',
+        description: 'Comece rapidamente com nossos exemplos pré-definidos. Perfeito para aprender!',
+        icon: '🚀',
+        type: 'feature',
+        target: 'quick_examples',
+        position: 'bottom',
+        highlightPadding: 10
+      },
+      {
+        id: 'intro_3',
+        title: 'Escolha a Unidade',
+        description: 'Selecione metros ou milímetros para suas medidas. O app converte automaticamente.',
+        icon: '📏',
+        type: 'feature',
+        target: 'unit_selector',
+        position: 'bottom',
+        highlightPadding: 8
+      },
+      {
+        id: 'intro_4',
+        title: 'Digite sua Geometria',
+        description: 'Insira as medidas do seu didgeridoo aqui. Formato: posição diâmetro (uma por linha)',
+        icon: '✏️',
+        type: 'input',
+        target: 'geometry_input',
+        position: 'top',
+        highlightPadding: 12,
+        example: '0.00 0.030\n0.50 0.045\n1.50 0.080'
+      },
+      {
+        id: 'intro_5',
+        title: 'Analisar!',
+        description: 'Clique aqui para calcular as frequências e características acústicas',
+        icon: '🔬',
+        type: 'action',
+        target: 'analyze_button',
+        position: 'top',
+        highlightPadding: 10,
+        actionRequired: true
+      },
+      {
+        id: 'intro_6',
+        title: 'Projetos',
+        description: 'Salve, organize e gerencie seus designs aqui. Seus projetos ficam seguros offline!',
+        icon: '📁',
+        type: 'feature',
+        target: 'manage_projects_button',
+        position: 'top',
+        highlightPadding: 10
+      },
+      {
+        id: 'intro_7',
+        title: 'Pronto para Começar! ✨',
+        description: 'Tutorial concluído! Explore o app e crie didgeridoos incríveis. Acesse as configurações para rever este tutorial.',
+        icon: '🎉',
+        type: 'completion',
+        target: null,
+        position: 'center',
+        isLast: true
+      }
+    ],
+
     welcome: [
       {
         id: 'welcome_1',
@@ -154,37 +230,262 @@ export class TutorialManager {
     ],
 
     tips_and_tricks: [
+      // Dicas de Geometria
       {
         id: 'tips_1',
-        title: 'Dica: Geometria Precisa',
-        description: 'Use pelo menos 4-6 pontos para melhor precisão. Mais pontos = melhor análise',
-        icon: '💡',
+        title: 'Geometria Precisa',
+        description: 'Use pelo menos 4-6 pontos para melhor precisão. Mais pontos = melhor análise acústica',
+        icon: '📐',
         type: 'tip',
         category: 'geometry'
       },
       {
+        id: 'tips_5',
+        title: 'Pontos Estratégicos',
+        description: 'Concentre pontos nas mudanças de diâmetro. Transições suaves precisam de mais detalhes',
+        icon: '🔍',
+        type: 'tip',
+        category: 'geometry'
+      },
+      {
+        id: 'tips_6',
+        title: 'Início e Fim',
+        description: 'Sempre comece em 0.00 e termine no comprimento total. Isso garante análise completa',
+        icon: '📏',
+        type: 'tip',
+        category: 'geometry'
+      },
+      {
+        id: 'tips_7',
+        title: 'Unidades Consistentes',
+        description: 'Mantenha a mesma unidade em toda geometria. Misturar mm e cm pode confundir a análise',
+        icon: '⚖️',
+        type: 'tip',
+        category: 'geometry'
+      },
+
+      // Dicas de Análise
+      {
         id: 'tips_2',
-        title: 'Dica: Interpretação de Resultados',
-        description: 'Cents próximos de 0 indicam afinação perfeita. ±20 cents ainda é aceitável',
+        title: 'Interpretação de Cents',
+        description: 'Cents próximos de 0 = afinação perfeita. ±20 cents = aceitável. ±50 cents = desafinado',
         icon: '🎯',
         type: 'tip',
         category: 'analysis'
       },
       {
+        id: 'tips_8',
+        title: 'Frequência Fundamental',
+        description: 'A nota mais grave determina a afinação. Harmônicos secundários criam o timbre único',
+        icon: '🎵',
+        type: 'tip',
+        category: 'analysis'
+      },
+      {
+        id: 'tips_9',
+        title: 'Velocidade do Som',
+        description: 'Temperatura afeta a velocidade do som. 20°C = 343 m/s. Ajuste para condições reais',
+        icon: '🌡️',
+        type: 'tip',
+        category: 'analysis'
+      },
+      {
+        id: 'tips_10',
+        title: 'Ressonâncias Múltiplas',
+        description: 'Didgeridoos têm várias frequências ressonantes. A primeira é mais audível',
+        icon: '🔊',
+        type: 'tip',
+        category: 'analysis'
+      },
+
+      // Dicas de Construção
+      {
+        id: 'tips_11',
+        title: 'Diâmetro do Bocal',
+        description: 'Bocal de 30-35mm é ideal para iniciantes. Menores = mais difíceis, maiores = menos controle',
+        icon: '🔧',
+        type: 'tip',
+        category: 'construction'
+      },
+      {
+        id: 'tips_12',
+        title: 'Conicidade Gradual',
+        description: 'Mudanças suaves de diâmetro soam melhor que transições abruptas',
+        icon: '📈',
+        type: 'tip',
+        category: 'construction'
+      },
+      {
+        id: 'tips_13',
+        title: 'Acabamento Interno',
+        description: 'Superfície interna lisa melhora a ressonância. Lixar bem vale a pena!',
+        icon: '✨',
+        type: 'tip',
+        category: 'construction'
+      },
+      {
+        id: 'tips_14',
+        title: 'Comprimento vs Afinação',
+        description: 'Mais longo = mais grave. 1.2-1.5m = Dó. 1.5-2.0m = Lá. Mais de 2m = muito grave',
+        icon: '📐',
+        type: 'tip',
+        category: 'construction'
+      },
+
+      // Dicas de Som e Técnica
+      {
+        id: 'tips_15',
+        title: 'Respiração Circular',
+        description: 'O som contínuo depende da técnica, não só do instrumento. Pratique!',
+        icon: '🫁',
+        type: 'tip',
+        category: 'sound'
+      },
+      {
+        id: 'tips_16',
+        title: 'Overtones Naturais',
+        description: 'Harmônicos aparecem naturalmente. Não force - deixe o instrumento ressoar',
+        icon: '🎶',
+        type: 'tip',
+        category: 'sound'
+      },
+      {
+        id: 'tips_17',
+        title: 'Posição da Língua',
+        description: 'Mudanças sutis na posição da língua alteram significativamente o timbre',
+        icon: '👅',
+        type: 'tip',
+        category: 'sound'
+      },
+
+      // Dicas Técnicas do App
+      {
         id: 'tips_3',
-        title: 'Dica: Modo Offline',
-        description: 'O app funciona completamente offline. Acesse as configurações para mais opções',
+        title: 'Modo Offline',
+        description: 'O app funciona completamente offline. Todos os cálculos são locais',
         icon: '📱',
         type: 'tip',
         category: 'offline'
       },
       {
         id: 'tips_4',
-        title: 'Dica: Backup de Projetos',
-        description: 'Projetos favoritos são automaticamente salvos em backup. Marque os importantes!',
-        icon: '⭐',
+        title: 'Backup Automático',
+        description: 'Projetos favoritos são salvos automaticamente. Use ⭐ para marcar importantes',
+        icon: '💾',
         type: 'tip',
         category: 'backup'
+      },
+      {
+        id: 'tips_18',
+        title: 'Exportação Profissional',
+        description: 'Exporte relatórios PDF com gráficos para documentar seus projetos',
+        icon: '📊',
+        type: 'tip',
+        category: 'export'
+      },
+      {
+        id: 'tips_19',
+        title: 'Comparar Projetos',
+        description: 'Use o gerenciador para comparar diferentes designs e suas frequências',
+        icon: '⚖️',
+        type: 'tip',
+        category: 'comparison'
+      },
+
+      // Dicas de Design
+      {
+        id: 'tips_20',
+        title: 'Design Bell vs Straight',
+        description: 'Bell = mais harmônicos complexos. Straight = som mais limpo e direto',
+        icon: '🎺',
+        type: 'tip',
+        category: 'design'
+      },
+      {
+        id: 'tips_21',
+        title: 'Proporção Áurea',
+        description: 'Alguns construtores usam proporção áurea (1.618) para posicionar expansões',
+        icon: '📏',
+        type: 'tip',
+        category: 'design'
+      },
+      {
+        id: 'tips_22',
+        title: 'Material Importa',
+        description: 'Madeira densa = som mais focado. Madeira leve = mais harmônicos',
+        icon: '🌳',
+        type: 'tip',
+        category: 'material'
+      },
+
+      // Dicas Avançadas
+      {
+        id: 'tips_23',
+        title: 'Análise Espectral',
+        description: 'Use o preview sonoro para ouvir como diferentes geometrias afetam o timbre',
+        icon: '🔊',
+        type: 'tip',
+        category: 'advanced'
+      },
+      {
+        id: 'tips_24',
+        title: 'Temperatura e Umidade',
+        description: 'Condições ambientais afetam madeira e som. Considere isso no design',
+        icon: '🌡️',
+        type: 'tip',
+        category: 'environmental'
+      },
+      {
+        id: 'tips_25',
+        title: 'Iteração é Chave',
+        description: 'Grandes didgeridoos vêm de muitas iterações. Teste, ajuste, repita!',
+        icon: '🔄',
+        type: 'tip',
+        category: 'process'
+      },
+
+      // Dicas Culturais
+      {
+        id: 'tips_26',
+        title: 'Respeito Cultural',
+        description: 'Didgeridoo é sagrado para aborígenes australianos. Aprenda com respeito',
+        icon: '🙏',
+        type: 'tip',
+        category: 'cultural'
+      },
+      {
+        id: 'tips_27',
+        title: 'Tradição vs Inovação',
+        description: 'Balance tradições milenares com inovação moderna no seu design',
+        icon: '⚖️',
+        type: 'tip',
+        category: 'cultural'
+      },
+
+      // Dicas de Performance
+      {
+        id: 'tips_28',
+        title: 'Otimização do App',
+        description: 'Para análises mais rápidas, use menos pontos em testes iniciais',
+        icon: '⚡',
+        type: 'tip',
+        category: 'performance'
+      },
+      {
+        id: 'tips_29',
+        title: 'Cache Inteligente',
+        description: 'O app salva automaticamente análises recentes para acesso rápido',
+        icon: '🧠',
+        type: 'tip',
+        category: 'performance'
+      },
+      {
+        id: 'tips_30',
+        title: 'Visualização 3D',
+        description: 'Use a visualização para detectar problemas na geometria visualmente',
+        icon: '👁️',
+        type: 'tip',
+        category: 'visualization'
       }
     ]
   };
@@ -193,11 +494,14 @@ export class TutorialManager {
     try {
       const progress = await this.getTutorialProgress();
       const settings = await this.getTutorialSettings();
+      const hasCompletedFirstRun = await this.hasCompletedFirstRun();
       
       return {
         progress,
         settings,
         shouldShowWelcome: !progress.welcome?.completed,
+        shouldShowFirstRunTutorial: !hasCompletedFirstRun,
+        isFirstRun: !hasCompletedFirstRun,
         currentStep: this.getCurrentStep(progress)
       };
     } catch (error) {
@@ -206,8 +510,72 @@ export class TutorialManager {
         progress: {},
         settings: { enabled: true, autoPlay: true },
         shouldShowWelcome: true,
+        shouldShowFirstRunTutorial: true,
+        isFirstRun: true,
         currentStep: null
       };
+    }
+  }
+
+  static async hasCompletedFirstRun() {
+    try {
+      const firstRunKey = '@didgemap_first_run_completed';
+      const completed = await AsyncStorage.getItem(firstRunKey);
+      return completed === 'true';
+    } catch (error) {
+      console.error('Error checking first run:', error);
+      return false;
+    }
+  }
+
+  static async markFirstRunCompleted() {
+    try {
+      const firstRunKey = '@didgemap_first_run_completed';
+      await AsyncStorage.setItem(firstRunKey, 'true');
+      return true;
+    } catch (error) {
+      console.error('Error marking first run completed:', error);
+      return false;
+    }
+  }
+
+  static async resetFirstRun() {
+    try {
+      const firstRunKey = '@didgemap_first_run_completed';
+      await AsyncStorage.removeItem(firstRunKey);
+      return true;
+    } catch (error) {
+      console.error('Error resetting first run:', error);
+      return false;
+    }
+  }
+
+  static getFirstRunTutorialSteps() {
+    return this.tutorialSteps.first_run;
+  }
+
+  static async completeFirstRunTutorial() {
+    try {
+      // Mark first run as completed
+      await this.markFirstRunCompleted();
+      
+      // Mark welcome section as completed too
+      await this.markSectionCompleted('welcome');
+      
+      return true;
+    } catch (error) {
+      console.error('Error completing first run tutorial:', error);
+      return false;
+    }
+  }
+
+  static async startManualTutorial() {
+    try {
+      // This allows users to restart tutorial from settings
+      return this.tutorialSteps.first_run;
+    } catch (error) {
+      console.error('Error starting manual tutorial:', error);
+      return [];
     }
   }
 
@@ -470,6 +838,104 @@ export class TutorialManager {
       console.error('Error getting random tip:', error);
       return null;
     }
+  }
+
+  static async getDailyTip() {
+    try {
+      const settings = await this.getTutorialSettings();
+      if (!settings.showTips) return null;
+
+      const tips = this.tutorialSteps.tips_and_tricks;
+      if (tips.length === 0) return null;
+
+      // Use a data atual para garantir a mesma dica por dia
+      const today = new Date();
+      const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+      
+      // Rotaciona através de todas as dicas baseado no dia do ano
+      const tipIndex = dayOfYear % tips.length;
+      const dailyTip = { ...tips[tipIndex], isDailyTip: true };
+
+      return dailyTip;
+    } catch (error) {
+      console.error('Error getting daily tip:', error);
+      return null;
+    }
+  }
+
+  static async getWeeklyTips() {
+    try {
+      const settings = await this.getTutorialSettings();
+      if (!settings.showTips) return [];
+
+      const tips = this.tutorialSteps.tips_and_tricks;
+      if (tips.length === 0) return [];
+
+      // Retorna 7 dicas para a semana
+      const today = new Date();
+      const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+      const weeklyTips = [];
+
+      for (let i = 0; i < 7; i++) {
+        const tipIndex = (dayOfYear + i) % tips.length;
+        weeklyTips.push({
+          ...tips[tipIndex],
+          dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][i],
+          isWeeklyTip: true
+        });
+      }
+
+      return weeklyTips;
+    } catch (error) {
+      console.error('Error getting weekly tips:', error);
+      return [];
+    }
+  }
+
+  static async getTipsByCategory(category) {
+    try {
+      const settings = await this.getTutorialSettings();
+      if (!settings.showTips) return [];
+
+      const tips = this.tutorialSteps.tips_and_tricks;
+      return tips.filter(tip => tip.category === category);
+    } catch (error) {
+      console.error('Error getting tips by category:', error);
+      return [];
+    }
+  }
+
+  static getTipCategories() {
+    const tips = this.tutorialSteps.tips_and_tricks;
+    const categories = [...new Set(tips.map(tip => tip.category))];
+    
+    return categories.map(category => ({
+      id: category,
+      name: this.getCategoryDisplayName(category),
+      count: tips.filter(tip => tip.category === category).length
+    }));
+  }
+
+  static getCategoryDisplayName(category) {
+    const names = {
+      geometry: 'Geometria',
+      analysis: 'Análise',
+      construction: 'Construção', 
+      sound: 'Som & Técnica',
+      offline: 'Modo Offline',
+      backup: 'Backup',
+      export: 'Exportação',
+      comparison: 'Comparação',
+      design: 'Design',
+      material: 'Materiais',
+      advanced: 'Avançado',
+      environmental: 'Ambiente',
+      process: 'Processo',
+      cultural: 'Cultural',
+      performance: 'Performance',
+      visualization: 'Visualização'
+    };
+    return names[category] || category;
   }
 
   static async getProgressStats() {

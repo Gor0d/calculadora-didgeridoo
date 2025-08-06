@@ -169,7 +169,7 @@ export class AcousticEngine {
    * Calculate effective acoustic length with end corrections
    */
   calculateEffectiveLength(segments) {
-    let physicalLength = segments.reduce((sum, seg) => sum + seg.length, 0);
+    const physicalLength = segments.reduce((sum, seg) => sum + seg.length, 0);
     
     // Add end correction for open pipe
     const finalRadius = segments[segments.length - 1].r2;

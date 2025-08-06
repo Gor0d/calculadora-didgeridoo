@@ -70,6 +70,29 @@ export const TutorialSettings = ({ visible, onClose }) => {
     }
   };
 
+  const handleStartFirstRunTutorial = () => {
+    Alert.alert(
+      'Refazer Tutorial Completo',
+      'Isso irá reiniciar o tutorial de introdução completo do aplicativo. Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Iniciar', 
+          onPress: () => {
+            // Trigger first run tutorial
+            TutorialManager.resetFirstRun().then(() => {
+              Alert.alert(
+                'Tutorial Reiniciado',
+                'O tutorial será iniciado quando você reiniciar o aplicativo.',
+                [{ text: 'OK' }]
+              );
+            });
+          }
+        }
+      ]
+    );
+  };
+
   const getSectionLabel = (sectionName) => {
     const labels = {
       welcome: 'Boas-vindas',
@@ -158,6 +181,14 @@ export const TutorialSettings = ({ visible, onClose }) => {
                   <Text style={styles.completionText}>🎉 Tutorial Completo!</Text>
                 </View>
               )}
+
+              {/* Start Tutorial Button */}
+              <TouchableOpacity 
+                style={styles.startTutorialButton}
+                onPress={handleStartFirstRunTutorial}
+              >
+                <Text style={styles.startTutorialButtonText}>🎯 Refazer Tutorial Completo</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -599,6 +630,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.body,
     fontWeight: '600',
+  },
+
+  // Start Tutorial Button
+  startTutorialButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    marginTop: spacing.md,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  startTutorialButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.body,
+    fontWeight: '700',
   },
 
   // Help styles

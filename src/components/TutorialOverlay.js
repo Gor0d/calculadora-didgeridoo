@@ -141,14 +141,36 @@ export const TutorialOverlay = ({
     if (isAnimating) return;
     
     if (step && onNext) {
-      await TutorialManager.markStepCompleted(step.section, step.id);
+      // Encontrar seção do step
+      let sectionName = null;
+      for (const [section, steps] of Object.entries(TutorialManager.tutorialSteps)) {
+        if (steps.find(s => s.id === step.id)) {
+          sectionName = section;
+          break;
+        }
+      }
+      
+      if (sectionName) {
+        await TutorialManager.markStepCompleted(sectionName, step.id);
+      }
       onNext();
     }
   };
 
   const handleSkip = async () => {
     if (step && onSkip) {
-      await TutorialManager.skipCurrentSection(step.section);
+      // Encontrar seção do step
+      let sectionName = null;
+      for (const [section, steps] of Object.entries(TutorialManager.tutorialSteps)) {
+        if (steps.find(s => s.id === step.id)) {
+          sectionName = section;
+          break;
+        }
+      }
+      
+      if (sectionName) {
+        await TutorialManager.skipCurrentSection(sectionName);
+      }
       onSkip();
     }
   };
@@ -169,40 +191,42 @@ export const TutorialOverlay = ({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        {/* Background blur */}
-        <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+        {/* Dark overlay background */}
+        <Animated.View style={[styles.darkBackground, { opacity: fadeAnim }]} />
         
-        {/* Dark overlay with hole for highlight */}
-        <Animated.View style={[styles.darkOverlay, { opacity: fadeAnim }]}>
-          <View style={styles.overlayTop} />
-          <View style={styles.overlayMiddle}>
-            <View style={styles.overlayLeft} />
-            {highlightBounds && (
+        {/* Highlight cutout effect */}
+        {highlightBounds && (
+          <Animated.View style={[styles.highlightContainer, { opacity: highlightAnim }]}>
+            {/* Top dark area */}
+            <View style={[styles.darkArea, { height: highlightBounds.y }]} />
+            
+            {/* Middle row with left, highlight, right */}
+            <View style={[styles.middleRow, { height: highlightBounds.height }]}>
+              <View style={[styles.darkArea, { width: highlightBounds.x }]} />
+              
+              {/* Highlighted element area */}
               <Animated.View
                 style={[
-                  styles.highlight,
+                  styles.highlightArea,
                   {
-                    left: highlightBounds.x,
-                    top: highlightBounds.y,
                     width: highlightBounds.width,
                     height: highlightBounds.height,
-                    borderColor: highlightAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['rgba(102, 126, 234, 0)', 'rgba(102, 126, 234, 0.8)']
-                    }),
-                    shadowOpacity: highlightAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 0.3]
-                    }),
                     transform: [{ scale: pulseAnim }]
                   }
                 ]}
-              />
-            )}
-            <View style={styles.overlayRight} />
-          </View>
-          <View style={styles.overlayBottom} />
-        </Animated.View>
+              >
+                {/* Glowing border effect */}
+                <View style={styles.glowBorder} />
+                <View style={styles.innerGlow} />
+              </Animated.View>
+              
+              <View style={[styles.darkArea, { flex: 1 }]} />
+            </View>
+            
+            {/* Bottom dark area */}
+            <View style={[styles.darkArea, { flex: 1 }]} />
+          </Animated.View>
+        )}
 
         {/* Tooltip */}
         <Animated.View
@@ -373,39 +397,43 @@ const getPointerStyle = (anchor) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    position: 'relative',
   },
-  darkOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  darkBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
   },
-  overlayTop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  highlightContainer: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'column',
   },
-  overlayMiddle: {
+  darkArea: {
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  },
+  middleRow: {
     flexDirection: 'row',
-    height: 100, // Will be dynamically calculated
   },
-  overlayLeft: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  highlightArea: {
+    position: 'relative',
+    backgroundColor: 'transparent',
   },
-  overlayRight: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  overlayBottom: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  highlight: {
+  glowBorder: {
+    ...StyleSheet.absoluteFillObject,
     borderWidth: 3,
-    borderRadius: 8,
-    shadowColor: '#667eea',
+    borderColor: '#10B981',
+    borderRadius: 12,
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 20,
+  },
+  innerGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.6)',
+    borderRadius: 10,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   tooltipGradient: {
     borderRadius: 12,
@@ -504,7 +532,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: 8,
-    backgroundColor: '#667eea',
+    backgroundColor: '#10B981',
   },
   nextButtonText: {
     fontSize: typography.body,

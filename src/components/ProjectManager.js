@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  FlatList
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProjectStorage } from '../services/storage/ProjectStorage';
@@ -71,36 +72,8 @@ export const ProjectManager = ({
     }
   }, [visible]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [projects, searchQuery, selectedCategory, showFavoritesOnly, sortBy]);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      await ProjectStorage.initializeDefaultTemplates();
-      const [projectsData, templatesData] = await Promise.all([
-        ProjectStorage.getAllProjects(),
-        ProjectStorage.getTemplates()
-      ]);
-      
-      setProjects(projectsData);
-      setTemplates(templatesData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      Alert.alert('Erro', 'Falha ao carregar projetos');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, []);
-
-  const applyFilters = () => {
+  // Memoizar filtros para melhor performance
+  const filteredAndSortedProjects = useMemo(() => {
     let filtered = [...projects];
 
     // Filtro por busca
@@ -147,8 +120,44 @@ export const ProjectManager = ({
         filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     }
 
-    setFilteredProjects(filtered);
-  };
+    return filtered;
+  }, [projects, searchQuery, selectedCategory, showFavoritesOnly, sortBy]);
+
+  useEffect(() => {
+    setFilteredProjects(filteredAndSortedProjects);
+  }, [filteredAndSortedProjects]);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Carregar templates em paralelo, mas não bloquear projetos
+      const templatesPromise = ProjectStorage.getTemplates();
+      
+      // Inicializar templates se necessário (sem await para não bloquear)
+      ProjectStorage.initializeDefaultTemplates().catch(console.warn);
+      
+      // Carregar projetos primeiro (mais importante)
+      const projectsData = await ProjectStorage.getAllProjects();
+      setProjects(projectsData);
+      
+      // Carregar templates depois
+      const templatesData = await templatesPromise;
+      setTemplates(templatesData);
+      
+    } catch (error) {
+      console.error('Error loading data:', error);
+      Alert.alert('Erro', 'Falha ao carregar projetos');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, []);
+
 
   const handleProjectSelect = (project) => {
     onProjectSelect(project);
@@ -414,7 +423,7 @@ export const ProjectManager = ({
     }
   };
 
-  const ProjectCard = ({ project }) => (
+  const ProjectCard = useCallback(({ project }) => (
     <View style={styles.projectCard}>
       <View style={styles.projectHeader}>
         <View style={styles.projectInfo}>
@@ -490,12 +499,12 @@ export const ProjectManager = ({
         </TouchableOpacity>
       </View>
     </View>
-  );
+  ), [handleProjectSelect, handleToggleFavorite, handleDuplicateProject, handleExportProject, handleDeleteProject, formatDate]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
-        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+        <LinearGradient colors={['#10B981', '#047857']} style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Gerenciador de Projetos</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -600,31 +609,45 @@ export const ProjectManager = ({
         </View>
 
         {/* Project List */}
-        <ScrollView
-          style={styles.projectList}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#667eea" />
-              <Text style={styles.loadingText}>Carregando projetos...</Text>
-            </View>
-          ) : filteredProjects.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {searchQuery || selectedCategory !== 'all' || showFavoritesOnly
-                  ? 'Nenhum projeto encontrado com os filtros aplicados'
-                  : 'Nenhum projeto encontrado\nCrie seu primeiro projeto!'}
-              </Text>
-            </View>
-          ) : (
-            filteredProjects.map(project => (
-              <ProjectCard key={project.id} project={project} />
-            ))
-          )}
-        </ScrollView>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#10B981" />
+            <Text style={styles.loadingText}>Carregando projetos...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredProjects}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <ProjectCard project={item} />}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor="#10B981"
+                colors={['#10B981']}
+              />
+            }
+            contentContainerStyle={styles.projectList}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={5}
+            getItemLayout={(data, index) => ({
+              length: 180, // altura estimada do card
+              offset: 180 * index,
+              index
+            })}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {searchQuery || selectedCategory !== 'all' || showFavoritesOnly
+                    ? 'Nenhum projeto encontrado com os filtros aplicados'
+                    : 'Nenhum projeto encontrado\nCrie seu primeiro projeto!'}
+                </Text>
+              </View>
+            )}
+          />
+        )}
 
         {/* New Project Modal */}
         <Modal visible={showNewProjectModal} animationType="slide" transparent>
@@ -835,7 +858,7 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
   },
   controlButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#10B981',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 8,
@@ -856,7 +879,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   filterChipActive: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#10B981',
   },
   filterChipText: {
     fontSize: typography.caption,
@@ -873,7 +896,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   toggleButtonActive: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#10B981',
   },
   toggleButtonText: {
     fontSize: typography.caption,
@@ -1067,7 +1090,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   categoryChipActive: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#10B981',
   },
   categoryChipText: {
     fontSize: typography.caption,
@@ -1088,7 +1111,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   templateChipActive: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#10B981',
   },
   templateChipText: {
     fontSize: typography.caption,
@@ -1113,7 +1136,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
   },
   modalCloseButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#10B981',
     marginTop: spacing.md,
   },
   modalButtonText: {

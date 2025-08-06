@@ -7,6 +7,8 @@ import { unitConverter } from './src/services/units/UnitConverter';
 import { localizationService } from './src/services/i18n/LocalizationService';
 import { ProjectStorage } from './src/services/storage/ProjectStorage';
 import { OfflineManager } from './src/services/offline/OfflineManager';
+import sentryConfig from './src/services/crashReporting/SentryConfig';
+import logger from './src/services/logging/Logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -22,13 +24,17 @@ export default function App() {
   useEffect(() => {
     const initApp = async () => {
       try {
+        // Initialize crash reporting first
+        sentryConfig.initialize();
+        logger.info('App initialization started');
+
         // Initialize localization
         await localizationService.initialize();
         setCurrentLanguage(localizationService.getCurrentLanguage());
         setIsI18nInitialized(true);
 
         // Initialize offline manager
-        console.log('Initializing offline manager...');
+        logger.info('Initializing offline manager...');
         await OfflineManager.initialize();
 
         // Check if user has seen onboarding
@@ -38,8 +44,9 @@ export default function App() {
         }
         
         setIsAppInitialized(true);
+        logger.info('App initialization completed successfully');
       } catch (error) {
-        console.error('App initialization error:', error);
+        logger.error('App initialization error', error);
         setIsI18nInitialized(true);
         setIsAppInitialized(true);
       }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   StyleSheet,
   Dimensions,
   StatusBar,
+  Animated,
+  Easing,
+  PanResponder
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -19,6 +22,8 @@ const spacing = getSpacing();
 
 const OnboardingScreen = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const handAnimRef = useRef(new Animated.Value(0)).current;
+  const pulseAnimRef = useRef(new Animated.Value(1)).current;
 
   const steps = [
     {
@@ -35,7 +40,7 @@ const OnboardingScreen = ({ onComplete }) => {
       subtitle: localizationService.t('analysisSubtitle'),
       icon: '🔬',
       description: localizationService.t('analysisDesc'),
-      gradient: ['#06B6D4', '#3B82F6'],
+      gradient: ['#065f46', '#10B981'],
     },
     {
       id: 'visualization',
@@ -51,7 +56,7 @@ const OnboardingScreen = ({ onComplete }) => {
       subtitle: localizationService.t('audioSubtitle'),
       icon: '🎺',
       description: localizationService.t('audioDesc'),
-      gradient: ['#F59E0B', '#EF4444'],
+      gradient: ['#047857', '#059669'],
     },
     {
       id: 'projects',
@@ -62,6 +67,50 @@ const OnboardingScreen = ({ onComplete }) => {
       gradient: ['#10B981', '#059669'],
     },
   ];
+
+  useEffect(() => {
+    startHandAnimation();
+    startPulseAnimation();
+  }, [currentStep]);
+
+  const startHandAnimation = () => {
+    // Animação suave de deslizar da mão
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(handAnimRef, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: true,
+        }),
+        Animated.timing(handAnimRef, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+  };
+
+  const startPulseAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnimRef, {
+          toValue: 1.1,
+          duration: 1500,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnimRef, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+  };
 
   const handleNext = async () => {
     try {
@@ -104,6 +153,32 @@ const OnboardingScreen = ({ onComplete }) => {
     setCurrentStep(index);
   };
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 20;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        // Optional: Add visual feedback during swipe
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const { dx, vx } = gestureState;
+        
+        if (Math.abs(dx) > 50 || Math.abs(vx) > 0.5) {
+          if (dx > 0) {
+            // Swipe right - previous step
+            if (currentStep > 0) {
+              setCurrentStep(currentStep - 1);
+            }
+          } else {
+            // Swipe left - next step
+            handleNext();
+          }
+        }
+      }
+    })
+  ).current;
+
   const renderIcon = (step) => {
     return (
       <View style={styles.iconContainer}>
@@ -123,7 +198,7 @@ const OnboardingScreen = ({ onComplete }) => {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.stepContainer}>
+      <View style={styles.stepContainer} {...panResponder.panHandlers}>
         <View style={styles.content}>
           <View style={styles.iconWrapper}>
             {renderIcon(currentStepData)}
@@ -134,6 +209,31 @@ const OnboardingScreen = ({ onComplete }) => {
           <Text style={styles.description}>{currentStepData.description}</Text>
         </View>
       </View>
+
+      {/* Animated Hand Gesture */}
+      <Animated.View style={[
+        styles.handContainer,
+        {
+          transform: [
+            {
+              translateX: handAnimRef.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-50, 50]
+              })
+            },
+            { scale: pulseAnimRef }
+          ],
+          opacity: handAnimRef.interpolate({
+            inputRange: [0, 0.2, 0.8, 1],
+            outputRange: [0.4, 1, 1, 0.4]
+          })
+        }
+      ]}>
+        <Text style={styles.handEmoji}>👆</Text>
+        <View style={styles.swipeIndicator}>
+          <Text style={styles.swipeText}>Deslize ou toque</Text>
+        </View>
+      </Animated.View>
 
       {/* Navigation Dots */}
       <View style={styles.dotsContainer}>
@@ -269,6 +369,33 @@ const styles = StyleSheet.create({
     fontSize: typography.button,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  handContainer: {
+    position: 'absolute',
+    bottom: 160,
+    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  handEmoji: {
+    fontSize: 32,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  swipeIndicator: {
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  swipeText: {
+    fontSize: typography.caption,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

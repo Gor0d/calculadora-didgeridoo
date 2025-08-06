@@ -1,251 +1,414 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TutorialManager } from '../services/tutorial/TutorialManager';
 
-export const useTutorial = (sectionName, context = {}) => {
-  const [currentStep, setCurrentStep] = useState(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [progress, setProgress] = useState(null);
-  const [elementRefs, setElementRefs] = useState({});
-  const [elementBounds, setElementBounds] = useState({});
-  
-  const tutorialState = useRef({
-    isActive: false,
-    stepIndex: 0,
-    section: null
+export const useTutorial = (sectionName = null, context = {}) => {
+  const [tutorialState, setTutorialState] = useState({
+    isVisible: false,
+    currentStep: null,
+    currentSection: sectionName,
+    progress: {},
+    settings: { enabled: true }
   });
 
-  // Initialize tutorial
+  const [isLoading, setIsLoading] = useState(true);
+  const [registeredRefs, setRegisteredRefs] = useState({});
+
   useEffect(() => {
     initializeTutorial();
-  }, [sectionName]);
-
-  // Check if tutorial should show based on context changes
-  useEffect(() => {
-    checkTutorialConditions();
-  }, [context]);
+  }, []);
 
   const initializeTutorial = async () => {
     try {
-      const { progress: tutorialProgress, shouldShowWelcome } = await TutorialManager.initializeTutorial();
-      setProgress(tutorialProgress);
-
-      if (shouldShowWelcome && sectionName === 'welcome') {
-        startTutorial('welcome');
-      }
+      setIsLoading(true);
+      const tutorialData = await TutorialManager.initializeTutorial();
+      
+      setTutorialState({
+        isVisible: tutorialData.shouldShowWelcome,
+        currentStep: tutorialData.currentStep?.step || null,
+        currentSection: tutorialData.currentStep?.section || null,
+        progress: tutorialData.progress,
+        settings: tutorialData.settings
+      });
     } catch (error) {
-      console.error('Error initializing tutorial:', error);
+      console.error('Failed to initialize tutorial:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const checkTutorialConditions = async () => {
-    if (tutorialState.current.isActive) return;
-
-    const shouldShow = await TutorialManager.shouldShowTutorial(sectionName, context);
-    if (shouldShow) {
-      startTutorial(sectionName);
-    }
-  };
-
-  const startTutorial = async (section) => {
+  const startTutorial = useCallback(async (sectionName = 'welcome') => {
     try {
-      const steps = TutorialManager.tutorialSteps[section];
+      const steps = TutorialManager.tutorialSteps[sectionName];
       if (!steps || steps.length === 0) return;
 
-      tutorialState.current = {
-        isActive: true,
-        stepIndex: 0,
-        section: section
-      };
-
       const firstStep = steps[0];
-      const enhancedStep = await enhanceStep(firstStep, section, 0, steps.length);
-      
-      setCurrentStep(enhancedStep);
-      setIsVisible(true);
+      setTutorialState(prev => ({
+        ...prev,
+        isVisible: true,
+        currentStep: firstStep,
+        currentSection: sectionName
+      }));
+    } catch (error) {
+      console.error('Failed to start tutorial:', error);
+    }
+  }, []);
 
-      // Measure target element if needed
-      if (firstStep.target && elementRefs[firstStep.target]) {
-        measureElement(firstStep.target);
+  const nextStep = useCallback(async () => {
+    try {
+      if (!tutorialState.currentSection || !tutorialState.currentStep) return;
+
+      const nextStep = TutorialManager.getNextStepInSection(
+        tutorialState.currentSection,
+        tutorialState.currentStep.id
+      );
+
+      if (nextStep) {
+        setTutorialState(prev => ({
+          ...prev,
+          currentStep: nextStep
+        }));
+      } else {
+        // Seção concluída
+        await TutorialManager.markSectionCompleted(tutorialState.currentSection);
+        closeTutorial();
       }
     } catch (error) {
-      console.error('Error starting tutorial:', error);
+      console.error('Failed to go to next step:', error);
     }
-  };
+  }, [tutorialState.currentSection, tutorialState.currentStep]);
 
-  const enhanceStep = async (step, section, index, total) => {
-    const progress = await TutorialManager.getProgressStats();
-    
-    return {
-      ...step,
-      section: section,
-      isFirst: index === 0,
-      isLast: index === total - 1,
-      progress: {
-        current: index + 1,
-        total: total,
-        percentage: Math.round(((index + 1) / total) * 100),
-        overall: progress
+  const previousStep = useCallback(async () => {
+    try {
+      if (!tutorialState.currentSection || !tutorialState.currentStep) return;
+
+      const prevStep = TutorialManager.getPreviousStepInSection(
+        tutorialState.currentSection,
+        tutorialState.currentStep.id
+      );
+
+      if (prevStep) {
+        setTutorialState(prev => ({
+          ...prev,
+          currentStep: prevStep
+        }));
       }
-    };
-  };
+    } catch (error) {
+      console.error('Failed to go to previous step:', error);
+    }
+  }, [tutorialState.currentSection, tutorialState.currentStep]);
 
-  const nextStep = async () => {
-    if (!tutorialState.current.isActive) return;
-
-    const { section, stepIndex } = tutorialState.current;
-    const steps = TutorialManager.tutorialSteps[section];
-    
-    if (stepIndex < steps.length - 1) {
-      // Move to next step in current section
-      const newIndex = stepIndex + 1;
-      tutorialState.current.stepIndex = newIndex;
-
-      const nextStepData = steps[newIndex];
-      const enhancedStep = await enhanceStep(nextStepData, section, newIndex, steps.length);
-      
-      setCurrentStep(enhancedStep);
-
-      // Measure target element if needed
-      if (nextStepData.target && elementRefs[nextStepData.target]) {
-        measureElement(nextStepData.target);
+  const skipTutorial = useCallback(async () => {
+    try {
+      if (tutorialState.currentSection) {
+        await TutorialManager.skipCurrentSection(tutorialState.currentSection);
       }
-    } else {
-      // Section completed, check for next section
-      await TutorialManager.markSectionCompleted(section);
-      const nextSection = getNextSection(section);
-      
-      if (nextSection) {
-        startTutorial(nextSection);
-      } else {
-        endTutorial();
-      }
+      closeTutorial();
+    } catch (error) {
+      console.error('Failed to skip tutorial:', error);
     }
-  };
+  }, [tutorialState.currentSection]);
 
-  const previousStep = async () => {
-    if (!tutorialState.current.isActive || tutorialState.current.stepIndex <= 0) return;
+  const closeTutorial = useCallback(() => {
+    setTutorialState(prev => ({
+      ...prev,
+      isVisible: false,
+      currentStep: null,
+      currentSection: null
+    }));
+  }, []);
 
-    const { section, stepIndex } = tutorialState.current;
-    const steps = TutorialManager.tutorialSteps[section];
-    
-    const newIndex = stepIndex - 1;
-    tutorialState.current.stepIndex = newIndex;
-
-    const prevStepData = steps[newIndex];
-    const enhancedStep = await enhanceStep(prevStepData, section, newIndex, steps.length);
-    
-    setCurrentStep(enhancedStep);
-
-    // Measure target element if needed
-    if (prevStepData.target && elementRefs[prevStepData.target]) {
-      measureElement(prevStepData.target);
+  const resetTutorial = useCallback(async () => {
+    try {
+      await TutorialManager.resetTutorial();
+      await initializeTutorial();
+    } catch (error) {
+      console.error('Failed to reset tutorial:', error);
     }
-  };
+  }, []);
 
-  const skipTutorial = async () => {
-    if (!tutorialState.current.isActive) return;
-
-    const { section } = tutorialState.current;
-    await TutorialManager.skipCurrentSection(section);
-    endTutorial();
-  };
-
-  const endTutorial = () => {
-    tutorialState.current = {
-      isActive: false,
-      stepIndex: 0,
-      section: null
-    };
-    
-    setCurrentStep(null);
-    setIsVisible(false);
-  };
-
-  const getNextSection = (currentSection) => {
-    const sectionOrder = ['welcome', 'basic_usage', 'advanced_features', 'project_management'];
-    const currentIndex = sectionOrder.indexOf(currentSection);
-    return currentIndex < sectionOrder.length - 1 ? sectionOrder[currentIndex + 1] : null;
-  };
-
-  const measureElement = (targetId) => {
-    const ref = elementRefs[targetId];
-    if (ref && ref.current) {
-      ref.current.measure((x, y, width, height, pageX, pageY) => {
-        setElementBounds({
-          [targetId]: {
-            x: pageX,
-            y: pageY,
-            width,
-            height
-          }
-        });
-      });
+  const enableTutorials = useCallback(async () => {
+    try {
+      await TutorialManager.enableTutorials();
+      setTutorialState(prev => ({
+        ...prev,
+        settings: { ...prev.settings, enabled: true }
+      }));
+    } catch (error) {
+      console.error('Failed to enable tutorials:', error);
     }
-  };
+  }, []);
+
+  const disableTutorials = useCallback(async () => {
+    try {
+      await TutorialManager.disableTutorials();
+      setTutorialState(prev => ({
+        ...prev,
+        isVisible: false,
+        settings: { ...prev.settings, enabled: false }
+      }));
+    } catch (error) {
+      console.error('Failed to disable tutorials:', error);
+    }
+  }, []);
+
+  const shouldShowTutorial = useCallback(async (sectionName, context = {}) => {
+    try {
+      if (!tutorialState.settings.enabled) return false;
+      return await TutorialManager.shouldShowTutorial(sectionName, context);
+    } catch (error) {
+      console.error('Failed to check tutorial condition:', error);
+      return false;
+    }
+  }, [tutorialState.settings.enabled]);
+
+  const getProgressStats = useCallback(async () => {
+    try {
+      return await TutorialManager.getProgressStats();
+    } catch (error) {
+      console.error('Failed to get progress stats:', error);
+      return {
+        totalSections: 0,
+        completedSections: 0,
+        progressPercentage: 0,
+        isComplete: false
+      };
+    }
+  }, []);
+
+  const getRandomTip = useCallback(async (category = null) => {
+    try {
+      return await TutorialManager.getRandomTip(category);
+    } catch (error) {
+      console.error('Failed to get random tip:', error);
+      return null;
+    }
+  }, []);
 
   const registerRef = useCallback((targetId, ref) => {
-    setElementRefs(prev => ({
+    setRegisteredRefs(prev => ({
       ...prev,
       [targetId]: ref
     }));
   }, []);
 
-  const triggerStep = useCallback(async (stepId) => {
-    const stepInfo = TutorialManager.getStepById(stepId);
-    if (stepInfo) {
-      const enhancedStep = await enhanceStep(stepInfo.step, stepInfo.section, 0, 1);
-      setCurrentStep(enhancedStep);
-      setIsVisible(true);
+  const unregisterRef = useCallback((targetId) => {
+    setRegisteredRefs(prev => {
+      const newRefs = { ...prev };
+      delete newRefs[targetId];
+      return newRefs;
+    });
+  }, []);
 
-      if (stepInfo.step.target && elementRefs[stepInfo.step.target]) {
-        measureElement(stepInfo.step.target);
-      }
-    }
-  }, [elementRefs]);
+  const getElementBounds = useCallback((targetId) => {
+    const ref = registeredRefs[targetId];
+    if (!ref?.current) return null;
 
-  const resetTutorial = async () => {
-    await TutorialManager.resetTutorial();
-    setProgress({});
-    endTutorial();
-  };
+    return new Promise((resolve) => {
+      ref.current.measureInWindow((x, y, width, height) => {
+        resolve({ x, y, width, height });
+      });
+    });
+  }, [registeredRefs]);
 
-  // Public API
+  const endTutorial = useCallback(() => {
+    closeTutorial();
+  }, [closeTutorial]);
+
   return {
-    // State
-    isVisible,
-    currentStep,
-    progress,
-    isActive: tutorialState.current.isActive,
+    // Estado
+    isVisible: tutorialState.isVisible,
+    currentStep: tutorialState.currentStep,
+    currentSection: tutorialState.currentSection,
+    isLoading,
+    settings: tutorialState.settings,
     
-    // Actions  
+    // Ações
     startTutorial,
     nextStep,
     previousStep,
     skipTutorial,
-    endTutorial,
+    closeTutorial,
     resetTutorial,
-    triggerStep,
+    enableTutorials,
+    disableTutorials,
     
-    // Helpers
+    // Utilitários
+    shouldShowTutorial,
+    getProgressStats,
+    getRandomTip,
+    
+    // Gerenciamento de referências
     registerRef,
-    elementBounds: currentStep?.target ? elementBounds[currentStep.target] : null,
-    
-    // Tutorial management
-    async enableTutorials() {
-      await TutorialManager.enableTutorials();
-    },
-    
-    async disableTutorials() {
-      await TutorialManager.disableTutorials();
-    },
-    
-    async getStats() {
-      return await TutorialManager.getProgressStats();
-    }
+    unregisterRef,
+    getElementBounds,
+    registeredRefs,
+    endTutorial
   };
 };
 
-// Hook for managing tutorial progress across the app
+// Hook para tutorial simples com apenas tooltip
+export const useSimpleTutorial = () => {
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
+  const showTooltip = useCallback((config) => {
+    setActiveTooltip({
+      id: Date.now(),
+      title: config.title,
+      description: config.description,
+      position: config.position || 'bottom',
+      target: config.target,
+      duration: config.duration || 5000,
+      ...config
+    });
+
+    if (config.duration && config.duration > 0) {
+      setTimeout(() => {
+        setActiveTooltip(null);
+      }, config.duration);
+    }
+  }, []);
+
+  const hideTooltip = useCallback(() => {
+    setActiveTooltip(null);
+  }, []);
+
+  return {
+    activeTooltip,
+    showTooltip,
+    hideTooltip
+  };
+};
+
+// Hook para dicas específicas por categoria
+export const useTips = (category = null) => {
+  const [currentTip, setCurrentTip] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const getTip = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const tip = await TutorialManager.getRandomTip(category);
+      setCurrentTip(tip);
+      return tip;
+    } catch (error) {
+      console.error('Failed to get tip:', error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [category]);
+
+  const getNewTip = useCallback(async () => {
+    return await getTip();
+  }, [getTip]);
+
+  const clearTip = useCallback(() => {
+    setCurrentTip(null);
+  }, []);
+
+  const showSpecificTip = useCallback((tip) => {
+    setCurrentTip(tip);
+  }, []);
+
+  const showTipForCategory = useCallback(async (category) => {
+    try {
+      setIsLoading(true);
+      const tip = await TutorialManager.getRandomTip(category);
+      if (tip) {
+        setCurrentTip(tip);
+      }
+      return tip;
+    } catch (error) {
+      console.error('Failed to show tip for category:', error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    getTip();
+  }, [getTip]);
+
+  return {
+    currentTip,
+    isLoading,
+    getTip,
+    getNewTip,
+    clearTip,
+    showSpecificTip,
+    showTipForCategory
+  };
+};
+
+// Hook específico para dica do dia
+export const useDailyTip = () => {
+  const [dailyTip, setDailyTip] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loadDailyTip = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const tip = await TutorialManager.getDailyTip();
+      setDailyTip(tip);
+      return tip;
+    } catch (error) {
+      console.error('Failed to load daily tip:', error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const showDailyTip = useCallback(() => {
+    setIsVisible(true);
+  }, []);
+
+  const hideDailyTip = useCallback(() => {
+    setIsVisible(false);
+  }, []);
+
+  const getWeeklyTips = useCallback(async () => {
+    try {
+      return await TutorialManager.getWeeklyTips();
+    } catch (error) {
+      console.error('Failed to get weekly tips:', error);
+      return [];
+    }
+  }, []);
+
+  const getTipCategories = useCallback(() => {
+    return TutorialManager.getTipCategories();
+  }, []);
+
+  const getTipsByCategory = useCallback(async (category) => {
+    try {
+      return await TutorialManager.getTipsByCategory(category);
+    } catch (error) {
+      console.error('Failed to get tips by category:', error);
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDailyTip();
+  }, [loadDailyTip]);
+
+  return {
+    dailyTip,
+    isVisible,
+    isLoading,
+    showDailyTip,
+    hideDailyTip,
+    loadDailyTip,
+    getWeeklyTips,
+    getTipCategories,
+    getTipsByCategory
+  };
+};
+
+// Hook para progresso e configurações do tutorial
 export const useTutorialProgress = () => {
   const [stats, setStats] = useState({
     totalSections: 0,
@@ -255,99 +418,67 @@ export const useTutorialProgress = () => {
     progressPercentage: 0,
     isComplete: false
   });
-
   const [settings, setSettings] = useState({
     enabled: true,
     autoPlay: true,
     showTips: true,
     animationSpeed: 'normal'
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    loadProgress();
-    loadSettings();
-  }, []);
-
-  const loadProgress = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const progressStats = await TutorialManager.getProgressStats();
+      setIsLoading(true);
+      const [progressStats, tutorialSettings] = await Promise.all([
+        TutorialManager.getProgressStats(),
+        TutorialManager.getTutorialSettings()
+      ]);
+      
       setStats(progressStats);
-    } catch (error) {
-      console.error('Error loading tutorial progress:', error);
-    }
-  };
-
-  const loadSettings = async () => {
-    try {
-      const tutorialSettings = await TutorialManager.getTutorialSettings();
       setSettings(tutorialSettings);
     } catch (error) {
-      console.error('Error loading tutorial settings:', error);
+      console.error('Failed to load tutorial data:', error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const updateSettings = async (newSettings) => {
+  const updateSettings = useCallback(async (newSettings) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
       await TutorialManager.saveTutorialSettings(updatedSettings);
       setSettings(updatedSettings);
     } catch (error) {
-      console.error('Error updating tutorial settings:', error);
+      console.error('Failed to update settings:', error);
     }
-  };
+  }, [settings]);
 
-  const resetAll = async () => {
+  const resetAll = useCallback(async () => {
     try {
+      setIsLoading(true);
       await TutorialManager.resetTutorial();
-      await loadProgress();
+      await loadData();
     } catch (error) {
-      console.error('Error resetting tutorial:', error);
+      console.error('Failed to reset tutorial:', error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [loadData]);
+
+  const refresh = useCallback(async () => {
+    await loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   return {
     stats,
     settings,
+    isLoading,
     updateSettings,
     resetAll,
-    refresh: loadProgress
-  };
-};
-
-// Hook for contextual tips
-export const useTips = (category = null) => {
-  const [currentTip, setCurrentTip] = useState(null);
-  
-  const showRandomTip = async () => {
-    try {
-      const tip = await TutorialManager.getRandomTip(category);
-      setCurrentTip(tip);
-      return tip;
-    } catch (error) {
-      console.error('Error showing tip:', error);
-      return null;
-    }
-  };
-
-  const showTipForCategory = async (categoryName) => {
-    try {
-      const tip = await TutorialManager.getRandomTip(categoryName);
-      setCurrentTip(tip);
-      return tip;
-    } catch (error) {
-      console.error('Error showing category tip:', error);
-      return null;
-    }
-  };
-
-  const clearTip = () => {
-    setCurrentTip(null);
-  };
-
-  return {
-    currentTip,
-    showRandomTip,
-    showTipForCategory,
-    clearTip
+    refresh
   };
 };

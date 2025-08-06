@@ -99,6 +99,26 @@ export class ProjectValidator {
       errors.push('Geometria não pode ter mais de 1000 pontos');
     }
     
+    // Auto-detectar unidades baseado no padrão dos valores
+    // Heurística melhorada: verificar máximos da geometria inteira primeiro
+    const allPositions = [];
+    const allDiameters = [];
+    
+    lines.forEach(line => {
+      const match = line.trim().match(/^(\d+\.?\d*)\s+(\d+\.?\d*)$/);
+      if (match) {
+        allPositions.push(parseFloat(match[1]));
+        allDiameters.push(parseFloat(match[2]));
+      }
+    });
+    
+    const maxPosition = Math.max(...allPositions);
+    const maxDiameter = Math.max(...allDiameters);
+    
+    // Determinar unidades baseado nos valores máximos
+    const isPositionInMeters = maxPosition <= 10; // Se máximo <= 10, assumir metros  
+    const isDiameterInMeters = maxDiameter <= 1;   // Se máximo <= 1, assumir metros
+    
     let lastPosition = -1;
     
     lines.forEach((line, index) => {
@@ -115,22 +135,20 @@ export class ProjectValidator {
       const position = parseFloat(match[1]);
       const diameter = parseFloat(match[2]);
       
-      // Auto-detectar unidades baseado nos valores
-      let isPositionInMeters = position <= 10; // Assumir metros se <= 10
-      let isDiameterInMeters = diameter <= 1; // Assumir metros se <= 1
-      
-      // Se diâmetro > 1, provavelmente está em mm
+      // Converter para metros usando a detecção de unidade já feita
+      let actualPosition = position;
       let actualDiameter = diameter;
-      if (!isDiameterInMeters && diameter <= 1000) {
-        actualDiameter = diameter / 1000; // Converter mm para m
+      
+      if (!isPositionInMeters) {
+        if (maxPosition <= 1000) {
+          actualPosition = position / 100; // Converter cm para m
+        } else {
+          actualPosition = position / 1000; // Converter mm para m
+        }
       }
       
-      // Se posição > 10, provavelmente está em cm ou mm
-      let actualPosition = position;
-      if (!isPositionInMeters && position <= 1000) {
-        actualPosition = position / 100; // Converter cm para m
-      } else if (!isPositionInMeters && position > 1000) {
-        actualPosition = position / 1000; // Converter mm para m
+      if (!isDiameterInMeters) {
+        actualDiameter = diameter / 1000; // Converter mm para m
       }
       
       // Validar posição (sempre em metros)
