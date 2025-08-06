@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StatusBar, StyleSheet } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingScreen from './OnboardingScreen';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -47,26 +48,34 @@ export const AppWrapper = ({ children }) => {
   }
 
   return (
-    <ErrorBoundary>
-      <View style={styles.container}>
+    <SafeAreaProvider>
+      <ErrorBoundary>
         <StatusBar 
           barStyle={showOnboarding ? "light-content" : "dark-content"}
-          backgroundColor={showOnboarding ? "transparent" : "#F8FAFC"}
-          translucent={deviceInfo.isIOS}
+          backgroundColor={showOnboarding ? "#10B981" : "#F8FAFC"}
+          translucent={false}
         />
         
-        {showOnboarding ? (
-          <OnboardingScreen onComplete={handleOnboardingComplete} />
-        ) : (
-          children
-        )}
-      </View>
-    </ErrorBoundary>
+        <SafeAreaView style={styles.container} edges={['left', 'right']}>
+          {showOnboarding ? (
+            <OnboardingScreen onComplete={handleOnboardingComplete} />
+          ) : (
+            <View style={styles.childrenContainer}>
+              {children}
+            </View>
+          )}
+        </SafeAreaView>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  childrenContainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',
   },

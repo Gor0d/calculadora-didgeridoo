@@ -23,7 +23,9 @@
       "Bash(npm run test:ci:*)",
       "Bash(npm test:*)",
       "Bash(ipconfig)",
-      "Bash(wmic process where:*)"
+      "Bash(wmic process where:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm cache clean:*)"
     ],
     "deny": []
   }

@@ -10,6 +10,7 @@ import {
   Easing,
   PanResponder
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
@@ -190,9 +191,7 @@ const OnboardingScreen = ({ onComplete }) => {
   const currentStepData = steps[currentStep];
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <LinearGradient
         colors={currentStepData.gradient}
         style={StyleSheet.absoluteFill}
@@ -261,7 +260,7 @@ const OnboardingScreen = ({ onComplete }) => {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -275,8 +274,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingTop: deviceInfo.safeAreaTop + spacing.xxl,
-    paddingBottom: spacing.xxl,
+    paddingVertical: spacing.lg,
   },
   content: {
     alignItems: 'center',
@@ -344,7 +342,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingBottom: deviceInfo.safeAreaBottom + spacing.lg,
+    paddingBottom: spacing.lg,
   },
   skipButton: {
     paddingVertical: spacing.md,

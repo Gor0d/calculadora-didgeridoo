@@ -49,6 +49,7 @@ export const getDeviceInfo = () => {
   
   // iOS specific detection
   const isIOS = Platform.OS === 'ios';
+  const isAndroid = Platform.OS === 'android';
   
   // Dynamic Island detection (iPhone 14 Pro/Pro Max and newer)
   const hasDynamicIsland = isIOS && 
@@ -60,9 +61,18 @@ export const getDeviceInfo = () => {
   // Notch detection (iPhone X series)
   const hasNotch = isIOS && statusBarHeight > 20 && !hasDynamicIsland;
   
-  // Safe area calculation
-  const safeAreaTop = Math.max(statusBarHeight, hasDynamicIsland ? 59 : hasNotch ? 44 : 20);
-  const safeAreaBottom = isIOS && (hasNotch || hasDynamicIsland) ? 34 : 0;
+  // Safe area calculation with better Android support
+  let safeAreaTop = 20; // Default
+  let safeAreaBottom = 0; // Default
+  
+  if (isIOS) {
+    safeAreaTop = Math.max(statusBarHeight, hasDynamicIsland ? 59 : hasNotch ? 44 : 20);
+    safeAreaBottom = (hasNotch || hasDynamicIsland) ? 34 : 0;
+  } else if (isAndroid) {
+    safeAreaTop = Math.max(statusBarHeight || 24, 24);
+    // Android devices with gesture navigation
+    safeAreaBottom = SCREEN_HEIGHT > 800 ? 24 : 0;
+  }
   
   return {
     width: SCREEN_WIDTH,
@@ -72,6 +82,7 @@ export const getDeviceInfo = () => {
     isLargeDevice,
     isTablet,
     isIOS,
+    isAndroid,
     hasNotch,
     hasDynamicIsland,
     statusBarHeight,
