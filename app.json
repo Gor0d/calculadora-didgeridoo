@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "description": "Calculadora profissional de didgeridoo com análise acústica avançada, visualização de geometria e preview sonoro em tempo real.",
     "platforms": [
       "ios",
