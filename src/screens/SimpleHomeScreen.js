@@ -878,7 +878,7 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   };
 
   return (
-    <SafeAreaView style={styles.safeContainer} edges={['top']}>
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
       <FloatingTipManager category="general">
         <OptimizedScrollView
           style={styles.container}
@@ -939,7 +939,7 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         metadata={analysisMetadata}
       />
 
-      {/* Project Save Button */}
+      {/* Project Management Section */}
       {(geometry.trim() || currentProject) && (
         <View style={styles.saveProjectContainer}>
           <TouchableOpacity
@@ -969,47 +969,71 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
             </TouchableOpacity>
           )}
 
-          {/* Novos Botões de Recursos */}
+          {/* Feature Buttons Row */}
           <View style={styles.newFeaturesContainer}>
             <TouchableOpacity
               style={styles.featureButton}
-              onPress={() => setShow3DVisualization(true)}
-            >
-              <Text style={styles.featureButtonText}>🎨 Visualização 3D</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.featureButton}
-              onPress={() => setShowAIRecommendations(true)}
-            >
-              <Text style={styles.featureButtonText}>🤖 Recomendações IA</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.featureButton}
-              onPress={() => setShowTipsSettings(true)}
-            >
-              <Text style={styles.featureButtonText}>⚙️ Config. Dicas</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Botão de Teste para Dica - Apenas se habilitado */}
-          {shouldShowTips && (
-            <TouchableOpacity
-              style={styles.testTipButton}
+              activeOpacity={0.7}
               onPress={() => {
-                if (tips.currentTip) {
-                  tips.clearTip();
-                } else {
-                  tips.getTip();
+                console.log('3D Visualization button pressed');
+                try {
+                  setShow3DVisualization(true);
+                } catch (error) {
+                  console.error('Error opening 3D visualization:', error);
                 }
               }}
             >
-              <Text style={styles.testTipButtonText}>
-                {tips.currentTip ? '❌ Fechar Dica' : '💡 Dica do Dia'}
-              </Text>
+              <Text style={styles.featureButtonText}>🎨 3D</Text>
             </TouchableOpacity>
-          )}
+            
+            <TouchableOpacity
+              style={styles.featureButton}
+              activeOpacity={0.7}
+              onPress={() => {
+                console.log('AI Recommendations button pressed');
+                try {
+                  setShowAIRecommendations(true);
+                } catch (error) {
+                  console.error('Error opening AI recommendations:', error);
+                }
+              }}
+            >
+              <Text style={styles.featureButtonText}>🤖 IA</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.featureButton}
+              activeOpacity={0.7}
+              onPress={() => {
+                console.log('Tips Settings button pressed');
+                try {
+                  setShowTipsSettings(true);
+                } catch (error) {
+                  console.error('Error opening tips settings:', error);
+                }
+              }}
+            >
+              <Text style={styles.featureButtonText}>⚙️ Dicas</Text>
+            </TouchableOpacity>
+
+            {/* Daily Tip Button - Only if enabled */}
+            {shouldShowTips && (
+              <TouchableOpacity
+                style={styles.featureButton}
+                onPress={() => {
+                  if (tips.currentTip) {
+                    tips.clearTip();
+                  } else {
+                    tips.getTip();
+                  }
+                }}
+              >
+                <Text style={styles.featureButtonText}>
+                  {tips.currentTip ? '❌' : '💡'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
@@ -1158,7 +1182,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl + 60, // Extra padding for tab bar
   },
   
   // Visualization styles
@@ -1443,18 +1467,18 @@ const styles = StyleSheet.create({
 
   // Project management styles
   saveProjectContainer: {
-    flexDirection: 'row',
     marginHorizontal: spacing.md,
     marginVertical: spacing.sm,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   saveProjectButton: {
-    flex: 2,
     backgroundColor: '#10B981',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
+    marginBottom: spacing.sm,
+    minHeight: scale(50),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1467,12 +1491,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   manageProjectsButton: {
-    flex: 1,
     backgroundColor: '#3B82F6',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
+    marginBottom: spacing.sm,
+    minHeight: scale(50),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1485,12 +1510,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   exportButton: {
-    flex: 1,
     backgroundColor: '#F59E0B',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
+    marginBottom: spacing.sm,
+    minHeight: scale(50),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1502,46 +1528,34 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '700',
   },
-  testTipButton: {
-    backgroundColor: '#10B981',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 12,
-    marginTop: spacing.sm,
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  testTipButtonText: {
-    color: '#FFFFFF',
-    fontSize: typography.small,
-    fontWeight: '600',
-  },
   newFeaturesContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     gap: spacing.sm,
   },
   featureButton: {
     flex: 1,
     backgroundColor: '#2563EB',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: scale(48),
+    minWidth: scale(48),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    // Debug: Add border to see the touch area
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   featureButtonText: {
     color: '#FFFFFF',
-    fontSize: typography.caption,
+    fontSize: typography.small,
     fontWeight: '600',
     textAlign: 'center',
   },

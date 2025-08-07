@@ -25,7 +25,10 @@
       "Bash(ipconfig)",
       "Bash(wmic process where:*)",
       "Bash(npm ls:*)",
-      "Bash(npm cache clean:*)"
+      "Bash(npm cache clean:*)",
+      "Bash(npm ci:*)",
+      "Bash(touch:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

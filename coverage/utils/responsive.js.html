@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/68</span>
+                <span class='fraction'>0/75</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/116</span>
+                <span class='fraction'>0/123</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/62</span>
+                <span class='fraction'>0/69</span>
             </div>
         
             
@@ -351,7 +351,18 @@
 <a name='L286'></a><a href='#L286'>286</a>
 <a name='L287'></a><a href='#L287'>287</a>
 <a name='L288'></a><a href='#L288'>288</a>
-<a name='L289'></a><a href='#L289'>289</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -402,22 +413,33 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -690,6 +712,7 @@ export const getDeviceInfo = <span class="cstat-no" title="statement not covered
   
   // iOS specific detection
   const isIOS = <span class="cstat-no" title="statement not covered" >Platform.OS === 'ios';</span>
+  const isAndroid = <span class="cstat-no" title="statement not covered" >Platform.OS === 'android';</span>
   
   // Dynamic Island detection (iPhone 14 Pro/Pro Max and newer)
   const hasDynamicIsland = <span class="cstat-no" title="statement not covered" >isIOS &amp;&amp; </span>
@@ -701,9 +724,18 @@ export const getDeviceInfo = <span class="cstat-no" title="statement not covered
   // Notch detection (iPhone X series)
   const hasNotch = <span class="cstat-no" title="statement not covered" >isIOS &amp;&amp; statusBarHeight &gt; 20 &amp;&amp; !hasDynamicIsland;</span>
   
-  // Safe area calculation
-  const safeAreaTop = <span class="cstat-no" title="statement not covered" >Math.max(statusBarHeight, hasDynamicIsland ? 59 : hasNotch ? 44 : 20);</span>
-  const safeAreaBottom = <span class="cstat-no" title="statement not covered" >isIOS &amp;&amp; (hasNotch || hasDynamicIsland) ? 34 : 0;</span>
+  // Safe area calculation with better Android support
+  let safeAreaTop = <span class="cstat-no" title="statement not covered" >20;</span> // Default
+  let safeAreaBottom = <span class="cstat-no" title="statement not covered" >0;</span> // Default
+  
+<span class="cstat-no" title="statement not covered" >  if (isIOS) {</span>
+<span class="cstat-no" title="statement not covered" >    safeAreaTop = Math.max(statusBarHeight, hasDynamicIsland ? 59 : hasNotch ? 44 : 20);</span>
+<span class="cstat-no" title="statement not covered" >    safeAreaBottom = (hasNotch || hasDynamicIsland) ? 34 : 0;</span>
+  } else <span class="cstat-no" title="statement not covered" >if (isAndroid) {</span>
+<span class="cstat-no" title="statement not covered" >    safeAreaTop = Math.max(statusBarHeight || 24, 24);</span>
+    // Android devices with gesture navigation
+<span class="cstat-no" title="statement not covered" >    safeAreaBottom = SCREEN_HEIGHT &gt; 800 ? 24 : 0;</span>
+  }
   
 <span class="cstat-no" title="statement not covered" >  return {</span>
     width: SCREEN_WIDTH,
@@ -713,6 +745,7 @@ export const getDeviceInfo = <span class="cstat-no" title="statement not covered
     isLargeDevice,
     isTablet,
     isIOS,
+    isAndroid,
     hasNotch,
     hasDynamicIsland,
     statusBarHeight,
@@ -934,7 +967,7 @@ export { SCREEN_WIDTH, SCREEN_HEIGHT };</pre></td></tr></table></pre>
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-06T18:38:39.567Z
+                at 2025-08-07T11:52:24.408Z
             </div>
         <script src="../prettify.js"></script>
         <script>
