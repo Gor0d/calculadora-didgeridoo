@@ -28,7 +28,10 @@
       "Bash(npm cache clean:*)",
       "Bash(npm ci:*)",
       "Bash(touch:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(gh run list:*)",
+      "Bash(timeout 45 npx expo start --no-dev --port 8085)",
+      "Bash(timeout 30 npx expo start --no-dev --port 8086)"
     ],
     "deny": []
   }

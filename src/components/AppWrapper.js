@@ -59,7 +59,7 @@ export const AppWrapper = ({ children }) => {
           translucent={false}
         />
         
-        <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
           {showOnboarding ? (
             <OnboardingScreen onComplete={handleOnboardingComplete} />
           ) : (

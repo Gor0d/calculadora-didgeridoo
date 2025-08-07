@@ -878,8 +878,8 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   };
 
   return (
-    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
-      <FloatingTipManager category="general">
+    <View style={styles.safeContainer}>
+      {/* <FloatingTipManager category="general"> */}
         <OptimizedScrollView
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
@@ -1005,12 +1005,9 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
               style={styles.featureButton}
               activeOpacity={0.7}
               onPress={() => {
-                console.log('Tips Settings button pressed');
-                try {
-                  setShowTipsSettings(true);
-                } catch (error) {
-                  console.error('Error opening tips settings:', error);
-                }
+                console.log('Tips Settings button pressed - state before:', showTipsSettings);
+                setShowTipsSettings(true);
+                console.log('Tips Settings button pressed - state should be true now');
               }}
             >
               <Text style={styles.featureButtonText}>⚙️ Dicas</Text>
@@ -1167,8 +1164,8 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         }}
       />
       </OptimizedScrollView>
-      </FloatingTipManager>
-    </SafeAreaView>
+      {/* </FloatingTipManager> */}
+    </View>
   );
 };
 
