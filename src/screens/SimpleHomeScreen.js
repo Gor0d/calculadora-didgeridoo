@@ -561,7 +561,7 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   const [geometryStats, setGeometryStats] = useState(null);
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showAdvancedExport, setShowAdvancedExport] = useState(false);
-  const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false);
+  const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false); // DESABILITADO PARA TESTE
   const [firstRunStep, setFirstRunStep] = useState(0);
   const [isFirstRun, setIsFirstRun] = useState(false);
   const [userSettings, setUserSettings] = useState({});
@@ -623,18 +623,20 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   useEffect(() => {
     const checkFirstRun = async () => {
       try {
-        const firstRunKey = '@didgemap_first_run_completed';
-        const completed = await AsyncStorage.getItem(firstRunKey);
+        // TUTORIAL TEMPORARIAMENTE DESABILITADO PARA TESTE
+        return;
         
-        if (completed !== 'true') {
-          setIsFirstRun(true);
-          setShowFirstRunTutorial(true);
-        }
+        // const firstRunKey = '@didgemap_first_run_completed';
+        // const completed = await AsyncStorage.getItem(firstRunKey);
+        
+        // if (completed !== 'true') {
+        //   setIsFirstRun(true);
+        //   setShowFirstRunTutorial(true);
+        // }
       } catch (error) {
         console.error('Error checking first run:', error);
-        // Default to showing tutorial on error
-        setIsFirstRun(true);
-        setShowFirstRunTutorial(true);
+        // TUTORIAL DESABILITADO - não mostrar em caso de erro
+        return;
       }
     };
 

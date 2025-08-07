@@ -19,15 +19,18 @@ export const AppWrapper = ({ children }) => {
 
   const checkOnboardingStatus = async () => {
     try {
-      const onboardingCompleted = await AsyncStorage.getItem(ONBOARDING_KEY);
-      if (onboardingCompleted === 'true') {
-        setShowOnboarding(false);
-      } else {
-        setShowOnboarding(true);
-      }
+      // TEMPORARIAMENTE DESABILITADO PARA TESTE
+      setShowOnboarding(false);
+      
+      // const onboardingCompleted = await AsyncStorage.getItem(ONBOARDING_KEY);
+      // if (onboardingCompleted === 'true') {
+      //   setShowOnboarding(false);
+      // } else {
+      //   setShowOnboarding(true);
+      // }
     } catch (error) {
       console.warn('Error checking onboarding status:', error);
-      setShowOnboarding(true); // Show onboarding if there's an error
+      setShowOnboarding(false); // Não mostrar onboarding se houver erro
     } finally {
       setIsLoading(false);
     }
