@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path, Circle, Line, Rect, G, Text as SvgText } from 'react-native-svg';
 import { AppHeader } from '../components/AppHeader';
 import { UnitSelector } from '../components/UnitSelector';
@@ -875,14 +876,15 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   };
 
   return (
-    <FloatingTipManager category="general">
-      <OptimizedScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-        keyboardShouldPersistTaps="handled"
-      >
+    <SafeAreaView style={styles.safeContainer} edges={['top']}>
+      <FloatingTipManager category="general">
+        <OptimizedScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+        >
         <View ref={appHeaderRef}>
           <AppHeader />
         </View>
@@ -1138,12 +1140,17 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
           experience: 'beginner'
         }}
       />
-    </OptimizedScrollView>
-    </FloatingTipManager>
+      </OptimizedScrollView>
+      </FloatingTipManager>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

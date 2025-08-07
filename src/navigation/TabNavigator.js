@@ -1,7 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, StyleSheet } from 'react-native';
 import { getDeviceInfo, getTypography, getSpacing, getIconSizes } from '../utils/responsive';
 import { AppIcon } from '../components/IconSystem';
@@ -36,8 +35,7 @@ export const TabNavigator = ({
   onResetOnboarding
 }) => {
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
+    <NavigationContainer>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
@@ -92,8 +90,7 @@ export const TabNavigator = ({
           )}
         </Tab.Screen>
       </Tab.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+    </NavigationContainer>
   );
 };
 
@@ -102,9 +99,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E5E7EB',
-    paddingBottom: deviceInfo.safeAreaBottom + spacing.xs,
+    paddingBottom: spacing.sm,
     paddingTop: spacing.sm,
-    height: (deviceInfo.isTablet ? 70 : 60) + deviceInfo.safeAreaBottom,
+    height: deviceInfo.isTablet ? 70 : 60,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
