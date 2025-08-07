@@ -1,19 +1,6 @@
 module.exports = function(api) {
   api.cache(true);
   return {
-    presets: [
-      'babel-preset-expo'
-    ],
-    plugins: [
-      '@babel/plugin-proposal-export-namespace-from',
-      'react-native-reanimated/plugin',
-    ],
-    env: {
-      test: {
-        presets: [
-          ['babel-preset-expo', { jsxRuntime: 'automatic' }],
-        ],
-      },
-    },
+    presets: ['babel-preset-expo'],
   };
 };
