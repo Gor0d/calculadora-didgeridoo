@@ -473,6 +473,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
             geometry / m
           </SvgText>
           </Svg>
+        </Animated.View>
         </ScrollView>
 
         {/* Reset pan button when panned */}
