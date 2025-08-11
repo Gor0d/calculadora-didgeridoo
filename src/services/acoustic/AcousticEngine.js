@@ -104,8 +104,8 @@ export class AcousticEngine {
       const effectiveLength = this.calculateEffectiveLength(segments);
       const averageRadius = this.calculateAverageRadius(segments);
       
-      // Calculate fundamental frequency
-      const fundamentalFreq = this.calculateFundamental(effectiveLength, averageRadius);
+      // Calculate fundamental frequency with refined mouthpiece modeling
+      const fundamentalFreq = this.calculateFundamental(effectiveLength, averageRadius, segments);
       
       // Calculate harmonic series
       const harmonics = this.calculateHarmonics(fundamentalFreq, segments);
@@ -197,17 +197,78 @@ export class AcousticEngine {
   /**
    * Calculate fundamental frequency using Webster's horn equation approximation
    */
-  calculateFundamental(effectiveLength, averageRadius) {
+  calculateFundamental(effectiveLength, averageRadius, segments = null) {
     // Base calculation for uniform tube
     let baseFreq = this.SPEED_OF_SOUND / (4 * effectiveLength);
     
     // Apply radius correction (larger radius = slightly lower frequency)
     const radiusCorrection = 1 - (averageRadius * 0.1); // Empirical factor
     
-    // Apply mouth coupling efficiency
-    baseFreq *= this.MOUTH_IMPEDANCE_FACTOR;
+    // Apply refined mouthpiece correction if segments are available
+    let mouthpieceCorrection = this.MOUTH_IMPEDANCE_FACTOR;
+    if (segments && segments.length > 0) {
+      mouthpieceCorrection = this.calculateMouthpieceCorrection(segments);
+    }
+    
+    baseFreq *= mouthpieceCorrection;
     
     return baseFreq * radiusCorrection;
+  }
+
+  /**
+   * Calculate refined mouthpiece correction based on first 30mm geometry
+   * More accurate modeling of the critical mouthpiece region
+   */
+  calculateMouthpieceCorrection(segments) {
+    // Find segments within first 30mm
+    const mouthpieceSegments = segments.filter(seg => seg.startPos <= 3.0); // 3cm = 30mm
+    
+    if (mouthpieceSegments.length === 0) {
+      return this.MOUTH_IMPEDANCE_FACTOR; // Fallback to default
+    }
+    
+    // Calculate average diameter in mouthpiece region
+    let totalLength = 0;
+    let weightedDiameter = 0;
+    
+    mouthpieceSegments.forEach(seg => {
+      const segmentLength = Math.min(seg.length, 3.0 - seg.startPos);
+      totalLength += segmentLength;
+      weightedDiameter += seg.avgDiameter * segmentLength;
+    });
+    
+    const avgMouthpieceDiameter = weightedDiameter / totalLength;
+    const mouthpieceRadius = avgMouthpieceDiameter / 2000; // mm to m
+    
+    // Refined correction based on mouthpiece geometry
+    // Smaller mouthpieces have better coupling efficiency
+    const sizeCorrection = 1.0 - (mouthpieceRadius - 0.015) * 2.0; // Optimal around 15mm radius
+    const clampedCorrection = Math.max(0.75, Math.min(0.95, sizeCorrection));
+    
+    // Apply taper correction for first 30mm
+    const taperCorrection = this.calculateMouthpieceTaperCorrection(mouthpieceSegments);
+    
+    return clampedCorrection * taperCorrection;
+  }
+
+  /**
+   * Calculate taper correction specifically for mouthpiece region
+   */
+  calculateMouthpieceTaperCorrection(mouthpieceSegments) {
+    if (mouthpieceSegments.length < 2) return 1.0;
+    
+    // Calculate rate of change in first 30mm
+    const startDiameter = mouthpieceSegments[0].avgDiameter;
+    const endDiameter = mouthpieceSegments[mouthpieceSegments.length - 1].avgDiameter;
+    const taperRate = (endDiameter - startDiameter) / 30; // mm per mm
+    
+    // Gentle taper improves acoustic coupling
+    // Too rapid taper creates reflections and reduces efficiency
+    const optimalTaperRate = 0.3; // 0.3mm increase per mm length
+    const taperDeviation = Math.abs(taperRate - optimalTaperRate);
+    const taperCorrection = 1.0 - (taperDeviation * 0.1);
+    
+    return Math.max(0.9, Math.min(1.1, taperCorrection));
   }
 
   /**

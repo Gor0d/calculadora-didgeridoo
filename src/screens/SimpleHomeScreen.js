@@ -6,7 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Platform
+  Platform,
+  PanResponder,
+  Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path, Circle, Line, Rect, G, Text as SvgText } from 'react-native-svg';
@@ -44,11 +46,80 @@ const typography = getTypography();
 const spacing = getSpacing();
 
 // Optimized GeometryVisualization Component with Performance Controls
-const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = 'metric' }) => {
+const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = 'metric', visualizationZoom = 1.0, setVisualizationZoom, visualizationMode = 'technical', setVisualizationMode, panOffset, setPanOffset }) => {
   // Skip rendering if not visible
   if (!isVisible) {
     return null;
   }
+  
+  // Animated values for smooth interactions
+  const animatedZoom = useRef(new Animated.Value(visualizationZoom)).current;
+  const animatedPan = useRef(new Animated.ValueXY(panOffset)).current;
+  const lastPinchDistance = useRef(null);
+  const lastZoom = useRef(visualizationZoom);
+  
+  // Update animated values when props change
+  useEffect(() => {
+    Animated.timing(animatedZoom, {
+      toValue: visualizationZoom,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [visualizationZoom, animatedZoom]);
+  
+  useEffect(() => {
+    Animated.timing(animatedPan, {
+      toValue: panOffset,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [panOffset, animatedPan]);
+
+  // Helper function to calculate distance between two touches
+  const getDistance = (touches) => {
+    if (touches.length < 2) return 0;
+    const [touch1, touch2] = touches;
+    const dx = touch1.pageX - touch2.pageX;
+    const dy = touch1.pageY - touch2.pageY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Pan responder for touch gestures
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (event) => {
+        const { nativeEvent } = event;
+        if (nativeEvent.touches.length === 2) {
+          // Start pinch gesture
+          lastPinchDistance.current = getDistance(nativeEvent.touches);
+          lastZoom.current = visualizationZoom;
+        }
+      },
+      onPanResponderMove: (event, gesture) => {
+        const { nativeEvent } = event;
+        
+        if (nativeEvent.touches.length === 2) {
+          // Pinch zoom
+          const currentDistance = getDistance(nativeEvent.touches);
+          if (lastPinchDistance.current && currentDistance > 0) {
+            const scale = currentDistance / lastPinchDistance.current;
+            const newZoom = Math.max(0.5, Math.min(3.0, lastZoom.current * scale));
+            setVisualizationZoom(newZoom);
+          }
+        } else if (nativeEvent.touches.length === 1 && visualizationZoom > 1.0) {
+          // Pan when zoomed in
+          const newPanX = panOffset.x + gesture.dx * 0.5;
+          const newPanY = panOffset.y + gesture.dy * 0.5;
+          setPanOffset({ x: newPanX, y: newPanY });
+        }
+      },
+      onPanResponderRelease: () => {
+        lastPinchDistance.current = null;
+      },
+    })
+  ).current;
 
   const points = useMemo(() => {
     if (!geometry || !geometry.trim()) return [];
@@ -88,22 +159,49 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       return { svgDimensions: null, pathData: null, scaleMarks: [] };
     }
 
-    // Technical drawing proportions - more realistic aspect ratio
+    // Proportions more realistic to didgeridoo dimensions
     const safeScreenWidth = isFinite(SCREEN_WIDTH) ? SCREEN_WIDTH : 400;
     const safeSpacingXL = isFinite(spacing.xl) ? spacing.xl : 24;
     const safeSpacingMD = isFinite(spacing.md) ? spacing.md : 12;
     
-    // Much longer and narrower - like a technical drawing
-    const svgWidth = Math.min(safeScreenWidth - safeSpacingXL, deviceInfo.isTablet ? 600 : 380);
-    const svgHeight = deviceInfo.isTablet ? scale(120) : scale(100); // Much shorter height
+    // Calculate dimensions based on visualization mode
+    const realAspectRatio = maxPosition / (maxDiameter / 10); // Convert mm to cm for true ratio
+    const svgWidth = Math.min(safeScreenWidth - safeSpacingXL, deviceInfo.isTablet ? 700 : 380);
     const margin = safeSpacingMD;
     
-    // Ensure positive dimensions before calculating scales
-    const availableWidth = Math.max(svgWidth - margin * 2, 100);
-    const availableHeight = Math.max(svgHeight - margin * 3, 60); // Leave more room for scale
+    let svgHeight, scaleX, scaleY, targetAspectRatio;
     
-    const scaleX = availableWidth / maxPosition;
-    const scaleY = availableHeight / maxDiameter;
+    if (visualizationMode === 'real') {
+      // Modo Real: proporções verdadeiras (fica muito fino mas é real)
+      targetAspectRatio = Math.max(15, Math.min(realAspectRatio, 50)); // Allow extreme ratios
+      const idealHeight = svgWidth / targetAspectRatio;
+      svgHeight = Math.max(idealHeight, deviceInfo.isTablet ? scale(40) : scale(30)); // Very thin
+      
+      const availableWidth = Math.max(svgWidth - margin * 2, 100);
+      const availableHeight = Math.max(svgHeight - margin * 3, 20);
+      
+      const baseScaleX = availableWidth / maxPosition;
+      const baseScaleY = availableHeight / maxDiameter;
+      
+      scaleX = baseScaleX * visualizationZoom;
+      scaleY = baseScaleY * visualizationZoom;
+      
+    } else {
+      // Modo Técnico: comprimento real + diâmetro amplificado para visibilidade
+      const technicalAspectRatio = Math.max(8, Math.min(realAspectRatio / 3, 15)); // Reduce ratio for visibility
+      const idealHeight = svgWidth / technicalAspectRatio;
+      svgHeight = Math.max(idealHeight, deviceInfo.isTablet ? scale(100) : scale(80)); // Taller for detail
+      targetAspectRatio = technicalAspectRatio;
+      
+      const availableWidth = Math.max(svgWidth - margin * 2, 100);
+      const availableHeight = Math.max(svgHeight - margin * 3, 60);
+      
+      const baseScaleX = availableWidth / maxPosition; // Comprimento real
+      const baseScaleY = availableHeight / maxDiameter; // Diâmetro amplificado
+      
+      scaleX = baseScaleX * visualizationZoom;
+      scaleY = baseScaleY * visualizationZoom;
+    }
 
     // Final validation to ensure all SVG dimensions are valid
     if (!isFinite(svgHeight) || !isFinite(svgWidth) || !isFinite(scaleX) || !isFinite(scaleY) ||
@@ -166,7 +264,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       pathData,
       scaleMarks
     };
-  }, [points, geometry]);
+  }, [points, geometry, visualizationZoom, visualizationMode]);
 
   if (!isVisible || !geometry || !geometry.trim() || points.length < 2 || !svgDimensions) return null;
 
@@ -176,8 +274,85 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
         {localizationService.t('geometryVisualization')}
       </Text>
       
-      <View style={styles.svgContainer}>
-        <Svg width={svgDimensions.svgWidth} height={svgDimensions.svgHeight} viewBox={`0 0 ${svgDimensions.svgWidth} ${svgDimensions.svgHeight}`}>
+      {/* Mode Toggle */}
+      <View style={styles.modeToggle}>
+        <Text style={styles.modeLabel}>Modo de Visualização:</Text>
+        <View style={styles.modeButtons}>
+          <TouchableOpacity 
+            style={[styles.modeButton, visualizationMode === 'technical' && styles.modeButtonActive]}
+            onPress={() => setVisualizationMode('technical')}
+          >
+            <Text style={[styles.modeButtonText, visualizationMode === 'technical' && styles.modeButtonTextActive]}>
+              🔧 Técnico
+            </Text>
+            <Text style={styles.modeButtonDesc}>Visível</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modeButton, visualizationMode === 'real' && styles.modeButtonActive]}
+            onPress={() => setVisualizationMode('real')}
+          >
+            <Text style={[styles.modeButtonText, visualizationMode === 'real' && styles.modeButtonTextActive]}>
+              📏 Real
+            </Text>
+            <Text style={styles.modeButtonDesc}>Proporção fiel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Zoom Controls */}
+      <View style={styles.zoomControls}>
+        <TouchableOpacity 
+          style={styles.zoomButton}
+          onPress={() => setVisualizationZoom(Math.max(0.5, visualizationZoom - 0.25))}
+        >
+          <Text style={styles.zoomButtonText}>🔍-</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.zoomIndicator}>
+          <Text style={styles.zoomText}>{(visualizationZoom * 100).toFixed(0)}%</Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={styles.zoomButton}
+          onPress={() => setVisualizationZoom(Math.min(3.0, visualizationZoom + 0.25))}
+        >
+          <Text style={styles.zoomButtonText}>🔍+</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.zoomButton, styles.resetButton]}
+          onPress={() => setVisualizationZoom(1.0)}
+        >
+          <Text style={styles.zoomButtonText}>⚪</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Interactive container with gestures */}
+      <View 
+        style={[styles.svgContainer, { overflow: 'hidden' }]}
+        {...panResponder.panHandlers}
+        onWheel={(event) => {
+          // Mouse wheel zoom for desktop
+          if (Platform.OS === 'web') {
+            event.preventDefault();
+            const delta = event.deltaY > 0 ? -0.1 : 0.1;
+            const newZoom = Math.max(0.5, Math.min(3.0, visualizationZoom + delta));
+            setVisualizationZoom(newZoom);
+          }
+        }}
+      >
+
+        <Animated.View
+          style={{
+            transform: [
+              { translateX: animatedPan.x },
+              { translateY: animatedPan.y },
+              { scale: animatedZoom },
+            ],
+          }}
+        >
+          <Svg width={svgDimensions.svgWidth} height={svgDimensions.svgHeight} viewBox={`0 0 ${svgDimensions.svgWidth} ${svgDimensions.svgHeight}`}>
           {/* Clean background */}
           <Rect 
             x="0" 
@@ -282,7 +457,18 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           >
             geometry / m
           </SvgText>
-        </Svg>
+          </Svg>
+        </Animated.View>
+        
+        {/* Reset pan button when panned */}
+        {(Math.abs(panOffset.x) > 10 || Math.abs(panOffset.y) > 10) && (
+          <TouchableOpacity 
+            style={styles.resetPanButton}
+            onPress={() => setPanOffset({ x: 0, y: 0 })}
+          >
+            <Text style={styles.resetPanButtonText}>📍 Centralizar</Text>
+          </TouchableOpacity>
+        )}
       </View>
       
       <View style={styles.geometryInfo}>
@@ -578,6 +764,9 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
+  const [visualizationZoom, setVisualizationZoom] = useState(1.0);
+  const [visualizationMode, setVisualizationMode] = useState('technical'); // 'real' or 'technical'
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [currentFileName, setCurrentFileName] = useState('');
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
@@ -1037,6 +1226,12 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
         geometry={geometry}
         isVisible={showVisualization}
         currentUnit={currentUnit}
+        visualizationZoom={visualizationZoom}
+        setVisualizationZoom={setVisualizationZoom}
+        visualizationMode={visualizationMode}
+        setVisualizationMode={setVisualizationMode}
+        panOffset={panOffset}
+        setPanOffset={setPanOffset}
       />
       
       <AnalysisResults 
@@ -1264,6 +1459,7 @@ const styles = StyleSheet.create({
     marginVertical: spacing.sm,
     borderRadius: 12,
     padding: spacing.md,
+    paddingTop: spacing.md, // Normal padding
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1279,6 +1475,105 @@ const styles = StyleSheet.create({
   svgContainer: {
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  zoomControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingVertical: spacing.xs,
+  },
+  zoomButton: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginHorizontal: spacing.xs,
+  },
+  resetButton: {
+    backgroundColor: '#10B981',
+  },
+  zoomButtonText: {
+    fontSize: typography.small,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  zoomIndicator: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  zoomText: {
+    fontSize: typography.small,
+    color: '#374151',
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  modeToggle: {
+    marginBottom: spacing.md,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  modeLabel: {
+    fontSize: typography.small,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  modeButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  modeButton: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: spacing.xs,
+  },
+  modeButtonActive: {
+    backgroundColor: '#10B981',
+  },
+  modeButtonText: {
+    fontSize: typography.small,
+    color: '#374151',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  modeButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  modeButtonDesc: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  resetPanButton: {
+    position: 'absolute',
+    top: -40, // Moved up above the SVG container  
+    right: 10,
+    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+    borderRadius: 6,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    zIndex: 10,
+  },
+  resetPanButtonText: {
+    fontSize: typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   geometryInfo: {
     flexDirection: 'row',
