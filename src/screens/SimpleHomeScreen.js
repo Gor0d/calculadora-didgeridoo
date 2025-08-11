@@ -238,15 +238,19 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       pathData += `M ${x1},${y1Top} L ${x2},${y2Top} L ${x2},${y2Bottom} L ${x1},${y1Bottom} Z `;
     }
 
-    // Generate scale marks - similar to the reference image
+    // Generate scale marks with zoom-aware spacing to prevent overlap
     const scaleMarks = [];
-    const scaleStep = maxPosition > 100 ? 20 : maxPosition > 50 ? 10 : 5; // cm intervals
-    for (let pos = 0; pos <= maxPosition; pos += scaleStep) {
+    const baseScaleStep = maxPosition > 100 ? 20 : maxPosition > 50 ? 10 : 5;
+    // Adjust label density based on zoom to prevent text overlap
+    const zoomAdjustedStep = baseScaleStep * Math.max(1, visualizationZoom / 2);
+    const actualStep = Math.ceil(zoomAdjustedStep / baseScaleStep) * baseScaleStep; // Round to nice numbers
+    
+    for (let pos = 0; pos <= maxPosition; pos += actualStep) {
       const x = margin + pos * scaleX;
       scaleMarks.push({
         x,
         position: pos,
-        isMajor: pos % (scaleStep * 2) === 0
+        isMajor: pos % (actualStep * 2) === 0
       });
     }
 
@@ -328,31 +332,42 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
         </TouchableOpacity>
       </View>
 
-      {/* Interactive container with gestures */}
-      <View 
-        style={[styles.svgContainer, { overflow: 'hidden' }]}
-        {...panResponder.panHandlers}
-        onWheel={(event) => {
-          // Mouse wheel zoom for desktop
-          if (Platform.OS === 'web') {
-            event.preventDefault();
-            const delta = event.deltaY > 0 ? -0.1 : 0.1;
-            const newZoom = Math.max(0.5, Math.min(3.0, visualizationZoom + delta));
-            setVisualizationZoom(newZoom);
-          }
-        }}
-      >
+      {/* Interactive container with horizontal ScrollView */}
+      <View style={styles.svgContainerWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={true}
+          contentContainerStyle={{
+            alignItems: 'center',
+            paddingHorizontal: spacing.md,
+          }}
+          style={styles.svgScrollContainer}
+          {...panResponder.panHandlers}
+          onWheel={(event) => {
+            // Mouse wheel zoom for desktop
+            if (Platform.OS === 'web') {
+              event.preventDefault();
+              const delta = event.deltaY > 0 ? -0.1 : 0.1;
+              const newZoom = Math.max(0.5, Math.min(3.0, visualizationZoom + delta));
+              setVisualizationZoom(newZoom);
+            }
+          }}
+        >
 
         <Animated.View
           style={{
+            width: svgDimensions.svgWidth * visualizationZoom,
             transform: [
               { translateX: animatedPan.x },
               { translateY: animatedPan.y },
-              { scale: animatedZoom },
             ],
           }}
         >
-          <Svg width={svgDimensions.svgWidth} height={svgDimensions.svgHeight} viewBox={`0 0 ${svgDimensions.svgWidth} ${svgDimensions.svgHeight}`}>
+          <Svg 
+            width={svgDimensions.svgWidth * visualizationZoom} 
+            height={svgDimensions.svgHeight * visualizationZoom} 
+            viewBox={`0 0 ${svgDimensions.svgWidth} ${svgDimensions.svgHeight}`}
+          >
           {/* Clean background */}
           <Rect 
             x="0" 
@@ -458,8 +473,8 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
             geometry / m
           </SvgText>
           </Svg>
-        </Animated.View>
-        
+        </ScrollView>
+
         {/* Reset pan button when panned */}
         {(Math.abs(panOffset.x) > 10 || Math.abs(panOffset.y) > 10) && (
           <TouchableOpacity 
@@ -1471,6 +1486,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: spacing.md,
+  },
+  svgContainerWrapper: {
+    marginBottom: spacing.md,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  svgScrollContainer: {
+    maxHeight: 300, // Limit height for better UX
   },
   svgContainer: {
     alignItems: 'center',
