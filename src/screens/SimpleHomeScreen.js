@@ -8,11 +8,8 @@ import {
   Alert,
   Platform,
   PanResponder,
-  Animated,
-  Dimensions
+  Animated
 } from 'react-native';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path, Circle, Line, Rect, G, Text as SvgText } from 'react-native-svg';
 import { AppHeader } from '../components/AppHeader';
