@@ -8,8 +8,11 @@ import {
   Alert,
   Platform,
   PanResponder,
-  Animated
+  Animated,
+  Dimensions
 } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path, Circle, Line, Rect, G, Text as SvgText } from 'react-native-svg';
 import { AppHeader } from '../components/AppHeader';
@@ -340,6 +343,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           contentContainerStyle={{
             alignItems: 'center',
             paddingHorizontal: spacing.md,
+            minWidth: Math.max(svgDimensions.svgWidth * visualizationZoom + spacing.md * 2, SCREEN_WIDTH),
           }}
           style={styles.svgScrollContainer}
           {...panResponder.panHandlers}
@@ -356,7 +360,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
 
         <Animated.View
           style={{
-            width: svgDimensions.svgWidth * visualizationZoom,
+            width: Math.max(svgDimensions.svgWidth * visualizationZoom + spacing.md * 2, SCREEN_WIDTH),
             transform: [
               { translateX: animatedPan.x },
               { translateY: animatedPan.y },
