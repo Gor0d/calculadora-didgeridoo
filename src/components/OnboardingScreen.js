@@ -8,6 +8,7 @@ import {
   StatusBar,
   Animated,
   Easing,
+  Platform,
   PanResponder
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -306,9 +307,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: spacing.sm,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...(Platform.OS !== 'web' ? {
+      textShadowColor: 'rgba(0,0,0,0.3)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    } : {
+      textShadow: '0px 2px 4px rgba(0, 0, 0, 0.3)',
+    }),
   },
   subtitle: {
     fontSize: typography.h5,
@@ -376,9 +381,13 @@ const styles = StyleSheet.create({
   },
   handEmoji: {
     fontSize: 32,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...(Platform.OS !== 'web' ? {
+      textShadowColor: 'rgba(0,0,0,0.3)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    } : {
+      textShadow: '0px 2px 4px rgba(0, 0, 0, 0.3)',
+    }),
   },
   swipeIndicator: {
     marginTop: spacing.xs,

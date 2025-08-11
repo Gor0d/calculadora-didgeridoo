@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
@@ -76,10 +77,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: '#10B981',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+    } : {
+      boxShadow: '0px 4px 8px rgba(16, 185, 129, 0.1)',
+    }),
     elevation: 4,
   },
   title: {
@@ -108,10 +113,14 @@ const styles = StyleSheet.create({
   },
   unitOptionActive: {
     backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    ...(Platform.OS !== 'web' ? {
+      shadowColor: '#10B981',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    } : {
+      boxShadow: '0px 2px 4px rgba(16, 185, 129, 0.3)',
+    }),
     elevation: 3,
   },
   unitOptionDisabled: {

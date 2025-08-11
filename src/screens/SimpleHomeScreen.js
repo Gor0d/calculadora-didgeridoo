@@ -5,7 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path, Circle, Line, Rect, G, Text as SvgText } from 'react-native-svg';
@@ -61,9 +62,9 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     }
   }, [geometry, currentUnit]);
 
-  const { svgDimensions, pathData, outerWallPath, controlPoints } = useMemo(() => {
+  const { svgDimensions, pathData, scaleMarks } = useMemo(() => {
     if (!geometry || !geometry.trim() || points.length < 2) {
-      return { svgDimensions: null, pathData: null, outerWallPath: null, controlPoints: [] };
+      return { svgDimensions: null, pathData: null, scaleMarks: [] };
     }
 
     // Validate points data to prevent NaN calculations
@@ -73,7 +74,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     );
 
     if (validPoints.length < 2) {
-      return { svgDimensions: null, pathData: null, outerWallPath: null, controlPoints: [] };
+      return { svgDimensions: null, pathData: null, scaleMarks: [] };
     }
 
     const maxPosition = Math.max(...validPoints.map(p => p.position));
@@ -84,21 +85,22 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     if (!isFinite(maxPosition) || !isFinite(maxDiameter) || !isFinite(minDiameter) || 
         maxPosition <= 0 || maxDiameter <= 0 || minDiameter <= 0) {
       console.warn('Invalid geometry calculations:', { maxPosition, maxDiameter, minDiameter });
-      return { svgDimensions: null, pathData: null, outerWallPath: null, controlPoints: [] };
+      return { svgDimensions: null, pathData: null, scaleMarks: [] };
     }
 
-    // Calculate safe SVG dimensions with fallback values
+    // Technical drawing proportions - more realistic aspect ratio
     const safeScreenWidth = isFinite(SCREEN_WIDTH) ? SCREEN_WIDTH : 400;
     const safeSpacingXL = isFinite(spacing.xl) ? spacing.xl : 24;
     const safeSpacingMD = isFinite(spacing.md) ? spacing.md : 12;
     
-    const svgHeight = deviceInfo.isTablet ? scale(200) : scale(150);
-    const svgWidth = Math.min(safeScreenWidth - safeSpacingXL, deviceInfo.isTablet ? 500 : 350);
+    // Much longer and narrower - like a technical drawing
+    const svgWidth = Math.min(safeScreenWidth - safeSpacingXL, deviceInfo.isTablet ? 600 : 380);
+    const svgHeight = deviceInfo.isTablet ? scale(120) : scale(100); // Much shorter height
     const margin = safeSpacingMD;
     
     // Ensure positive dimensions before calculating scales
     const availableWidth = Math.max(svgWidth - margin * 2, 100);
-    const availableHeight = Math.max(svgHeight - margin * 2, 100);
+    const availableHeight = Math.max(svgHeight - margin * 3, 60); // Leave more room for scale
     
     const scaleX = availableWidth / maxPosition;
     const scaleY = availableHeight / maxDiameter;
@@ -107,71 +109,62 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     if (!isFinite(svgHeight) || !isFinite(svgWidth) || !isFinite(scaleX) || !isFinite(scaleY) ||
         svgHeight <= 0 || svgWidth <= 0 || scaleX <= 0 || scaleY <= 0) {
       console.warn('Invalid SVG dimensions:', { svgHeight, svgWidth, scaleX, scaleY, SCREEN_WIDTH, spacing: spacing.xl });
-      return { svgDimensions: null, pathData: null, outerWallPath: null, controlPoints: [] };
+      return { svgDimensions: null, pathData: null, scaleMarks: [] };
     }
     
-    // Create smooth curves for more realistic didgeridoo shape
-    const createSmoothPath = (points, isTop = true) => {
-      if (points.length < 2) return '';
-      
-      const coords = points.map(p => ({
-        x: margin + p.position * scaleX,
-        y: svgHeight / 2 + (isTop ? -1 : 1) * (p.diameter / 2) * scaleY
-      }));
-
-      let path = `M ${coords[0].x},${coords[0].y}`;
-      
-      for (let i = 1; i < coords.length; i++) {
-        const prev = coords[i - 1];
-        const curr = coords[i];
-        const next = coords[i + 1];
-        
-        if (i === coords.length - 1 || !next) {
-          // Last point - straight line
-          path += ` L ${curr.x},${curr.y}`;
-        } else {
-          // Create smooth curve using quadratic bezier
-          const cp1x = prev.x + (curr.x - prev.x) * 0.5;
-          const cp1y = prev.y + (curr.y - prev.y) * 0.5;
-          path += ` Q ${cp1x},${cp1y} ${curr.x},${curr.y}`;
-        }
-      }
-      
-      return path;
-    };
-
-    const topPath = createSmoothPath(validPoints, true);
-    const bottomPath = createSmoothPath([...validPoints].reverse(), false);
-    
-    // Create closed path for the didgeridoo bore
-    const pathData = `${topPath} ${bottomPath.replace('M', 'L')} Z`;
-
-    // Create wall thickness for more realistic appearance
-    const wallThickness = Math.min(scale(3), maxDiameter * scaleY * 0.1);
-    const outerTopPath = validPoints.map(p => ({
+    // Create technical profile view - simple lines showing the bore
+    const topCoords = validPoints.map(p => ({
       x: margin + p.position * scaleX,
-      y: svgHeight / 2 - (p.diameter / 2 + wallThickness / scaleY) * scaleY
+      y: svgHeight / 2 - (p.diameter / 2) * scaleY
     }));
 
-    const outerBottomPath = validPoints.map(p => ({
+    const bottomCoords = validPoints.map(p => ({
       x: margin + p.position * scaleX,
-      y: svgHeight / 2 + (p.diameter / 2 + wallThickness / scaleY) * scaleY
-    })).reverse();
+      y: svgHeight / 2 + (p.diameter / 2) * scaleY
+    }));
 
-    const outerWallPath = `M ${[...outerTopPath, ...outerBottomPath].map(p => `${p.x},${p.y}`).join(' L ')} Z`;
+    // Create simple straight-line segments (technical style)
+    const topPath = `M ${topCoords.map(c => `${c.x},${c.y}`).join(' L ')}`;
+    const bottomPath = `M ${bottomCoords.map(c => `${c.x},${c.y}`).join(' L ')}`;
     
-    const controlPoints = validPoints.map((point, index) => {
-      const x = margin + point.position * scaleX;
-      const yTop = svgHeight / 2 - (point.diameter / 2) * scaleY;
-      const yBottom = svgHeight / 2 + (point.diameter / 2) * scaleY;
-      return { x, yTop, yBottom, index };
-    });
+    // Create closed rectangular sections for each segment
+    let pathData = '';
+    for (let i = 0; i < validPoints.length - 1; i++) {
+      const x1 = margin + validPoints[i].position * scaleX;
+      const x2 = margin + validPoints[i + 1].position * scaleX;
+      const y1Top = svgHeight / 2 - (validPoints[i].diameter / 2) * scaleY;
+      const y1Bottom = svgHeight / 2 + (validPoints[i].diameter / 2) * scaleY;
+      const y2Top = svgHeight / 2 - (validPoints[i + 1].diameter / 2) * scaleY;
+      const y2Bottom = svgHeight / 2 + (validPoints[i + 1].diameter / 2) * scaleY;
+      
+      pathData += `M ${x1},${y1Top} L ${x2},${y2Top} L ${x2},${y2Bottom} L ${x1},${y1Bottom} Z `;
+    }
+
+    // Generate scale marks - similar to the reference image
+    const scaleMarks = [];
+    const scaleStep = maxPosition > 100 ? 20 : maxPosition > 50 ? 10 : 5; // cm intervals
+    for (let pos = 0; pos <= maxPosition; pos += scaleStep) {
+      const x = margin + pos * scaleX;
+      scaleMarks.push({
+        x,
+        position: pos,
+        isMajor: pos % (scaleStep * 2) === 0
+      });
+    }
 
     return {
-      svgDimensions: { svgWidth, svgHeight, margin, maxPosition, maxDiameter, minDiameter },
+      svgDimensions: { 
+        svgWidth, 
+        svgHeight, 
+        margin, 
+        maxPosition, 
+        maxDiameter, 
+        minDiameter,
+        scaleX,
+        scaleY
+      },
       pathData,
-      outerWallPath,
-      controlPoints
+      scaleMarks
     };
   }, [points, geometry]);
 
@@ -185,161 +178,109 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       
       <View style={styles.svgContainer}>
         <Svg width={svgDimensions.svgWidth} height={svgDimensions.svgHeight} viewBox={`0 0 ${svgDimensions.svgWidth} ${svgDimensions.svgHeight}`}>
-          {/* Background */}
+          {/* Clean background */}
           <Rect 
             x="0" 
             y="0" 
             width={svgDimensions.svgWidth} 
             height={svgDimensions.svgHeight} 
-            fill="#F8FAFC" 
-            stroke="#CBD5E1" 
+            fill="#FFFFFF" 
+            stroke="#E5E7EB" 
             strokeWidth="1"
           />
           
-          {/* Center reference line */}
+          {/* Scale grid - like technical drawing */}
+          {scaleMarks.map((mark, index) => (
+            <G key={index}>
+              {/* Vertical scale lines */}
+              <Line
+                x1={mark.x}
+                y1={svgDimensions.margin}
+                x2={mark.x}
+                y2={svgDimensions.svgHeight - svgDimensions.margin}
+                stroke={mark.isMajor ? "#D1D5DB" : "#F3F4F6"}
+                strokeWidth={mark.isMajor ? "1" : "0.5"}
+              />
+              
+              {/* Scale labels */}
+              {mark.isMajor && (
+                <SvgText
+                  x={mark.x}
+                  y={svgDimensions.svgHeight - svgDimensions.margin + 12}
+                  fontSize="10"
+                  fill="#6B7280"
+                  textAnchor="middle"
+                  fontFamily="monospace"
+                >
+                  {mark.position}
+                </SvgText>
+              )}
+            </G>
+          ))}
+          
+          {/* Horizontal reference lines */}
           <Line
             x1={svgDimensions.margin}
             y1={svgDimensions.svgHeight / 2}
             x2={svgDimensions.svgWidth - svgDimensions.margin}
             y2={svgDimensions.svgHeight / 2}
-            stroke="#E2E8F0"
-            strokeWidth="1"
-            strokeDasharray="4,4"
+            stroke="#E5E7EB"
+            strokeWidth="0.5"
+            strokeDasharray="2,2"
           />
           
-          {/* Outer wall (wood) */}
-          {outerWallPath && (
-            <Path
-              d={outerWallPath}
-              fill="#8B4513"
-              stroke="#654321"
-              strokeWidth="2"
-              opacity="0.8"
-            />
-          )}
-          
-          {/* Inner bore (hollow space) */}
+          {/* Technical bore profile - simple and clean */}
           <Path
             d={pathData}
-            fill="rgba(240, 240, 240, 0.9)"
-            stroke="#10B981"
-            strokeWidth="2"
+            fill="none"
+            stroke="#1F2937"
+            strokeWidth="1.5"
           />
           
-          {/* Measurement points with dimensions */}
-          {controlPoints.map((point, index) => {
-            const pointData = points[index];
-            const isKeyPoint = index === 0 || index === controlPoints.length - 1 || index % 2 === 0;
+          {/* Section dividers */}
+          {points.map((point, index) => (
+            <Line
+              key={index}
+              x1={svgDimensions.margin + point.position * svgDimensions.scaleX}
+              y1={svgDimensions.svgHeight / 2 - (point.diameter / 2) * svgDimensions.scaleY - 3}
+              x2={svgDimensions.margin + point.position * svgDimensions.scaleX}
+              y2={svgDimensions.svgHeight / 2 + (point.diameter / 2) * svgDimensions.scaleY + 3}
+              stroke="#6B7280"
+              strokeWidth="1"
+              opacity="0.7"
+            />
+          ))}
+          
+          {/* Dimension line at bottom */}
+          <G>
+            <Line
+              x1={svgDimensions.margin}
+              y1={svgDimensions.svgHeight - svgDimensions.margin + 20}
+              x2={svgDimensions.svgWidth - svgDimensions.margin}
+              y2={svgDimensions.svgHeight - svgDimensions.margin + 20}
+              stroke="#1F2937"
+              strokeWidth="1"
+            />
             
-            return (
-              <G key={point.index}>
-                <Circle cx={point.x} cy={point.yTop} r="3" fill="#059669" opacity="0.7" />
-                <Circle cx={point.x} cy={point.yBottom} r="3" fill="#059669" opacity="0.7" />
-                <Line 
-                  x1={point.x} 
-                  y1={point.yTop} 
-                  x2={point.x} 
-                  y2={point.yBottom}
-                  stroke="#059669"
-                  strokeWidth="1"
-                  opacity="0.5"
-                />
-                
-                {/* Position labels for key points */}
-                {isKeyPoint && (
-                  <>
-                    {/* Position measurement (bottom) */}
-                    <SvgText
-                      x={point.x}
-                      y={svgDimensions.svgHeight - 8}
-                      fontSize="10"
-                      fill="#6B7280"
-                      textAnchor="middle"
-                      fontFamily="monospace"
-                    >
-                      {currentUnit === 'metric' ? 
-                        `${pointData.position}cm` : 
-                        unitConverter.formatLength(pointData.position, 'imperial')
-                      }
-                    </SvgText>
-                    
-                    {/* Diameter measurement (side) */}
-                    <SvgText
-                      x={point.x + 15}
-                      y={svgDimensions.svgHeight / 2}
-                      fontSize="9"
-                      fill="#374151"
-                      textAnchor="start"
-                      fontFamily="monospace"
-                    >
-                      {currentUnit === 'metric' ? 
-                        `⌀${pointData.diameter}mm` : 
-                        `⌀${unitConverter.formatDiameter(pointData.diameter, 'imperial')}`
-                      }
-                    </SvgText>
-                  </>
-                )}
-              </G>
-            );
-          })}
+            {/* Start and end marks */}
+            <Line x1={svgDimensions.margin} y1={svgDimensions.svgHeight - svgDimensions.margin + 18} 
+                  x2={svgDimensions.margin} y2={svgDimensions.svgHeight - svgDimensions.margin + 22} 
+                  stroke="#1F2937" strokeWidth="1" />
+            <Line x1={svgDimensions.svgWidth - svgDimensions.margin} y1={svgDimensions.svgHeight - svgDimensions.margin + 18} 
+                  x2={svgDimensions.svgWidth - svgDimensions.margin} y2={svgDimensions.svgHeight - svgDimensions.margin + 22} 
+                  stroke="#1F2937" strokeWidth="1" />
+          </G>
           
-          {/* Mouthpiece indicator */}
-          <Circle 
-            cx={svgDimensions.margin} 
-            cy={svgDimensions.svgHeight / 2} 
-            r="6" 
-            fill="#DC2626" 
-            stroke="#B91C1C" 
-            strokeWidth="2"
-          />
-          
-          {/* Bell end indicator */}
-          <Circle 
-            cx={svgDimensions.svgWidth - svgDimensions.margin} 
-            cy={svgDimensions.svgHeight / 2} 
-            r="4" 
-            fill="#2563EB" 
-            stroke="#1D4ED8" 
-            strokeWidth="2"
-          />
-          
-          {/* Total length measurement */}
-          <Line
-            x1={svgDimensions.margin}
-            y1={15}
-            x2={svgDimensions.svgWidth - svgDimensions.margin}
-            y2={15}
-            stroke="#374151"
-            strokeWidth="1"
-            markerEnd="url(#arrowhead)"
-          />
+          {/* Axis labels */}
           <SvgText
             x={svgDimensions.svgWidth / 2}
-            y={12}
+            y={svgDimensions.svgHeight - 4}
             fontSize="11"
-            fill="#374151"
+            fill="#6B7280"
             textAnchor="middle"
-            fontWeight="bold"
+            fontFamily="monospace"
           >
-            {currentUnit === 'metric' ? 
-              `Comprimento total: ${svgDimensions.maxPosition}cm` :
-              `Total length: ${unitConverter.formatLength(svgDimensions.maxPosition, 'imperial')}`
-            }
-          </SvgText>
-          
-          {/* Diameter range */}
-          <SvgText
-            x={svgDimensions.svgWidth - 10}
-            y={svgDimensions.svgHeight - 25}
-            fontSize="10"
-            fill="#374151"
-            textAnchor="end"
-            fontStyle="italic"
-          >
-            {currentUnit === 'metric' ? 
-              `⌀ ${svgDimensions.minDiameter}-${svgDimensions.maxDiameter}mm` :
-              `⌀ ${unitConverter.formatDiameter(svgDimensions.minDiameter, 'imperial')}-${unitConverter.formatDiameter(svgDimensions.maxDiameter, 'imperial')}`
-            }
+            geometry / m
           </SvgText>
         </Svg>
       </View>
@@ -363,19 +304,12 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
         </View>
       </View>
       
-      <View style={styles.legendContainer}>
-        <View style={styles.legendRow}>
-          <View style={[styles.legendDot, { backgroundColor: '#DC2626' }]} />
-          <Text style={styles.legendText}>Bocal</Text>
-          <View style={[styles.legendDot, { backgroundColor: '#2563EB' }]} />
-          <Text style={styles.legendText}>Saída</Text>
-        </View>
-        <View style={styles.legendRow}>
-          <View style={[styles.legendDot, { backgroundColor: '#8B4513' }]} />
-          <Text style={styles.legendText}>Parede (madeira)</Text>
-          <View style={[styles.legendDot, { backgroundColor: '#F0F0F0' }]} />
-          <Text style={styles.legendText}>Bore interno</Text>
-        </View>
+      <View style={styles.technicalLegend}>
+        <Text style={styles.legendTitle}>📐 Vista Técnica - Perfil do Bore Interno</Text>
+        <Text style={styles.legendSubtitle}>
+          Comprimento: {svgDimensions.maxPosition.toFixed(1)}cm | 
+          Bore: ⌀{svgDimensions.minDiameter.toFixed(0)}-{svgDimensions.maxDiameter.toFixed(0)}mm
+        </Text>
       </View>
       
       <Text style={styles.visualizationHint}>
@@ -428,80 +362,169 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
       {/* Professional Analysis Table */}
       {results.length > 0 && (
         <>
-          <Text style={styles.harmonicsTitle}>Análise Completa de Harmônicos</Text>
+          <Text style={styles.harmonicsTitle}>📊 Análise Profissional de Harmônicos</Text>
+          <Text style={styles.harmonicsSubtitle}>Baseada em cálculos acústicos avançados para didgeridoo</Text>
           
           {/* Table Header */}
           <View style={styles.analysisTable}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>H#</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Freq (Hz)</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Nota</Text>
-              <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Oct</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Cents</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Ampl</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>Impedância</Text>
+              <Text style={[styles.tableHeaderText, { flex: 0.6 }]}>H#</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.4 }]}>Freq (Hz)</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Nota</Text>
+              <Text style={[styles.tableHeaderText, { flex: 0.7 }]}>Oct</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Cents</Text>
+              <Text style={[styles.tableHeaderText, { flex: 0.9 }]}>Ampl</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.4 }]}>Razão</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Status</Text>
             </View>
             
             {/* Table Rows */}
-            {results.slice(0, 6).map((result, index) => {
-              const impedance = metadata?.impedanceProfile?.[Math.floor((index / results.length) * metadata.impedanceProfile.length)]?.impedance || 0;
-              const isPlayable = Math.abs(result.centDiff) < 50 && result.amplitude > 0.3;
+            {results.slice(0, 8).map((result, index) => {
+              const harmonicRatio = index === 0 ? 1.0 : (result.frequency / results[0].frequency);
+              const expectedRatio = index + 1;
+              const inharmonicity = Math.abs(harmonicRatio - expectedRatio);
+              
+              const isPlayable = Math.abs(result.centDiff || 0) < 50 && (result.amplitude || 0) > 0.2;
+              const isTuned = Math.abs(result.centDiff || 0) < 15;
+              const isStrong = (result.amplitude || 0) > 0.4;
+              
+              let statusIcon = '🔴';
+              let statusText = 'Fraco';
+              if (isPlayable) {
+                if (isTuned && isStrong) {
+                  statusIcon = '🟢';
+                  statusText = 'Excelente';
+                } else if (isTuned || isStrong) {
+                  statusIcon = '🟡';
+                  statusText = 'Bom';
+                } else {
+                  statusIcon = '🟠';
+                  statusText = 'Regular';
+                }
+              }
               
               return (
                 <View key={index} style={[
                   styles.tableRow,
                   index % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd,
-                  !isPlayable && styles.tableRowWeak
+                  !isPlayable && styles.tableRowWeak,
+                  index === 0 && styles.fundamentalRow
                 ]}>
-                  <Text style={[styles.tableCellText, { flex: 0.8, fontWeight: 'bold' }]}>
-                    {index + 1}
+                  <Text style={[styles.tableCellText, { flex: 0.6, fontWeight: 'bold', color: index === 0 ? '#10B981' : '#374151' }]}>
+                    {index === 0 ? 'F0' : `H${index}`}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.5 }]}>
+                  <Text style={[styles.tableCellText, { flex: 1.4, fontFamily: 'monospace' }]}>
                     {result.frequency.toFixed(1)}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.2, fontWeight: '600' }]}>
-                    {result.note}
+                  <Text style={[styles.tableCellText, { flex: 1.0, fontWeight: '600' }]}>
+                    {result.note || 'N/A'}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 0.8 }]}>
-                    {result.octave}
+                  <Text style={[styles.tableCellText, { flex: 0.7 }]}>
+                    {result.octave || '-'}
                   </Text>
                   <Text style={[
                     styles.tableCellText, 
-                    { flex: 1, color: Math.abs(result.centDiff) < 10 ? '#10B981' : Math.abs(result.centDiff) < 30 ? '#F59E0B' : '#EF4444' }
+                    { 
+                      flex: 1.0, 
+                      fontFamily: 'monospace',
+                      color: Math.abs(result.centDiff || 0) < 10 ? '#10B981' : 
+                             Math.abs(result.centDiff || 0) < 30 ? '#F59E0B' : '#EF4444'
+                    }
                   ]}>
-                    {result.centDiff > 0 ? '+' : ''}{result.centDiff}
+                    {result.centDiff >= 0 ? '+' : ''}{(result.centDiff || 0).toFixed(0)}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.2 }]}>
-                    {(result.amplitude * 100).toFixed(0)}%
+                  <Text style={[styles.tableCellText, { flex: 0.9, fontFamily: 'monospace' }]}>
+                    {((result.amplitude || 0) * 100).toFixed(0)}%
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.5 }]}>
-                    {impedance.toFixed(0)}
+                  <Text style={[styles.tableCellText, { 
+                    flex: 1.4, 
+                    fontFamily: 'monospace',
+                    color: inharmonicity < 0.1 ? '#10B981' : inharmonicity < 0.3 ? '#F59E0B' : '#EF4444'
+                  }]}>
+                    {harmonicRatio.toFixed(2)}
+                  </Text>
+                  <Text style={[styles.tableCellText, { flex: 1.0, fontSize: 11 }]}>
+                    {statusIcon} {statusText}
                   </Text>
                 </View>
               );
             })}
           </View>
           
-          {/* Analysis Metadata */}
+          {/* Professional Analysis Summary */}
+          <View style={styles.analysisSummary}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>🎵 Tom Fundamental</Text>
+                <Text style={styles.summaryValue}>{results[0]?.note}{results[0]?.octave}</Text>
+                <Text style={styles.summarySubvalue}>{results[0]?.frequency.toFixed(1)} Hz</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>🎯 Precisão</Text>
+                <Text style={[styles.summaryValue, {
+                  color: Math.abs(results[0]?.centDiff || 0) < 10 ? '#10B981' : '#F59E0B'
+                }]}>
+                  {Math.abs(results[0]?.centDiff || 0) < 10 ? 'Afinado' : 'Desafinado'}
+                </Text>
+                <Text style={styles.summarySubvalue}>{results[0]?.centDiff || 0}¢</Text>
+              </View>
+            </View>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>📈 Harmônicos Fortes</Text>
+                <Text style={styles.summaryValue}>
+                  {results.filter(r => (r.amplitude || 0) > 0.4).length}
+                </Text>
+                <Text style={styles.summarySubvalue}>de {results.length} total</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>🔧 Tocabilidade</Text>
+                <Text style={[styles.summaryValue, {
+                  color: results.filter(r => Math.abs(r.centDiff || 0) < 30).length >= 3 ? '#10B981' : '#F59E0B'
+                }]}>
+                  {results.filter(r => Math.abs(r.centDiff || 0) < 30).length >= 3 ? 'Boa' : 'Difícil'}
+                </Text>
+                <Text style={styles.summarySubvalue}>para iniciantes</Text>
+              </View>
+            </View>
+          </View>
+          
+          {/* Technical Parameters */}
           {metadata && (
             <View style={styles.metadataContainer}>
-              <Text style={styles.metadataTitle}>Parâmetros Físicos</Text>
+              <Text style={styles.metadataTitle}>🔬 Parâmetros Técnicos</Text>
               <View style={styles.metadataGrid}>
                 <View style={styles.metadataItem}>
                   <Text style={styles.metadataLabel}>Comprimento Efetivo</Text>
                   <Text style={styles.metadataValue}>{metadata.effectiveLength.toFixed(1)} cm</Text>
                 </View>
                 <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Raio Médio</Text>
-                  <Text style={styles.metadataValue}>{metadata.averageRadius.toFixed(1)} mm</Text>
+                  <Text style={styles.metadataLabel}>Diâmetro Médio</Text>
+                  <Text style={styles.metadataValue}>{(metadata.averageRadius * 2).toFixed(1)} mm</Text>
                 </View>
                 <View style={styles.metadataItem}>
                   <Text style={styles.metadataLabel}>Volume Interno</Text>
-                  <Text style={styles.metadataValue}>{(metadata.volume / 1000).toFixed(1)} L</Text>
+                  <Text style={styles.metadataValue}>{(metadata.volume / 1000).toFixed(2)} L</Text>
                 </View>
                 <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Pontos de Análise</Text>
-                  <Text style={styles.metadataValue}>{metadata.impedanceProfile?.length || 0}</Text>
+                  <Text style={styles.metadataLabel}>Impedância Média</Text>
+                  <Text style={styles.metadataValue}>
+                    {metadata.impedanceProfile?.length ? 
+                      (metadata.impedanceProfile.reduce((sum, p) => sum + p.impedance, 0) / metadata.impedanceProfile.length / 1000).toFixed(0) + 'k'
+                      : 'N/A'
+                    }
+                  </Text>
+                </View>
+                <View style={styles.metadataItem}>
+                  <Text style={styles.metadataLabel}>Método de Cálculo</Text>
+                  <Text style={styles.metadataValue}>
+                    {metadata.calculationMethod === 'online_advanced' ? '🟢 Avançado' : 
+                     metadata.calculationMethod === 'simplified_fallback' ? '🟡 Simplificado' : '🔴 Básico'}
+                  </Text>
+                </View>
+                <View style={styles.metadataItem}>
+                  <Text style={styles.metadataLabel}>Correções Aplicadas</Text>
+                  <Text style={styles.metadataValue}>Extremidade + Boca</Text>
                 </View>
               </View>
             </View>
@@ -548,7 +571,7 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
 });
 
 // Main HomeScreen Component (renamed from SimpleHomeScreen)
-export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, onLanguageChange }) => {
+export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange, currentLanguage, onLanguageChange }) => {
   const [geometry, setGeometry] = useState('');
   const [analysisResults, setAnalysisResults] = useState([]);
   const [analysisMetadata, setAnalysisMetadata] = useState(null);
@@ -561,11 +584,12 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
   const [geometryStats, setGeometryStats] = useState(null);
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showAdvancedExport, setShowAdvancedExport] = useState(false);
-  const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false); // DESABILITADO PARA TESTE
+  const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false);
   const [firstRunStep, setFirstRunStep] = useState(0);
   const [isFirstRun, setIsFirstRun] = useState(false);
   const [userSettings, setUserSettings] = useState({});
   const [shouldShowTips, setShouldShowTips] = useState(false);
+  const [isQuickExporting, setIsQuickExporting] = useState(false);
   const [showPerformanceSettings, setShowPerformanceSettings] = useState(false);
   const [showTipsSettings, setShowTipsSettings] = useState(false);
   const [show3DVisualization, setShow3DVisualization] = useState(false);
@@ -645,6 +669,30 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
     return () => clearTimeout(timer);
   }, []);
 
+  // Handle data from other screens
+  useEffect(() => {
+    if (route?.params?.recommendation) {
+      const { recommendation } = route.params;
+      if (recommendation.geometry) {
+        setGeometry(recommendation.geometry);
+        setCurrentProject({
+          id: `ai_${Date.now()}`,
+          name: recommendation.name,
+          geometry: recommendation.geometry,
+          source: 'ai_recommendation',
+          createdAt: new Date().toISOString()
+        });
+        
+        // Auto-analyze the new geometry
+        if (recommendation.geometry.trim()) {
+          setTimeout(() => {
+            handleAnalyze();
+          }, 500);
+        }
+      }
+    }
+  }, [route?.params]);
+
   // Initialize audio engine on component mount
   useEffect(() => {
     const initAudio = async () => {
@@ -707,6 +755,65 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         localizationService.t('audioPlaybackError')
       );
       console.error('Audio playback error:', error);
+    }
+  };
+
+  const handleQuickExport = async (format) => {
+    if (!currentProject || analysisResults.length === 0) {
+      Alert.alert('Erro', 'Nenhum projeto ou resultado disponível para exportação');
+      return;
+    }
+
+    setIsQuickExporting(true);
+    
+    try {
+      const { ExportManager } = await import('../services/export/ExportManager');
+      
+      const project = {
+        ...currentProject,
+        results: analysisResults,
+        metadata: metadata
+      };
+
+      let result;
+      switch (format) {
+        case 'pdf':
+        case 'html':
+        case 'png':
+          result = await ExportManager.exportToPDF(project, {
+            includeGeometry: true,
+            includeAnalysis: true,
+            includeVisualization: false, // Skip SVG for quick export
+            includeNotes: true,
+            template: 'professional',
+            format: format
+          });
+          break;
+        default:
+          throw new Error('Formato não suportado');
+      }
+
+      if (result.success) {
+        const formatNames = {
+          pdf: 'PDF',
+          html: 'HTML', 
+          png: 'PNG'
+        };
+        
+        Alert.alert(
+          'Exportação Concluída!',
+          `Arquivo ${formatNames[format]} baixado com sucesso:\n${result.filename}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Quick export error:', error);
+      Alert.alert(
+        'Erro na Exportação',
+        error.message || 'Ocorreu um erro durante a exportação rápida.'
+      );
+    } finally {
+      setIsQuickExporting(false);
     }
   };
 
@@ -960,54 +1067,77 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
           </TouchableOpacity>
           
           {currentProject && analysisResults.length > 0 && (
-            <TouchableOpacity
-              ref={exportButtonRef}
-              style={styles.exportButton}
-              onPress={() => setShowAdvancedExport(true)}
-            >
-              <Text style={styles.exportButtonText}>📤 Exportar</Text>
-            </TouchableOpacity>
+            <View style={styles.exportContainer}>
+              <TouchableOpacity
+                ref={exportButtonRef}
+                style={styles.exportButton}
+                onPress={() => setShowAdvancedExport(true)}
+              >
+                <Text style={styles.exportButtonText}>📤 Exportar Completo</Text>
+              </TouchableOpacity>
+              
+              {/* Quick Export Options */}
+              <View style={styles.quickExportContainer}>
+                <TouchableOpacity
+                  style={styles.quickExportButton}
+                  onPress={() => handleQuickExport('pdf')}
+                >
+                  <Text style={styles.quickExportText}>📄 PDF</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.quickExportButton}
+                  onPress={() => handleQuickExport('png')}
+                >
+                  <Text style={styles.quickExportText}>🖼️ PNG</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.quickExportButton}
+                  onPress={() => handleQuickExport('html')}
+                >
+                  <Text style={styles.quickExportText}>🌐 HTML</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
 
           {/* Feature Buttons Row */}
           <View style={styles.newFeaturesContainer}>
             <TouchableOpacity
-              style={styles.featureButton}
+              style={[styles.featureButton, styles.disabledFeatureButton]}
               activeOpacity={0.7}
               onPress={() => {
-                console.log('3D Visualization button pressed');
-                try {
-                  setShow3DVisualization(true);
-                } catch (error) {
-                  console.error('Error opening 3D visualization:', error);
-                }
+                Alert.alert(
+                  '🎨 Visualização 3D',
+                  'Esta funcionalidade estará disponível em breve!\n\n• Visualização 3D interativa\n• Análise visual de ondas sonoras\n• Simulação de ressonância\n• Controles de ângulo e zoom',
+                  [{ text: 'OK', style: 'default' }]
+                );
               }}
             >
-              <Text style={styles.featureButtonText}>🎨 3D</Text>
+              <Text style={styles.featureButtonText}>🔒 3D</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.featureButton, styles.disabledFeatureButton]}
+              activeOpacity={0.7}
+              onPress={() => {
+                Alert.alert(
+                  '🤖 Recomendações de IA',
+                  'Esta funcionalidade estará disponível em breve!\n\n• Chat inteligente com IA\n• Análise de áudio gravado\n• Sugestões personalizadas\n• Recomendações por tom',
+                  [{ text: 'OK', style: 'default' }]
+                );
+              }}
+            >
+              <Text style={styles.featureButtonText}>🔒 IA</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
               style={styles.featureButton}
               activeOpacity={0.7}
               onPress={() => {
-                console.log('AI Recommendations button pressed');
-                try {
-                  setShowAIRecommendations(true);
-                } catch (error) {
-                  console.error('Error opening AI recommendations:', error);
-                }
-              }}
-            >
-              <Text style={styles.featureButtonText}>🤖 IA</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.featureButton}
-              activeOpacity={0.7}
-              onPress={() => {
-                console.log('Tips Settings button pressed - state before:', showTipsSettings);
-                setShowTipsSettings(true);
-                console.log('Tips Settings button pressed - state should be true now');
+                console.log('Tips Settings button pressed');
+                navigation.navigate('TipsSettings');
               }}
             >
               <Text style={styles.featureButtonText}>⚙️ Dicas</Text>
@@ -1049,16 +1179,18 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         project={currentProject}
       />
 
-      {/* Tutorial System */}
-      <TutorialOverlay
-        visible={tutorial.isVisible}
-        step={tutorial.currentStep}
-        elementBounds={tutorial.elementBounds}
-        onNext={tutorial.nextStep}
-        onPrevious={tutorial.previousStep}
-        onSkip={tutorial.skipTutorial}
-        onClose={tutorial.endTutorial}
-      />
+      {/* Tutorial System - DESABILITADO PARA APRESENTAÇÃO */}
+      {false && (
+        <TutorialOverlay
+          visible={tutorial.isVisible}
+          step={tutorial.currentStep}
+          elementBounds={tutorial.elementBounds}
+          onNext={tutorial.nextStep}
+          onPrevious={tutorial.previousStep}
+          onSkip={tutorial.skipTutorial}
+          onClose={tutorial.endTutorial}
+        />
+      )}
 
       {/* Dica do Dia - Apenas se usuário habilitou */}
       {shouldShowTips && (
@@ -1069,26 +1201,28 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         />
       )}
 
-      {/* First Run Tutorial */}
-      <FirstRunTutorial
-        visible={showFirstRunTutorial}
-        currentStep={firstRunStep}
-        onStepChange={setFirstRunStep}
-        registeredRefs={tutorial.registeredRefs}
-        onComplete={async () => {
-          try {
-            const firstRunKey = '@didgemap_first_run_completed';
-            await AsyncStorage.setItem(firstRunKey, 'true');
-            setShowFirstRunTutorial(false);
-            setIsFirstRun(false);
-          } catch (error) {
-            console.error('Error marking first run completed:', error);
-            // Still close tutorial even on error
-            setShowFirstRunTutorial(false);
-            setIsFirstRun(false);
-          }
-        }}
-      />
+      {/* First Run Tutorial - DESABILITADO PARA APRESENTAÇÃO */}
+      {false && (
+        <FirstRunTutorial
+          visible={showFirstRunTutorial}
+          currentStep={firstRunStep}
+          onStepChange={setFirstRunStep}
+          registeredRefs={tutorial.registeredRefs}
+          onComplete={async () => {
+            try {
+              const firstRunKey = '@didgemap_first_run_completed';
+              await AsyncStorage.setItem(firstRunKey, 'true');
+              setShowFirstRunTutorial(false);
+              setIsFirstRun(false);
+            } catch (error) {
+              console.error('Error marking first run completed:', error);
+              // Still close tutorial even on error
+              setShowFirstRunTutorial(false);
+              setIsFirstRun(false);
+            }
+          }}
+        />
+      )}
       {/* Tips Settings */}
       <TipsSettings
         visible={showTipsSettings}
@@ -1103,66 +1237,7 @@ export const SimpleHomeScreen = ({ currentUnit, onUnitChange, currentLanguage, o
         }}
       />
 
-      {/* 3D Visualization */}
-      <Visualization3D
-        visible={show3DVisualization}
-        onClose={() => setShow3DVisualization(false)}
-        analysisData={{
-          frequencies: analysisResults.length > 0 ? {
-            fundamental: analysisResults[0]?.frequency || 146.83,
-            harmonics: analysisResults.slice(1, 6).map(r => r.frequency).filter(f => f)
-          } : null,
-          resonanceModes: analysisResults.length > 0 ? analysisResults.map(r => ({
-            frequency: r.frequency,
-            amplitude: r.amplitude || 1
-          })) : null
-        }}
-        geometry={geometry ? (() => {
-          try {
-            const parts = geometry.split(':')[1]?.split(',');
-            if (parts && parts.length > 1) {
-              return {
-                length: parseInt(parts[0]),
-                diameters: parts.slice(1).map(d => parseInt(d))
-              };
-            }
-          } catch (error) {
-            console.warn('Error parsing geometry for 3D:', error);
-          }
-          return null;
-        })() : null}
-      />
-
-      {/* AI Recommendations */}
-      <AIRecommendations
-        visible={showAIRecommendations}
-        onClose={() => setShowAIRecommendations(false)}
-        onSelectRecommendation={(recommendation) => {
-          // Aplicar recomendação da IA
-          if (recommendation.geometry) {
-            setGeometry(recommendation.geometry);
-            setCurrentProject({
-              id: `ai_${Date.now()}`,
-              name: recommendation.name,
-              geometry: recommendation.geometry,
-              source: 'ai_recommendation',
-              createdAt: new Date().toISOString()
-            });
-            
-            // Analisar automaticamente a nova geometria
-            if (recommendation.geometry.trim()) {
-              setTimeout(() => {
-                handleAnalyze(recommendation.geometry);
-              }, 500);
-            }
-          }
-        }}
-        initialPreferences={{
-          targetNote: 'D',
-          targetOctave: 2,
-          experience: 'beginner'
-        }}
-      />
+      {/* Removed modal components - now using navigation */}
       </OptimizedScrollView>
       {/* </FloatingTipManager> */}
     </View>
@@ -1230,24 +1305,50 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  legendContainer: {
+  technicalLegend: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: spacing.sm,
     marginVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  legendRow: {
+  legendTitle: {
+    fontSize: typography.small,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  legendSubtitle: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  legendGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    width: '48%',
     marginBottom: spacing.xs,
   },
   legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: spacing.xs,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   legendText: {
     fontSize: typography.caption,
-    color: '#6B7280',
+    color: '#4B5563',
+    fontWeight: '500',
     flex: 1,
   },
   
@@ -1316,10 +1417,18 @@ const styles = StyleSheet.create({
     color: '#065F46',
   },
   harmonicsTitle: {
-    fontSize: typography.body,
+    fontSize: typography.h3,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  harmonicsSubtitle: {
+    fontSize: typography.small,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    fontStyle: 'italic',
   },
   harmonicsGrid: {
     flexDirection: 'row',
@@ -1402,13 +1511,20 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
     fontWeight: '700',
     textAlign: 'center',
+    paddingVertical: spacing.xs,
   },
   tableRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  fundamentalRow: {
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
   },
   tableRowEven: {
     backgroundColor: '#F9FAFB',
@@ -1423,6 +1539,7 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
     color: '#374151',
     textAlign: 'center',
+    paddingHorizontal: 2,
   },
   
   // Metadata styles
@@ -1448,7 +1565,12 @@ const styles = StyleSheet.create({
   },
   metadataItem: {
     width: '48%',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    padding: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   metadataLabel: {
     fontSize: typography.caption,
@@ -1460,6 +1582,55 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontWeight: '700',
     marginTop: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  // New Analysis Summary Styles
+  analysisSummary: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginHorizontal: spacing.xs,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  summaryLabel: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  summaryValue: {
+    fontSize: typography.body,
+    color: '#1F2937',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  summarySubvalue: {
+    fontSize: typography.caption,
+    color: '#9CA3AF',
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
 
   // Project management styles
@@ -1506,6 +1677,9 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '700',
   },
+  exportContainer: {
+    marginVertical: spacing.sm,
+  },
   exportButton: {
     backgroundColor: '#F59E0B',
     paddingVertical: spacing.lg,
@@ -1519,6 +1693,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  quickExportContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  quickExportButton: {
+    flex: 1,
+    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickExportText: {
+    color: '#FFFFFF',
+    fontSize: typography.small,
+    fontWeight: '600',
   },
   exportButtonText: {
     color: '#FFFFFF',
@@ -1546,9 +1745,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    // Debug: Add border to see the touch area
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
+  },
+  disabledFeatureButton: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.7,
   },
   featureButtonText: {
     color: '#FFFFFF',
