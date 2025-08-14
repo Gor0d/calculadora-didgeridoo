@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Text, 
   View, 
@@ -7,6 +7,7 @@ import {
   Alert, 
   StyleSheet
 } from 'react-native';
+import { AppIcon } from './IconSystem';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { getDeviceInfo, getTypography, getSpacing, getResponsiveDimensions } from '../utils/responsive';
@@ -18,7 +19,9 @@ const typography = getTypography();
 const spacing = getSpacing();
 const dimensions = getResponsiveDimensions();
 
-export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metric' }) => {
+export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metric', onNewProject }) => {
+  const [selectedExample, setSelectedExample] = useState(null);
+  
   // Base examples in metric (cm/mm)
   const metricExamples = [
     { name: localizationService.t('traditional'), data: `0 28\n50 26\n100 30\n150 38`, desc: localizationService.t('traditionalDesc') },
@@ -62,25 +65,64 @@ export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metr
     }
   };
 
+  const handleSelectExample = (example, index) => {
+    setSelectedExample(index);
+    onSelectExample({ geometry: example.data, name: example.name });
+    
+    // Auto-scroll to geometry table (if available)
+    if (onNewProject) {
+      setTimeout(() => {
+        onNewProject();
+      }, 300);
+    }
+  };
+
   return (
     <View style={styles.examplesSection}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{localizationService.t('quickExamples')}</Text>
+        <TouchableOpacity 
+          style={styles.newProjectButton} 
+          onPress={() => onNewProject && onNewProject()}
+        >
+          <AppIcon name="plus" size={16} color="#FFFFFF" />
+          <Text style={styles.newProjectText}>{localizationService.t('newProject') || 'Novo Projeto'}</Text>
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.loadFileButton} onPress={handleLoadFile}>
+          <AppIcon name="folder" size={14} color="#3B82F6" />
           <Text style={styles.loadFileText}>{localizationService.t('loadFile')}</Text>
         </TouchableOpacity>
       </View>
       
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.exampleScrollContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        contentContainerStyle={styles.exampleScrollContainer}
+        style={styles.exampleScrollView}
+      >
         {examples.map((example, index) => (
           <TouchableOpacity
             key={index}
-            style={styles.exampleCard}
-            onPress={() => onSelectExample({ geometry: example.data, name: example.name })}
+            style={[
+              styles.exampleCard,
+              selectedExample === index && styles.exampleCardSelected
+            ]}
+            onPress={() => handleSelectExample(example, index)}
           >
-            <Text style={styles.exampleName}>{example.name}</Text>
-            <Text style={styles.exampleDesc}>{example.desc}</Text>
-            <Text style={styles.exampleLines}>{example.data.split('\n').length} {localizationService.t('points').toLowerCase()}</Text>
+            <View style={styles.cardContent}>
+              <Text style={[
+                styles.exampleName,
+                selectedExample === index && styles.exampleNameSelected
+              ]}>
+                {example.name}
+              </Text>
+              <Text style={styles.exampleDesc} numberOfLines={2} ellipsizeMode="tail">
+                {example.desc}
+              </Text>
+              <Text style={styles.exampleLines}>
+                {example.data.split('\n').length} {localizationService.t('points').toLowerCase()}
+              </Text>
+            </View>
           </TouchableOpacity>
         ))}
         <TouchableOpacity 
@@ -90,7 +132,7 @@ export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metr
             localizationService.t('shareDesignDesc') || 'Envie suas medidas para adicionarmos aqui!'
           )}
         >
-          <Text style={styles.addCustomText}>➕</Text>
+          <AppIcon name="plus" size={24} color="#8B5CF6" />
           <Text style={styles.addCustomLabel}>{localizationService.t('yourDesign') || 'Seu Design'}</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -100,83 +142,131 @@ export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metr
 
 const styles = StyleSheet.create({
   examplesSection: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    marginHorizontal: spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  sectionTitle: {
-    fontSize: typography.h5,
-    color: '#64748B',
-    fontWeight: '600',
+  newProjectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    backgroundColor: '#10B981',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  newProjectText: {
+    fontSize: typography.button,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: spacing.xs,
   },
   loadFileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: '#22D3EE',
-    backgroundColor: 'rgba(34, 211, 238, 0.1)',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
   loadFileText: {
-    fontSize: typography.caption,
+    fontSize: typography.small,
     fontWeight: '600',
-    color: '#22D3EE',
+    color: '#3B82F6',
+    marginLeft: spacing.xs,
+  },
+  exampleScrollView: {
+    marginHorizontal: -spacing.xs,
   },
   exampleScrollContainer: {
-    paddingRight: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingRight: spacing.xl,
+    alignItems: 'flex-start',
   },
   exampleCard: {
-    width: deviceInfo.width * 0.4,
-    minWidth: deviceInfo.isTablet ? 180 : 140,
-    height: deviceInfo.isTablet ? 120 : 100,
+    width: deviceInfo.isTablet ? 200 : 160,
+    minWidth: deviceInfo.isTablet ? 200 : 160,
+    minHeight: deviceInfo.isTablet ? 140 : 120,
     backgroundColor: '#FFFFFF',
-    borderRadius: dimensions.borderRadius,
-    borderWidth: 1.5,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: spacing.md,
-    marginRight: spacing.md,
-    justifyContent: 'space-between',
-    shadowColor: '#6366F1',
+    padding: spacing.lg,
+    marginRight: spacing.lg,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+    height: '100%',
+  },
+  exampleCardSelected: {
+    borderColor: '#10B981',
+    borderWidth: 2,
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    shadowColor: '#10B981',
+    shadowOpacity: 0.25,
+    transform: [{ scale: 1.03 }],
   },
   addCustomCard: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#F472B6',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#8B5CF6',
+    borderWidth: 2,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: deviceInfo.isTablet ? 140 : 120,
   },
   exampleName: {
-    fontSize: typography.bodySmall,
-    fontWeight: '600',
-    color: '#6366F1',
+    fontSize: typography.small,
+    fontWeight: '700',
+    color: '#1E293B',
     marginBottom: spacing.xs,
+    letterSpacing: 0.2,
+  },
+  exampleNameSelected: {
+    color: '#059669',
   },
   exampleDesc: {
     fontSize: typography.caption,
     color: '#64748B',
-    marginBottom: spacing.xs,
+    marginVertical: spacing.xs,
+    lineHeight: typography.caption * 1.3,
+    textAlign: 'left',
+    flexShrink: 1,
   },
   exampleLines: {
     fontSize: typography.caption,
     color: '#94A3B8',
+    fontWeight: '500',
+    textAlign: 'left',
   },
   addCustomText: {
-    fontSize: typography.h4,
-    color: '#F472B6',
+    fontSize: typography.h3,
+    color: '#8B5CF6',
     textAlign: 'center',
+    marginBottom: spacing.xs,
   },
   addCustomLabel: {
-    fontSize: typography.caption,
+    fontSize: typography.small,
     fontWeight: '600',
-    color: '#F472B6',
+    color: '#8B5CF6',
     textAlign: 'center',
   },
 });

@@ -250,7 +250,7 @@ export const SettingsScreen = ({
           
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>{localizationService.t('developer')}</Text>
-            <Text style={styles.infoValue}>Renan & Claude</Text>
+            <Text style={styles.infoValue}>Emerson Guimarães</Text>
           </View>
         </View>
       </View>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { AppWrapper } from './src/components/AppWrapper';
-import { TabNavigator } from './src/navigation/TabNavigator';
+import { AppNavigator } from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/components/OnboardingScreen';
 import { unitConverter } from './src/services/units/UnitConverter';
 import { localizationService } from './src/services/i18n/LocalizationService';
@@ -198,7 +198,7 @@ export default function App() {
 
   return (
     <AppWrapper>
-      <TabNavigator
+      <AppNavigator
         currentLanguage={currentLanguage}
         onLanguageChange={handleLanguageChange}
         currentUnit={currentUnit}

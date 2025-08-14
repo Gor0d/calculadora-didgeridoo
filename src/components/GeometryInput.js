@@ -6,6 +6,7 @@ import {
   TouchableOpacity, 
   StyleSheet
 } from 'react-native';
+import { AppIcon } from './IconSystem';
 import { getDeviceInfo, getTypography, getSpacing, getResponsiveDimensions } from '../utils/responsive';
 import { unitConverter } from '../services/units/UnitConverter';
 import { localizationService } from '../services/i18n/LocalizationService';
@@ -110,28 +111,33 @@ export const GeometryInput = ({
           </Text>
         </TouchableOpacity>
       </View>
+      
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   geometryContainer: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    marginHorizontal: spacing.md,
     backgroundColor: '#FFFFFF',
-    borderRadius: dimensions.borderRadius,
-    padding: dimensions.cardPadding,
-    shadowColor: '#10B981',
+    borderRadius: 16,
+    padding: spacing.lg,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   inputTitle: {
-    fontSize: typography.h4,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontSize: typography.h3,
+    fontWeight: '700',
+    color: '#0F172A',
     marginBottom: spacing.sm,
-    textAlign: 'center',
+    textAlign: 'left',
+    letterSpacing: 0.3,
   },
   fileNameBadge: {
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -160,16 +166,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   geometryInput: {
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
-    borderRadius: dimensions.borderRadius / 2,
-    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    backgroundColor: '#FAFBFC',
     color: '#1E293B',
-    fontFamily: 'Courier',
-    fontSize: typography.input,
-    padding: spacing.md,
-    minHeight: dimensions.inputHeight,
+    fontFamily: 'monospace',
+    fontSize: typography.body,
+    padding: spacing.lg,
+    minHeight: dimensions.inputHeight * 1.2,
     textAlignVertical: 'top',
+    lineHeight: typography.body * 1.4,
   },
   validationErrorContainer: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -213,14 +220,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.lg,
-    gap: spacing.md,
+    justifyContent: 'space-between',
   },
   button: {
     flex: 1,
-    height: dimensions.buttonHeight,
-    borderRadius: dimensions.borderRadius / 2,
+    height: dimensions.buttonHeight * 1.1,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: spacing.xs,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   analyzeButton: {
     backgroundColor: '#10B981',

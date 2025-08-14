@@ -47,15 +47,15 @@ export const AdvancedExport = ({
     
     // General options
     template: 'professional',
-    format: 'html'
+    format: 'pdf' // 'pdf', 'html', 'png'
   });
 
   const exportTypes = [
     {
       id: 'pdf',
-      name: 'Relatório PDF',
+      name: 'Relatório PDF/HTML/PNG',
       icon: '📄',
-      description: 'Relatório completo em formato PDF profissional'
+      description: 'Relatório em múltiplos formatos para compartilhamento'
     },
     {
       id: 'audio',
@@ -100,7 +100,8 @@ export const AdvancedExport = ({
             includeAnalysis: exportOptions.includeAnalysis,
             includeVisualization: exportOptions.includeVisualization,
             includeNotes: exportOptions.includeNotes,
-            template: exportOptions.template
+            template: exportOptions.template,
+            format: exportOptions.format
           });
           break;
           
@@ -267,6 +268,16 @@ export const AdvancedExport = ({
                 { value: 'professional', label: 'Profissional' },
                 { value: 'simple', label: 'Simples' },
                 { value: 'detailed', label: 'Detalhado' }
+              ]}
+            />
+            
+            <OptionSelector
+              label="Formato de Saída"
+              optionKey="format"
+              options={[
+                { value: 'pdf', label: '📏 PDF (Ideal para impressão)' },
+                { value: 'html', label: '🌐 HTML (Visualização web)' },
+                { value: 'png', label: '🖼️ PNG (Imagem para compartilhar)' }
               ]}
             />
           </View>

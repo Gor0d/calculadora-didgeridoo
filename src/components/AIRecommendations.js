@@ -7,13 +7,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Dimensions
+  Dimensions,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Svg, Rect, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
 import didgeridooAI from '../services/ai/DidgeridooAI';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const deviceInfo = getDeviceInfo();
@@ -40,14 +44,34 @@ export const AIRecommendations = ({
   
   const [recommendations, setRecommendations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(true);
+  const [showPreferences, setShowPreferences] = useState(false);
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
+  const [showChat, setShowChat] = useState(true);
+  const [chatMessages, setChatMessages] = useState([
+    {
+      id: 1,
+      type: 'ai',
+      content: '🎵 Olá! Sou seu assistente de IA para didgeridoo. Posso ajudar você a encontrar a estrutura perfeita para seu instrumento.\n\n💬 **Digite sua dúvida** ou descreva o tom que você quer\n🎤 **Grave um áudio** com o som que deseja alcançar\n⚙️ **Configure preferências** para recomendações detalhadas\n\n*Em breve: Mais funções de IA estarão disponíveis!*',
+      timestamp: new Date()
+    }
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState(null);
 
   useEffect(() => {
-    if (visible && !showPreferences && recommendations.length === 0) {
+    if (visible && !showPreferences && !showChat && recommendations.length === 0) {
       generateRecommendations();
     }
-  }, [visible, showPreferences]);
+  }, [visible, showPreferences, showChat]);
+  
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+    };
+  }, [recording]);
 
   const generateRecommendations = async () => {
     setIsLoading(true);
@@ -104,6 +128,152 @@ export const AIRecommendations = ({
       onSelectRecommendation(selectedRecommendation);
       onClose();
     }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: inputText.trim(),
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setInputText('');
+
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse = generateAIResponse(userMessage.content);
+      setChatMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        type: 'ai',
+        content: aiResponse,
+        timestamp: new Date()
+      }]);
+    }, 1500);
+  };
+
+  const generateAIResponse = (userInput) => {
+    const input = userInput.toLowerCase();
+    
+    if (input.includes('tom') || input.includes('nota') || input.includes('frequen')) {
+      return '🎵 **Análise de Tom**\n\nPara sugerir a estrutura ideal, preciso de mais informações:\n\n• Que tom específico você quer? (Ex: D2, C3)\n• É para iniciante ou avançado?\n• Prefere som grave ou agudo?\n\n💡 **Dica:** Use as ⚙️ Preferências para uma análise completa, ou grave um áudio do tom desejado!';
+    }
+    
+    if (input.includes('tamanho') || input.includes('comprimento') || input.includes('diametro')) {
+      return '📏 **Dimensões do Didgeridoo**\n\n**Estrutura básica recomendada:**\n\n• **Comprimento:** 120-150cm (tom D-C)\n• **Diâmetro boca:** 28-35mm\n• **Diâmetro final:** 8-12cm\n• **Conicidade:** Gradual, 2-3% por seção\n\n🔧 Para especificações exatas baseadas no seu tom, use as **Preferências** para gerar recomendações personalizadas!';
+    }
+    
+    if (input.includes('construir') || input.includes('fazer') || input.includes('madeira') || input.includes('material')) {
+      return '🔨 **Construção de Didgeridoo**\n\n**Materiais recomendados:**\n• Eucalipto (tradicional)\n• PVC (iniciantes)\n• Bambu (leve e natural)\n\n**Processo básico:**\n1. Definir geometria (use nossa calculadora!)\n2. Preparar material\n3. Perfuração/moldagem\n4. Acabamento interno\n5. Boquilha de cera\n\n⚙️ Use as **Preferências** para dicas específicas do seu projeto!';
+    }
+    
+    return '🤖 **Assistente IA - Didgeridoo**\n\nEntendi sua pergunta! Atualmente posso ajudar com:\n\n✅ **Estruturas básicas** de didgeridoo\n✅ **Dimensões** por tom musical\n✅ **Dicas de construção** gerais\n\n🔜 **Em breve:**\n• Análise de áudio em tempo real\n• Sugestões por gravação\n• Chat com IA avançada\n• Diagnóstico acústico\n\n💡 Para recomendações detalhadas, use as ⚙️ **Preferências**!';
+  };
+
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permissão Necessária', 'Preciso de acesso ao microfone para gravar áudio.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+      );
+      setRecording(recording);
+      setIsRecording(true);
+      
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch (error) {}
+      
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível iniciar a gravação.');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+
+    try {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch (error) {}
+      
+      // Add audio message to chat
+      const audioMessage = {
+        id: Date.now(),
+        type: 'user',
+        content: '🎤 Áudio gravado',
+        audioUri: uri,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, audioMessage]);
+      
+      // Simulate AI audio analysis
+      setTimeout(() => {
+        const aiResponse = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: '🎵 **Análise de Áudio** (Em Desenvolvimento)\n\nRecebi seu áudio! Em breve poderei:\n\n🔍 **Analisar frequências** do som gravado\n📊 **Identificar tom fundamental**\n🎯 **Sugerir estrutura** específica\n📐 **Calcular dimensões** exatas\n\n💡 **Por enquanto:** Use as ⚙️ Preferências para configurar manualmente o tom desejado e receber recomendações detalhadas!',
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, aiResponse]);
+      }, 2000);
+      
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao processar a gravação.');
+    }
+  };
+
+  const renderChatMessage = (message) => {
+    const isUser = message.type === 'user';
+    return (
+      <View key={message.id} style={[
+        styles.messageContainer,
+        isUser ? styles.userMessage : styles.aiMessage
+      ]}>
+        <View style={[
+          styles.messageBubble,
+          isUser ? styles.userBubble : styles.aiBubble
+        ]}>
+          {message.audioUri ? (
+            <View style={styles.audioMessage}>
+              <Text style={styles.audioText}>🎤 Áudio gravado</Text>
+              <Text style={styles.audioHint}>(Análise em desenvolvimento)</Text>
+            </View>
+          ) : (
+            <Text style={[
+              styles.messageText,
+              isUser ? styles.userText : styles.aiText
+            ]}>
+              {message.content}
+            </Text>
+          )}
+        </View>
+        <Text style={styles.messageTime}>
+          {message.timestamp.toLocaleTimeString('pt-BR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })}
+        </Text>
+      </View>
+    );
   };
 
   const renderPreferenceSelector = (title, key, options) => (
@@ -404,30 +574,98 @@ export const AIRecommendations = ({
           <TouchableOpacity 
             style={styles.backButton} 
             onPress={() => {
-              if (!showPreferences && !selectedRecommendation) {
-                setShowPreferences(true);
-                setRecommendations([]);
+              if (showChat && !selectedRecommendation) {
+                onClose();
               } else if (selectedRecommendation) {
                 setSelectedRecommendation(null);
+                setShowChat(true);
+              } else if (showPreferences) {
+                setShowPreferences(false);
+                setShowChat(true);
               } else {
-                onClose();
+                setShowChat(true);
+                setRecommendations([]);
               }
             }}
           >
             <Text style={styles.backButtonText}>
-              {!showPreferences && !selectedRecommendation ? '⚙️' : selectedRecommendation ? '←' : '✕'}
+              {showChat ? '✕' : '←'}
             </Text>
           </TouchableOpacity>
           
           <Text style={styles.headerTitle}>
-            {selectedRecommendation ? 'Detalhes' : showPreferences ? '🤖 IA - Preferências' : '🤖 Recomendações IA'}
+            {selectedRecommendation ? 'Detalhes' : showPreferences ? '🤖 IA - Preferências' : showChat ? '🤖 Assistente IA' : '🤖 Recomendações'}
           </Text>
           
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => {
+              if (showChat) {
+                setShowPreferences(true);
+                setShowChat(false);
+              } else {
+                // Future: Add more AI features here
+                Alert.alert('Em Breve', 'Mais funções de IA estarão disponíveis em breve!');
+              }
+            }}
+          >
+            <Text style={styles.headerButtonText}>
+              {showChat ? '⚙️' : '+'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
-        {showPreferences ? (
+        {showChat ? (
+          <KeyboardAvoidingView 
+            style={styles.chatContainer} 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <ScrollView 
+              style={styles.messagesContainer} 
+              showsVerticalScrollIndicator={false}
+              ref={scrollViewRef => {
+                scrollViewRef?.scrollToEnd({ animated: true });
+              }}
+            >
+              {chatMessages.map(renderChatMessage)}
+            </ScrollView>
+            
+            <View style={styles.inputContainer}>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Descreva o tom ou faça uma pergunta..."
+                  placeholderTextColor="#9CA3AF"
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity
+                  style={[styles.actionButton, isRecording && styles.recordingButton]}
+                  onPress={isRecording ? stopRecording : startRecording}
+                >
+                  <Text style={styles.actionButtonText}>
+                    {isRecording ? '⏹️' : '🎤'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, !inputText.trim() && styles.disabledButton]}
+                  onPress={handleSendMessage}
+                  disabled={!inputText.trim()}
+                >
+                  <Text style={styles.actionButtonText}>📤</Text>
+                </TouchableOpacity>
+              </View>
+              {isRecording && (
+                <Text style={styles.recordingText}>
+                  🎤 Gravando... Toque em ⏹️ para parar
+                </Text>
+              )}
+            </View>
+          </KeyboardAvoidingView>
+        ) : showPreferences ? (
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <Text style={styles.introText}>
               Configure suas preferências para receber recomendações personalizadas de didgeridoo
@@ -474,6 +712,16 @@ export const AIRecommendations = ({
               onPress={handleGenerateRecommendations}
             >
               <Text style={styles.generateButtonText}>🚀 Gerar Recomendações</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.backToChatButton} 
+              onPress={() => {
+                setShowPreferences(false);
+                setShowChat(true);
+              }}
+            >
+              <Text style={styles.backToChatButtonText}>💬 Voltar ao Chat</Text>
             </TouchableOpacity>
           </ScrollView>
         ) : selectedRecommendation ? (
@@ -538,8 +786,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
   },
-  headerSpacer: {
+  headerButton: {
     width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerButtonText: {
+    fontSize: 18,
+    color: '#10B981',
   },
   content: {
     flex: 1,
@@ -858,5 +1113,126 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     color: '#9CA3AF',
     textAlign: 'center',
+  },
+  // Chat Styles
+  chatContainer: {
+    flex: 1,
+  },
+  messagesContainer: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  messageContainer: {
+    marginVertical: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  userMessage: {
+    alignItems: 'flex-end',
+  },
+  aiMessage: {
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    padding: spacing.md,
+    borderRadius: 16,
+    marginBottom: spacing.xs,
+  },
+  userBubble: {
+    backgroundColor: '#10B981',
+    borderBottomRightRadius: 4,
+  },
+  aiBubble: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomLeftRadius: 4,
+  },
+  messageText: {
+    fontSize: typography.body,
+    lineHeight: 20,
+  },
+  userText: {
+    color: '#FFFFFF',
+  },
+  aiText: {
+    color: '#FFFFFF',
+  },
+  messageTime: {
+    fontSize: typography.caption,
+    color: '#9CA3AF',
+    marginBottom: spacing.sm,
+  },
+  audioMessage: {
+    alignItems: 'center',
+  },
+  audioText: {
+    fontSize: typography.body,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  audioHint: {
+    fontSize: typography.caption,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: spacing.xs,
+  },
+  inputContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: '#FFFFFF',
+    fontSize: typography.body,
+    maxHeight: 100,
+    textAlignVertical: 'top',
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordingButton: {
+    backgroundColor: '#EF4444',
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  actionButtonText: {
+    fontSize: 20,
+  },
+  recordingText: {
+    fontSize: typography.small,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontWeight: '600',
+  },
+  backToChatButton: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    paddingVertical: spacing.lg,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  backToChatButtonText: {
+    color: '#10B981',
+    fontSize: typography.h4,
+    fontWeight: '600',
   },
 });

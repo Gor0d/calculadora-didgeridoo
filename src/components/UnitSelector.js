@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { AppIcon } from './IconSystem';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
 
@@ -54,7 +55,7 @@ export const UnitSelector = ({ currentUnit, onUnitChange, disabled = false }) =>
             
             {currentUnit === unit.key && (
               <View style={styles.checkmark}>
-                <Text style={styles.checkmarkText}>✓</Text>
+                <AppIcon name="check" size={14} color="#FFFFFF" />
               </View>
             )}
           </TouchableOpacity>
@@ -74,32 +75,34 @@ export const UnitSelector = ({ currentUnit, onUnitChange, disabled = false }) =>
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...(Platform.OS !== 'web' ? {
-      shadowColor: '#10B981',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-    } : {
-      boxShadow: '0px 4px 8px rgba(16, 185, 129, 0.1)',
-    }),
-    elevation: 4,
+    marginBottom: spacing.lg,
+    marginHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   title: {
-    fontSize: typography.h5,
-    fontWeight: '600',
-    color: '#1E293B',
-    textAlign: 'center',
+    fontSize: typography.h4,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'left',
     marginBottom: spacing.lg,
+    letterSpacing: 0.3,
   },
   unitOptions: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    padding: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 6,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   unitOption: {
     flex: 1,
@@ -107,20 +110,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'transparent',
-    borderRadius: 6,
+    borderRadius: 10,
     padding: spacing.md,
-    transition: 'all 0.2s ease',
+    minHeight: 60,
   },
   unitOptionActive: {
     backgroundColor: '#10B981',
-    ...(Platform.OS !== 'web' ? {
-      shadowColor: '#10B981',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-    } : {
-      boxShadow: '0px 2px 4px rgba(16, 185, 129, 0.3)',
-    }),
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 3,
   },
   unitOptionDisabled: {
@@ -131,9 +130,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unitLabel: {
-    fontSize: typography.bodySmall,
+    fontSize: typography.body,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#1E293B',
     marginBottom: 2,
   },
   unitLabelActive: {
@@ -143,8 +142,8 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   unitSublabel: {
-    fontSize: typography.caption,
-    color: '#94A3B8',
+    fontSize: typography.small,
+    color: '#64748B',
     fontWeight: '500',
   },
   unitSublabelActive: {
@@ -154,18 +153,15 @@ const styles = StyleSheet.create({
     color: '#CBD5E1',
   },
   checkmark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
-  },
-  checkmarkText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   helpText: {
     fontSize: typography.caption,

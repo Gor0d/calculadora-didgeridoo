@@ -31,7 +31,16 @@
       "Bash(mkdir:*)",
       "Bash(gh run list:*)",
       "Bash(timeout 45 npx expo start --no-dev --port 8085)",
-      "Bash(timeout 30 npx expo start --no-dev --port 8086)"
+      "Bash(timeout 30 npx expo start --no-dev --port 8086)",
+      "Bash(npm run build:web:*)",
+      "Bash(npm run serve:*)",
+      "Bash(cmd /c:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(timeout 5 npm run serve)",
+      "Bash(timeout 15 npx expo start --no-dev --port 8087)",
+      "Bash(cp:*)",
+      "Bash(npm:*)",
+      "Bash(vercel:*)"
     ],
     "deny": []
   }

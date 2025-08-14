@@ -1,6 +1,5 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
 import { View, StyleSheet } from 'react-native';
 import { getDeviceInfo, getTypography, getSpacing, getIconSizes } from '../utils/responsive';
 import { AppIcon } from '../components/IconSystem';
@@ -35,8 +34,7 @@ export const TabNavigator = ({
   onResetOnboarding
 }) => {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
+    <Tab.Navigator
         screenOptions={{
           headerShown: false,
           tabBarStyle: styles.tabBar,
@@ -90,7 +88,6 @@ export const TabNavigator = ({
           )}
         </Tab.Screen>
       </Tab.Navigator>
-    </NavigationContainer>
   );
 };
 

@@ -67,12 +67,16 @@
     "updates": {
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 30000
+      "fallbackToCacheTimeout": 30000,
+      "url": "https://u.expo.dev/cad4f3a7-4b85-4cf7-bc47-f276f23ec2c6"
     },
     "extra": {
       "eas": {
         "projectId": "cad4f3a7-4b85-4cf7-bc47-f276f23ec2c6"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

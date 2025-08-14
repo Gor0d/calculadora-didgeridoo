@@ -1,8 +1,17 @@
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import * as DocumentPicker from 'expo-document-picker';
+import { Platform } from 'react-native';
 import { ProjectStorage } from '../storage/ProjectStorage';
 import { audioEngine } from '../audio/AudioEngine';
+// Web-compatible imports
+let FileSystem, Sharing, DocumentPicker;
+try {
+  if (Platform.OS !== 'web') {
+    FileSystem = require('expo-file-system');
+    Sharing = require('expo-sharing');
+    DocumentPicker = require('expo-document-picker');
+  }
+} catch (error) {
+  console.warn('Native modules not available:', error);
+}
 
 export class ExportManager {
   static async exportToPDF(project, options = {}) {
@@ -24,21 +33,32 @@ export class ExportManager {
         template
       });
 
-      // For now, we'll export as HTML since React Native doesn't have native PDF generation
-      // In a full implementation, you'd use a service like react-native-html-to-pdf
-      const filename = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_report.html`;
-      const fileUri = FileSystem.documentDirectory + filename;
+      const filename = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_report`;
+      const format = options.format || 'html';
       
-      await FileSystem.writeAsStringAsync(fileUri, htmlContent);
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/html',
-          dialogTitle: `Exportar Relatório: ${project.name}`
-        });
+      if (Platform.OS === 'web') {
+        if (format === 'png') {
+          return await this.exportToPNG(project, options);
+        } else if (format === 'pdf') {
+          return await this.exportToRealPDF(project, options);
+        } else {
+          // HTML format
+          await this.downloadFile(htmlContent, filename + '.html', 'text/html');
+          return { success: true, filename: filename + '.html' };
+        }
+      } else {
+        // Mobile implementation - HTML only
+        const fileUri = FileSystem.documentDirectory + filename + '.html';
+        await FileSystem.writeAsStringAsync(fileUri, htmlContent);
+        
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'text/html',
+            dialogTitle: `Exportar Relatório: ${project.name}`
+          });
+        }
+        return { success: true, fileUri, filename: filename + '.html' };
       }
-
-      return { success: true, fileUri, filename };
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       throw new Error('Falha ao exportar para PDF');
@@ -536,7 +556,9 @@ export class ExportManager {
       if (audioFiles.length === 1) {
         // Single file - share directly
         const audioFile = audioFiles[0];
-        if (await Sharing.isAvailableAsync()) {
+        if (Platform.OS === 'web') {
+          // Already downloaded via generateAudioFile
+        } else if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(audioFile.uri, {
             mimeType: `audio/${format}`,
             dialogTitle: `Exportar Áudio: ${audioFile.name}`
@@ -551,7 +573,9 @@ export class ExportManager {
         };
 
         // For now, share the first file with a note about multiple files
-        if (await Sharing.isAvailableAsync()) {
+        if (Platform.OS === 'web') {
+          // Files already downloaded individually via generateAudioFile
+        } else if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(audioFiles[0].uri, {
             mimeType: `audio/${format}`,
             dialogTitle: `Áudio Exportado (${audioFiles.length} arquivos)`
@@ -570,22 +594,37 @@ export class ExportManager {
     try {
       const { duration, volume, sampleRate } = options;
       
-      // This is a simplified implementation
-      // In a real app, you would generate actual audio data
-      const fileUri = FileSystem.documentDirectory + filename;
-      
-      // For demonstration, we'll create a simple audio description file
-      const audioInfo = {
-        config: audioConfig,
-        duration: duration,
-        volume: volume,
-        sampleRate: sampleRate,
-        generated: new Date().toISOString(),
-        note: 'Audio file would be generated here with actual synthesis'
-      };
-      
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(audioInfo, null, 2));
-      return fileUri;
+      if (Platform.OS === 'web') {
+        // Web implementation - create audio info file
+        const audioInfo = {
+          config: audioConfig,
+          duration: duration,
+          volume: volume,
+          sampleRate: sampleRate,
+          generated: new Date().toISOString(),
+          note: 'Síntese de áudio (demonstração) - funcionalidade completa em desenvolvimento',
+          frequencies: audioConfig.frequencies || [audioConfig.fundamental],
+          instructions: 'Use um sintetizador externo com essas frequências para reprodução'
+        };
+        
+        const jsonFilename = filename.replace(/\.[^.]+$/, '.json');
+        await this.downloadFile(JSON.stringify(audioInfo, null, 2), jsonFilename, 'application/json');
+        return jsonFilename;
+      } else {
+        // Mobile implementation
+        const fileUri = FileSystem.documentDirectory + filename;
+        const audioInfo = {
+          config: audioConfig,
+          duration: duration,
+          volume: volume,
+          sampleRate: sampleRate,
+          generated: new Date().toISOString(),
+          note: 'Audio file would be generated here with actual synthesis'
+        };
+        
+        await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(audioInfo, null, 2));
+        return fileUri;
+      }
     } catch (error) {
       console.error('Error generating audio file:', error);
       throw error;
@@ -635,15 +674,23 @@ export class ExportManager {
       }
 
       const filename = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_advanced_report.${extension}`;
-      const fileUri = FileSystem.documentDirectory + filename;
       
-      await FileSystem.writeAsStringAsync(fileUri, content);
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType,
-          dialogTitle: `Relatório Avançado: ${project.name}`
-        });
+      if (Platform.OS === 'web') {
+        // Web implementation - direct download
+        await this.downloadFile(content, filename, mimeType);
+        return { success: true, filename, report };
+      } else {
+        // Mobile implementation
+        const fileUri = FileSystem.documentDirectory + filename;
+        await FileSystem.writeAsStringAsync(fileUri, content);
+        
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType,
+            dialogTitle: `Relatório Avançado: ${project.name}`
+          });
+        }
+        return { success: true, fileUri, filename, report };
       }
 
       return { success: true, fileUri, filename, report };
@@ -926,5 +973,207 @@ export class ExportManager {
       console.error('Error in batch export:', error);
       throw new Error('Falha na exportação em lote');
     }
+  }
+
+  // Web-specific download function
+  static async downloadFile(content, filename, mimeType) {
+    if (typeof window === 'undefined') {
+      throw new Error('Download function only available in web environment');
+    }
+
+    try {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      console.log(`📁 Download iniciado: ${filename}`);
+    } catch (error) {
+      console.error('Erro no download:', error);
+      throw new Error(`Falha ao fazer download do arquivo: ${filename}`);
+    }
+  }
+
+  // Real PDF generation using html2pdf
+  static async exportToRealPDF(project, options = {}) {
+    if (Platform.OS !== 'web' || !html2pdf) {
+      throw new Error('PDF export only available in web environment');
+    }
+
+    try {
+      const {
+        includeGeometry = true,
+        includeAnalysis = true,
+        includeVisualization = true,
+        includeNotes = true,
+        template = 'professional'
+      } = options;
+
+      // Generate HTML content optimized for PDF
+      const htmlContent = this.generatePDFHTML(project, {
+        includeGeometry,
+        includeAnalysis,
+        includeVisualization,
+        includeNotes,
+        template
+      });
+
+      // Create a temporary div for PDF generation
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm'; // A4 width
+      document.body.appendChild(tempDiv);
+
+      const filename = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_report.pdf`;
+
+      // Configure PDF options
+      const opt = {
+        margin: [15, 15, 15, 15],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.92 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait',
+          compress: true
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      // Generate and download PDF
+      await html2pdf().set(opt).from(tempDiv).save();
+      
+      // Clean up
+      document.body.removeChild(tempDiv);
+      
+      console.log(`📏 PDF gerado: ${filename}`);
+      return { success: true, filename };
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      throw new Error('Falha ao gerar PDF');
+    }
+  }
+
+  // PNG image export
+  static async exportToPNG(project, options = {}) {
+    if (Platform.OS !== 'web' || !html2canvas) {
+      throw new Error('PNG export only available in web environment');
+    }
+
+    try {
+      const {
+        includeGeometry = true,
+        includeAnalysis = true,
+        includeVisualization = true,
+        includeNotes = true,
+        template = 'professional',
+        imageWidth = 1200,
+        imageHeight = null, // Auto height
+        quality = 1.0
+      } = options;
+
+      // Generate HTML content optimized for PNG
+      const htmlContent = this.generateImageHTML(project, {
+        includeGeometry,
+        includeAnalysis,
+        includeVisualization,
+        includeNotes,
+        template
+      });
+
+      // Create a temporary div for image generation
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = imageWidth + 'px';
+      tempDiv.style.background = '#ffffff';
+      tempDiv.style.padding = '20px';
+      document.body.appendChild(tempDiv);
+
+      // Wait for fonts and images to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Generate canvas
+      const canvas = await html2canvas(tempDiv, {
+        width: imageWidth,
+        height: imageHeight,
+        scale: quality,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+
+      // Convert to blob and download
+      const filename = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_report.png`;
+      
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }, 'image/png', quality);
+      
+      // Clean up
+      document.body.removeChild(tempDiv);
+      
+      console.log(`🖼️ PNG gerado: ${filename}`);
+      return { success: true, filename };
+    } catch (error) {
+      console.error('Error generating PNG:', error);
+      throw new Error('Falha ao gerar PNG');
+    }
+  }
+
+  // Generate HTML optimized for image export
+  static generateImageHTML(project, options) {
+    const htmlContent = this.generatePDFHTML(project, options);
+    
+    // Modify HTML for better image rendering
+    return htmlContent.replace(
+      '<style>',
+      `<style>
+        body { 
+          margin: 0; 
+          padding: 20px; 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: #ffffff;
+          width: fit-content;
+          min-width: 800px;
+        }
+        .container {
+          max-width: none;
+          width: 100%;
+          margin: 0;
+          box-shadow: none;
+          border: 2px solid #e5e7eb;
+        }`
+    );
   }
 }

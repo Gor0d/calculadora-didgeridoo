@@ -108,7 +108,7 @@ export const AppIcon = ({
       case 'loading':
         return <MaterialCommunityIcons name="loading" size={size} color={color} {...props} />;
       
-      // Ícones de navegação
+      // Ícones de navegação e controles
       case 'back':
         return <Ionicons name="arrow-back" size={size} color={color} {...props} />;
       case 'forward':
@@ -119,6 +119,20 @@ export const AppIcon = ({
         return <Ionicons name="chevron-down" size={size} color={color} {...props} />;
       case 'close':
         return <Ionicons name="close" size={size} color={color} {...props} />;
+      case 'check':
+        return <Ionicons name="checkmark" size={size} color={color} {...props} />;
+      case 'plus':
+        return <Ionicons name="add" size={size} color={color} {...props} />;
+      case 'folder':
+        return <Ionicons name="folder-outline" size={size} color={color} {...props} />;
+      
+      // Ícones de mídia e som
+      case 'music':
+        return <Ionicons name="musical-notes-outline" size={size} color={color} {...props} />;
+      case 'sound':
+        return <Ionicons name="volume-medium-outline" size={size} color={color} {...props} />;
+      case 'chart':
+        return <Ionicons name="bar-chart-outline" size={size} color={color} {...props} />;
       
       // Ícone especial do didgeridoo (customizado)
       case 'didgeridoo':

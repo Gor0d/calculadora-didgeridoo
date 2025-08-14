@@ -306,30 +306,46 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
 
       {/* Zoom Controls */}
       <View style={styles.zoomControls}>
-        <TouchableOpacity 
-          style={styles.zoomButton}
-          onPress={() => setVisualizationZoom(Math.max(0.5, visualizationZoom - 0.25))}
-        >
-          <Text style={styles.zoomButtonText}>🔍-</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.zoomIndicator}>
-          <Text style={styles.zoomText}>{(visualizationZoom * 100).toFixed(0)}%</Text>
+        <View style={styles.controlsLeft}>
+          {Platform.OS === 'web' && (
+            <Text style={styles.webInstructions}>
+              🖱️ Roda do mouse: zoom • Arrastar: mover gráfico
+            </Text>
+          )}
         </View>
         
-        <TouchableOpacity 
-          style={styles.zoomButton}
-          onPress={() => setVisualizationZoom(Math.min(3.0, visualizationZoom + 0.25))}
-        >
-          <Text style={styles.zoomButtonText}>🔍+</Text>
-        </TouchableOpacity>
+        <View style={styles.controlsCenter}>
+          <TouchableOpacity 
+            style={styles.zoomButton}
+            onPress={() => setVisualizationZoom(Math.max(0.5, visualizationZoom - 0.25))}
+          >
+            <Text style={styles.zoomButtonText}>🔍-</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.zoomIndicator}>
+            <Text style={styles.zoomText}>{(visualizationZoom * 100).toFixed(0)}%</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.zoomButton}
+            onPress={() => setVisualizationZoom(Math.min(3.0, visualizationZoom + 0.25))}
+          >
+            <Text style={styles.zoomButtonText}>🔍+</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.zoomButton, styles.resetButton]}
+            onPress={() => setVisualizationZoom(1.0)}
+          >
+            <Text style={styles.zoomButtonText}>⚪</Text>
+          </TouchableOpacity>
+        </View>
         
-        <TouchableOpacity 
-          style={[styles.zoomButton, styles.resetButton]}
-          onPress={() => setVisualizationZoom(1.0)}
-        >
-          <Text style={styles.zoomButtonText}>⚪</Text>
-        </TouchableOpacity>
+        <View style={styles.controlsRight}>
+          <Text style={styles.modeText}>
+            {visualizationMode === 'real' ? '📏 Real' : '🔧 Técnica'}
+          </Text>
+        </View>
       </View>
 
       {/* Interactive container with horizontal ScrollView */}
@@ -339,8 +355,8 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           showsHorizontalScrollIndicator={true}
           contentContainerStyle={{
             alignItems: 'center',
-            paddingHorizontal: spacing.md,
-            minWidth: Math.max(svgDimensions.svgWidth * visualizationZoom + spacing.md * 2, SCREEN_WIDTH),
+            paddingHorizontal: spacing.md * 2,
+            minWidth: Math.max(svgDimensions.svgWidth * visualizationZoom + spacing.md * 8, SCREEN_WIDTH * visualizationZoom),
           }}
           style={styles.svgScrollContainer}
           {...panResponder.panHandlers}
@@ -357,11 +373,13 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
 
         <Animated.View
           style={{
-            width: Math.max(svgDimensions.svgWidth * visualizationZoom + spacing.md * 2, SCREEN_WIDTH),
+            width: svgDimensions.svgWidth * visualizationZoom,
+            height: svgDimensions.svgHeight * visualizationZoom,
             transform: [
               { translateX: animatedPan.x },
               { translateY: animatedPan.y },
             ],
+            alignSelf: visualizationZoom <= 1.0 ? 'center' : 'flex-start',
           }}
         >
           <Svg 
@@ -791,6 +809,25 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showAdvancedExport, setShowAdvancedExport] = useState(false);
   const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false);
+
+  // Handle edited geometry from GeometryEditor
+  useEffect(() => {
+    if (route?.params?.editedGeometry) {
+      setGeometry(route.params.editedGeometry);
+      setShowVisualization(true);
+      
+      // Auto-analyze if requested
+      if (route.params.shouldAnalyze) {
+        // Delay to allow state to update
+        setTimeout(() => {
+          handleAnalyze();
+        }, 100);
+      }
+      
+      // Clear the params to prevent re-triggering
+      navigation.setParams({ editedGeometry: null, shouldAnalyze: false });
+    }
+  }, [route?.params?.editedGeometry]);
   const [firstRunStep, setFirstRunStep] = useState(0);
   const [isFirstRun, setIsFirstRun] = useState(false);
   const [userSettings, setUserSettings] = useState({});
@@ -814,6 +851,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
 
   // Refs for tutorial targets
   const appHeaderRef = useRef(null);
+  const scrollViewRef = useRef(null);
   const quickExamplesRef = useRef(null);
   const unitSelectorRef = useRef(null);
   const geometryInputRef = useRef(null);
@@ -1194,6 +1232,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
     <View style={styles.safeContainer}>
       {/* <FloatingTipManager category="general"> */}
         <OptimizedScrollView
+          ref={scrollViewRef}
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -1209,6 +1248,16 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
             onSelectExample={handleSelectExample} 
             onLoadFile={handleLoadFile}
             currentUnit={currentUnit}
+            onNewProject={() => {
+              // Auto-scroll to geometry input after example selection
+              setTimeout(() => {
+                geometryInputRef.current?.measure?.((x, y, width, height, pageX, pageY) => {
+                  if (pageY) {
+                    scrollViewRef.current?.scrollTo?.({ y: pageY - 100, animated: true });
+                  }
+                });
+              }, 300);
+            }}
           />
         </View>
 
@@ -1473,13 +1522,14 @@ const styles = StyleSheet.create({
   visualizationContainer: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: spacing.md,
-    marginVertical: spacing.sm,
-    borderRadius: 12,
-    padding: spacing.md,
-    paddingTop: spacing.md, // Normal padding
+    marginVertical: spacing.lg,
+    borderRadius: 16,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
   },
@@ -1509,12 +1559,35 @@ const styles = StyleSheet.create({
   zoomControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  controlsLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  controlsCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlsRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  webInstructions: {
+    fontSize: typography.caption,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  modeText: {
+    fontSize: typography.caption,
+    color: '#374151',
+    fontWeight: '600',
   },
   zoomButton: {
     backgroundColor: '#E5E7EB',
@@ -1681,12 +1754,14 @@ const styles = StyleSheet.create({
   resultsContainer: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: spacing.md,
-    marginVertical: spacing.sm,
-    borderRadius: 12,
-    padding: spacing.md,
+    marginVertical: spacing.lg,
+    borderRadius: 16,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
   },
@@ -1961,8 +2036,17 @@ const styles = StyleSheet.create({
   // Project management styles
   saveProjectContainer: {
     marginHorizontal: spacing.md,
-    marginVertical: spacing.sm,
-    gap: spacing.md,
+    marginVertical: spacing.lg,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   saveProjectButton: {
     backgroundColor: '#10B981',
@@ -1970,13 +2054,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: spacing.sm,
-    minHeight: scale(50),
+    marginBottom: spacing.md,
+    minHeight: scale(52),
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   saveProjectText: {
     color: '#FFFFFF',
@@ -1989,13 +2073,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: spacing.sm,
-    minHeight: scale(50),
+    marginBottom: spacing.md,
+    minHeight: scale(52),
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   manageProjectsText: {
     color: '#FFFFFF',
@@ -2011,18 +2095,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: spacing.sm,
-    minHeight: scale(50),
+    marginBottom: spacing.md,
+    minHeight: scale(52),
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   quickExportContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: spacing.sm,
   },
   quickExportButton: {
     flex: 1,
@@ -2031,6 +2114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: 8,
     alignItems: 'center',
+    marginHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(16, 185, 129, 0.3)',
     shadowColor: '#000000',
@@ -2053,7 +2137,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: spacing.sm,
-    gap: spacing.sm,
   },
   featureButton: {
     flex: 1,
@@ -2065,6 +2148,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: scale(48),
     minWidth: scale(48),
+    marginHorizontal: spacing.xs,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
