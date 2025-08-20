@@ -9,7 +9,8 @@ import {
   Animated,
   Easing,
   Platform,
-  PanResponder
+  PanResponder,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -182,6 +183,18 @@ const OnboardingScreen = ({ onComplete }) => {
   ).current;
 
   const renderIcon = (step) => {
+    if (step.id === 'welcome') {
+      return (
+        <View style={styles.iconContainer}>
+          <Image 
+            source={require('../../assets/didgemap.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+        </View>
+      );
+    }
+    
     return (
       <View style={styles.iconContainer}>
         <Text style={styles.iconText}>{step.icon}</Text>
@@ -300,6 +313,10 @@ const styles = StyleSheet.create({
   iconText: {
     fontSize: 48,
     textAlign: 'center',
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
   },
   title: {
     fontSize: typography.h2,

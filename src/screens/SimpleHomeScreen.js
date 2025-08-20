@@ -27,6 +27,8 @@ import { OptimizedScrollView, OptimizedTouchableOpacity, OptimizedText } from '.
 import { AppIcon } from '../components/IconSystem';
 import { Visualization3D } from '../components/Visualization3D';
 import { AIRecommendations } from '../components/AIRecommendations';
+import { TuningSelector } from '../components/TuningSelector';
+import { themeService } from '../services/theme/ThemeService';
 import { useTutorial, useTips } from '../hooks/useTutorial';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceInfo, getTypography, getSpacing, scale } from '../utils/responsive';
@@ -46,11 +48,27 @@ const typography = getTypography();
 const spacing = getSpacing();
 
 // Optimized GeometryVisualization Component with Performance Controls
-const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = 'metric', visualizationZoom = 1.0, setVisualizationZoom, visualizationMode = 'technical', setVisualizationMode, panOffset, setPanOffset }) => {
+const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = 'metric', visualizationZoom = 1.0, setVisualizationZoom, visualizationMode = 'technical', setVisualizationMode, panOffset, setPanOffset, analysisResults = [] }) => {
   // Skip rendering if not visible
   if (!isVisible) {
     return null;
   }
+  
+  // Theme support
+  const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+  const colors = currentTheme.colors;
+
+  useEffect(() => {
+    const handleThemeChange = (newTheme) => {
+      setCurrentTheme(newTheme);
+    };
+
+    themeService.addThemeChangeListener(handleThemeChange);
+    
+    return () => {
+      themeService.removeThemeChangeListener(handleThemeChange);
+    };
+  }, []);
   
   // Animated values for smooth interactions
   const animatedZoom = useRef(new Animated.Value(visualizationZoom)).current;
@@ -133,9 +151,9 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     }
   }, [geometry, currentUnit]);
 
-  const { svgDimensions, pathData, scaleMarks } = useMemo(() => {
+  const { svgDimensions, pathData, scaleMarks, validPoints } = useMemo(() => {
     if (!geometry || !geometry.trim() || points.length < 2) {
-      return { svgDimensions: null, pathData: null, scaleMarks: [] };
+      return { svgDimensions: null, pathData: null, scaleMarks: [], validPoints: [] };
     }
 
     // Validate points data to prevent NaN calculations
@@ -145,7 +163,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     );
 
     if (validPoints.length < 2) {
-      return { svgDimensions: null, pathData: null, scaleMarks: [] };
+      return { svgDimensions: null, pathData: null, scaleMarks: [], validPoints: [] };
     }
 
     const maxPosition = Math.max(...validPoints.map(p => p.position));
@@ -164,10 +182,10 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     const safeSpacingXL = isFinite(spacing.xl) ? spacing.xl : 24;
     const safeSpacingMD = isFinite(spacing.md) ? spacing.md : 12;
     
-    // Calculate dimensions based on visualization mode
+    // Calculate dimensions based on visualization mode - FULL WIDTH
     const realAspectRatio = maxPosition / (maxDiameter / 10); // Convert mm to cm for true ratio
-    const svgWidth = Math.min(safeScreenWidth - safeSpacingXL, deviceInfo.isTablet ? 700 : 380);
-    const margin = safeSpacingMD;
+    const svgWidth = safeScreenWidth - safeSpacingXL * 0.5; // Use almost full screen width
+    const margin = safeSpacingMD * 0.6; // Even smaller margins for maximum space
     
     let svgHeight, scaleX, scaleY, targetAspectRatio;
     
@@ -187,10 +205,10 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       scaleY = baseScaleY * visualizationZoom;
       
     } else {
-      // Modo Técnico: comprimento real + diâmetro amplificado para visibilidade
-      const technicalAspectRatio = Math.max(8, Math.min(realAspectRatio / 3, 15)); // Reduce ratio for visibility
+      // Modo Técnico: comprimento real + diâmetro amplificado para visibilidade - AUMENTADO
+      const technicalAspectRatio = Math.max(6, Math.min(realAspectRatio / 3, 12)); // Better ratio for visibility
       const idealHeight = svgWidth / technicalAspectRatio;
-      svgHeight = Math.max(idealHeight, deviceInfo.isTablet ? scale(100) : scale(80)); // Taller for detail
+      svgHeight = Math.max(idealHeight, deviceInfo.isTablet ? scale(160) : scale(140)); // Much taller for better detail
       targetAspectRatio = technicalAspectRatio;
       
       const availableWidth = Math.max(svgWidth - margin * 2, 100);
@@ -207,7 +225,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
     if (!isFinite(svgHeight) || !isFinite(svgWidth) || !isFinite(scaleX) || !isFinite(scaleY) ||
         svgHeight <= 0 || svgWidth <= 0 || scaleX <= 0 || scaleY <= 0) {
       console.warn('Invalid SVG dimensions:', { svgHeight, svgWidth, scaleX, scaleY, SCREEN_WIDTH, spacing: spacing.xl });
-      return { svgDimensions: null, pathData: null, scaleMarks: [] };
+      return { svgDimensions: null, pathData: null, scaleMarks: [], validPoints: [] };
     }
     
     // Create technical profile view - simple lines showing the bore
@@ -238,19 +256,18 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       pathData += `M ${x1},${y1Top} L ${x2},${y2Top} L ${x2},${y2Bottom} L ${x1},${y1Bottom} Z `;
     }
 
-    // Generate scale marks with zoom-aware spacing to prevent overlap
+    // Generate scale marks with zoom-aware spacing to prevent overlap - 20CM INTERVALS
     const scaleMarks = [];
-    const baseScaleStep = maxPosition > 100 ? 20 : maxPosition > 50 ? 10 : 5;
-    // Adjust label density based on zoom to prevent text overlap
-    const zoomAdjustedStep = baseScaleStep * Math.max(1, visualizationZoom / 2);
-    const actualStep = Math.ceil(zoomAdjustedStep / baseScaleStep) * baseScaleStep; // Round to nice numbers
+    const baseScaleStep = 200; // Fixed 200mm = 20cm intervals
+    // Simplify to always show labels on main marks to ensure visibility
+    const actualStep = baseScaleStep; // Keep consistent 20cm intervals
     
     for (let pos = 0; pos <= maxPosition; pos += actualStep) {
       const x = margin + pos * scaleX;
       scaleMarks.push({
         x,
         position: pos,
-        isMajor: pos % (actualStep * 2) === 0
+        isMajor: true // All marks are major to ensure labels are visible
       });
     }
 
@@ -266,7 +283,8 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
         scaleY
       },
       pathData,
-      scaleMarks
+      scaleMarks,
+      validPoints
     };
   }, [points, geometry, visualizationZoom, visualizationMode]);
 
@@ -355,8 +373,9 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           showsHorizontalScrollIndicator={true}
           contentContainerStyle={{
             alignItems: 'center',
-            paddingHorizontal: spacing.md * 2,
-            minWidth: Math.max(svgDimensions.svgWidth * visualizationZoom + spacing.md * 8, SCREEN_WIDTH * visualizationZoom),
+            justifyContent: 'center', // Center horizontally
+            paddingHorizontal: spacing.sm, // Reduced padding for more space
+            minWidth: Math.max(svgDimensions.svgWidth * visualizationZoom + spacing.md * 4, SCREEN_WIDTH * visualizationZoom),
           }}
           style={styles.svgScrollContainer}
           {...panResponder.panHandlers}
@@ -379,7 +398,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
               { translateX: animatedPan.x },
               { translateY: animatedPan.y },
             ],
-            alignSelf: visualizationZoom <= 1.0 ? 'center' : 'flex-start',
+            alignSelf: 'center', // Always center the visualization
           }}
         >
           <Svg 
@@ -411,17 +430,39 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
                 strokeWidth={mark.isMajor ? "1" : "0.5"}
               />
               
-              {/* Scale labels */}
+              {/* Scale labels - OUTSIDE the graph */}
               {mark.isMajor && (
                 <SvgText
                   x={mark.x}
-                  y={svgDimensions.svgHeight - svgDimensions.margin + 12}
-                  fontSize="10"
-                  fill="#6B7280"
+                  y={svgDimensions.svgHeight - svgDimensions.margin + 15}
+                  fontSize="12"
+                  fill="#374151"
                   textAnchor="middle"
                   fontFamily="monospace"
+                  fontWeight="600"
                 >
-                  {mark.position}
+                  {currentUnit === 'metric' 
+                    ? `${(mark.position / 10).toFixed(0)}cm` 
+                    : `${(mark.position / 25.4).toFixed(1)}"`
+                  }
+                </SvgText>
+              )}
+              
+              {/* Scale labels - INSIDE the graph (above the instrument) */}
+              {mark.isMajor && mark.position > 0 && (
+                <SvgText
+                  x={mark.x}
+                  y={svgDimensions.margin - 5}
+                  fontSize="11"
+                  fill="#DC2626"
+                  textAnchor="middle"
+                  fontFamily="monospace"
+                  fontWeight="700"
+                >
+                  {currentUnit === 'metric' 
+                    ? `${(mark.position / 10).toFixed(0)}cm` 
+                    : `${(mark.position / 25.4).toFixed(1)}"`
+                  }
                 </SvgText>
               )}
             </G>
@@ -437,6 +478,85 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
             strokeWidth="0.5"
             strokeDasharray="2,2"
           />
+
+          {/* Y-axis diameter markings */}
+          {(() => {
+            const centerY = svgDimensions.svgHeight / 2;
+            const diameterMarks = [];
+            const maxRadius = Math.max(svgDimensions.maxDiameter / 2, 50); // Min 5cm radius for visibility
+            const radiusStep = currentUnit === 'metric' ? 50 : 50; // 5cm steps in metric, maintain for imperial
+            
+            // Create marks above and below center line
+            for (let radius = radiusStep; radius <= maxRadius + radiusStep; radius += radiusStep) {
+              const yOffset = radius * svgDimensions.scaleY;
+              if (centerY - yOffset > svgDimensions.margin && centerY + yOffset < svgDimensions.svgHeight - svgDimensions.margin) {
+                const diameter = radius * 2;
+                const displayValue = currentUnit === 'metric' 
+                  ? `${(diameter / 10).toFixed(0)}cm`  // Convert mm to cm
+                  : `${(diameter / 25.4).toFixed(1)}"`; // Convert mm to inches
+                
+                diameterMarks.push(
+                  <G key={`diameter-${radius}`}>
+                    {/* Top mark */}
+                    <Line
+                      x1={svgDimensions.margin - 5}
+                      y1={centerY - yOffset}
+                      x2={svgDimensions.margin}
+                      y2={centerY - yOffset}
+                      stroke="#9CA3AF"
+                      strokeWidth="1"
+                    />
+                    <SvgText
+                      x={svgDimensions.margin - 10}
+                      y={centerY - yOffset + 4}
+                      fontSize="11"
+                      fill="#374151"
+                      textAnchor="end"
+                      fontFamily="monospace"
+                      fontWeight="600"
+                    >
+                      {displayValue}
+                    </SvgText>
+                    
+                    {/* Bottom mark */}
+                    <Line
+                      x1={svgDimensions.margin - 8}
+                      y1={centerY + yOffset}
+                      x2={svgDimensions.margin}
+                      y2={centerY + yOffset}
+                      stroke="#9CA3AF"
+                      strokeWidth="1.5"
+                    />
+                    <SvgText
+                      x={svgDimensions.margin - 10}
+                      y={centerY + yOffset + 4}
+                      fontSize="11"
+                      fill="#374151"
+                      textAnchor="end"
+                      fontFamily="monospace"
+                      fontWeight="600"
+                    >
+                      {displayValue}
+                    </SvgText>
+                  </G>
+                );
+              }
+            }
+            return diameterMarks;
+          })()}
+
+          {/* Y-axis label only (X-axis is clear from the measurements) */}
+          <SvgText
+            x={15}
+            y={svgDimensions.svgHeight / 2}
+            fontSize="12"
+            fill="#374151"
+            textAnchor="middle"
+            fontWeight="600"
+            transform={`rotate(-90, 15, ${svgDimensions.svgHeight / 2})`}
+          >
+            {currentUnit === 'metric' ? 'Diâmetro (cm)' : 'Diameter (inches)'}
+          </SvgText>
           
           {/* Technical bore profile - simple and clean */}
           <Path
@@ -445,6 +565,133 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
             stroke="#1F2937"
             strokeWidth="1.5"
           />
+
+          {/* Professional measurements - position and diameter in mm like text format */}
+          {(() => {
+            const isSmallScreen = svgDimensions.svgWidth < 400;
+            const fontSize = isSmallScreen ? "8" : "9";
+            const measurements = [];
+            
+            // Create measurements every 25mm (2.5cm intervals like the text example)
+            const stepMm = 250; // 25mm intervals in our coordinate system (250 = 25mm * 10)
+            const maxPosition = svgDimensions.maxPosition * 10; // Convert to mm
+            
+            // Start from 0
+            for (let positionMm = 0; positionMm <= maxPosition; positionMm += stepMm) {
+              // Find diameter at this position by interpolation
+              let diameter = 0;
+              
+              // Handle position 0 separately
+              if (positionMm === 0) {
+                diameter = validPoints[0]?.diameter || 0;
+              } else {
+                // Find the two closest points for interpolation
+                const closestIndex = validPoints.reduce((closest, point, index) => {
+                  const distance = Math.abs(point.position - positionMm);
+                  const closestDistance = Math.abs(validPoints[closest].position - positionMm);
+                  return distance < closestDistance ? index : closest;
+                }, 0);
+                
+                // Interpolate between points if needed
+                if (closestIndex < validPoints.length - 1) {
+                  const p1 = validPoints[closestIndex];
+                  const p2 = validPoints[closestIndex + 1];
+                  
+                  if (positionMm >= p1.position && positionMm <= p2.position) {
+                    // Interpolate
+                    const ratio = (positionMm - p1.position) / (p2.position - p1.position);
+                    diameter = p1.diameter + (p2.diameter - p1.diameter) * ratio;
+                  } else if (positionMm < p1.position && closestIndex > 0) {
+                    // Use previous point for extrapolation
+                    const p0 = validPoints[closestIndex - 1];
+                    const ratio = (positionMm - p0.position) / (p1.position - p0.position);
+                    diameter = p0.diameter + (p1.diameter - p0.diameter) * ratio;
+                  } else {
+                    diameter = p1.diameter;
+                  }
+                } else {
+                  diameter = validPoints[closestIndex].diameter;
+                }
+              }
+              
+              // Calculate SVG position
+              const x = svgDimensions.margin + (positionMm / 10) * svgDimensions.scaleX;
+              const yTop = svgDimensions.svgHeight / 2 - (diameter / 2) * svgDimensions.scaleY;
+              const yBottom = svgDimensions.svgHeight / 2 + (diameter / 2) * svgDimensions.scaleY;
+              const yCenter = svgDimensions.svgHeight / 2;
+              
+              // Convert to mm for display (matching text format)
+              const displayPosition = (positionMm / 10).toFixed(0); // Convert to mm and remove decimals
+              const displayDiameter = (diameter).toFixed(1); // Keep 1 decimal like 29.5
+              
+              // Only show if within bounds
+              if (x >= svgDimensions.margin && x <= svgDimensions.svgWidth - svgDimensions.margin) {
+                measurements.push(
+                  <G key={`text-format-${positionMm}`}>
+                    {/* Position in mm - TOP */}
+                    <SvgText
+                      x={x}
+                      y={yTop - (isSmallScreen ? 10 : 14)}
+                      fontSize={fontSize}
+                      fill={colors?.error || "#DC2626"}
+                      textAnchor="middle"
+                      fontFamily="monospace"
+                      fontWeight="700"
+                    >
+                      {displayPosition}
+                    </SvgText>
+                    
+                    {/* Diameter in mm - BOTTOM */}
+                    <SvgText
+                      x={x}
+                      y={yBottom + (isSmallScreen ? 12 : 16)}
+                      fontSize={fontSize}
+                      fill={colors?.primary || "#059669"}
+                      textAnchor="middle"
+                      fontFamily="monospace"
+                      fontWeight="700"
+                    >
+                      {displayDiameter}
+                    </SvgText>
+                    
+                    {/* Vertical measurement line */}
+                    <Line
+                      x1={x}
+                      y1={yTop - (isSmallScreen ? 8 : 12)}
+                      x2={x}
+                      y2={yBottom + (isSmallScreen ? 10 : 14)}
+                      stroke={colors?.textSecondary || "#6B7280"}
+                      strokeWidth="1"
+                      opacity="0.4"
+                      strokeDasharray="2,1"
+                    />
+                    
+                    {/* Horizontal diameter indicator */}
+                    <Line
+                      x1={x - (diameter / 2) * svgDimensions.scaleY * 0.8}
+                      y1={yCenter}
+                      x2={x + (diameter / 2) * svgDimensions.scaleY * 0.8}
+                      y2={yCenter}
+                      stroke={colors?.primary || "#059669"}
+                      strokeWidth="1.5"
+                      opacity="0.6"
+                    />
+                    
+                    {/* Center point indicator */}
+                    <Circle
+                      cx={x}
+                      cy={yCenter}
+                      r="1.5"
+                      fill={colors?.textSecondary || "#6B7280"}
+                      opacity="0.8"
+                    />
+                  </G>
+                );
+              }
+            }
+            
+            return measurements;
+          })()}
           
           {/* Section dividers */}
           {points.map((point, index) => (
@@ -506,36 +753,187 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
         )}
       </View>
       
-      <View style={styles.geometryInfo}>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>{localizationService.t('length')}</Text>
-          <Text style={styles.infoValue}>
+      {/* Responsive technical parameters - better for mobile */}
+      <View style={styles.geometryInfoResponsive}>
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardHeader}>
+            <AppIcon name="ruler" size={16} color="#059669" />
+            <Text style={styles.infoCardTitle}>Comprimento</Text>
+          </View>
+          <Text style={styles.infoCardValue}>
             {svgDimensions.maxPosition.toFixed(1)} {currentUnit === 'metric' ? 'cm' : 'in'}
           </Text>
         </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>{localizationService.t('diameter')}</Text>
-          <Text style={styles.infoValue}>
-            {svgDimensions.minDiameter.toFixed(1)}-{svgDimensions.maxDiameter.toFixed(1)} {currentUnit === 'metric' ? 'mm' : 'in'}
+        
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardHeader}>
+            <AppIcon name="droplet" size={16} color="#3B82F6" />
+            <Text style={styles.infoCardTitle}>Volume</Text>
+          </View>
+          <Text style={styles.infoCardValue}>
+            {(() => {
+              // Calculate internal volume using cylindrical segments
+              let totalVolume = 0;
+              for (let i = 0; i < validPoints.length - 1; i++) {
+                const p1 = validPoints[i];
+                const p2 = validPoints[i + 1];
+                const length = Math.abs(p2.position - p1.position); // in mm
+                const avgRadius = (p1.diameter + p2.diameter) / 4; // convert diameter to radius in mm
+                const segmentVolume = Math.PI * avgRadius * avgRadius * length; // mm³
+                totalVolume += segmentVolume;
+              }
+              
+              if (currentUnit === 'metric') {
+                // Convert mm³ to liters (1 liter = 1,000,000 mm³)
+                const volumeLiters = totalVolume / 1000000;
+                return `${volumeLiters.toFixed(2)}L`;
+              } else {
+                // Convert mm³ to cubic inches (1 in³ = 16,387 mm³)
+                const volumeInches = totalVolume / 16387;
+                return `${volumeInches.toFixed(2)}in³`;
+              }
+            })()}
           </Text>
         </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>{localizationService.t('points')}</Text>
-          <Text style={styles.infoValue}>{points.length}</Text>
+        
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardHeader}>
+            <AppIcon name="resize" size={16} color="#F59E0B" />
+            <Text style={styles.infoCardTitle}>Faixa Ø</Text>
+          </View>
+          <Text style={styles.infoCardValue}>
+            {svgDimensions.minDiameter.toFixed(0)}-{svgDimensions.maxDiameter.toFixed(0)}mm
+          </Text>
+        </View>
+      </View>
+
+      {/* Technical excavation data - exactly what's needed for carving */}
+      <View style={styles.excavationDataContainer}>
+        <View style={styles.excavationHeader}>
+          <AppIcon name="construct" size={18} color="#059669" />
+          <Text style={styles.excavationDataTitle}>Dados Técnicos de Escavação</Text>
+        </View>
+        <Text style={styles.excavationDataSubtitle}>
+          Diâmetros a cada {currentUnit === 'metric' ? '10cm' : '4"'} - Para marcar no tronco
+        </Text>
+        
+        <View style={styles.excavationTable}>
+          <View style={styles.excavationTableHeader}>
+            <Text style={styles.excavationHeaderCell}>
+              {currentUnit === 'metric' ? 'Posição (cm)' : 'Position (in)'}
+            </Text>
+            <Text style={styles.excavationHeaderCell}>
+              {currentUnit === 'metric' ? 'Diâmetro (mm)' : 'Diameter (in)'}
+            </Text>
+            <Text style={styles.excavationHeaderCell}>
+              {currentUnit === 'metric' ? 'Raio (mm)' : 'Radius (in)'}
+            </Text>
+          </View>
+          
+          <ScrollView style={styles.excavationTableScrollView} showsVerticalScrollIndicator={false}>
+            {(() => {
+              const excavationPoints = [];
+              const step = currentUnit === 'metric' ? 100 : 101.6; // 10cm or ~4 inches
+              const maxPos = svgDimensions.maxPosition * 10; // Convert to mm
+              
+              for (let pos = 0; pos <= maxPos; pos += step) {
+                // Find the closest actual point or interpolate
+                let diameter = 0;
+                const closestPointIndex = validPoints.reduce((closest, point, index) => {
+                  const distance = Math.abs(point.position - pos);
+                  const closestDistance = Math.abs(validPoints[closest].position - pos);
+                  return distance < closestDistance ? index : closest;
+                }, 0);
+                
+                // Simple interpolation for positions between actual points
+                if (closestPointIndex < validPoints.length - 1) {
+                  const p1 = validPoints[closestPointIndex];
+                  const p2 = validPoints[closestPointIndex + 1];
+                  const ratio = (pos - p1.position) / (p2.position - p1.position);
+                  diameter = p1.diameter + (p2.diameter - p1.diameter) * ratio;
+                } else {
+                  diameter = validPoints[closestPointIndex].diameter;
+                }
+                
+                const displayPos = currentUnit === 'metric' ? (pos / 10).toFixed(0) : (pos / 254).toFixed(1);
+                const displayDiameter = currentUnit === 'metric' ? diameter.toFixed(0) : (diameter / 25.4).toFixed(2);
+                const displayRadius = currentUnit === 'metric' ? (diameter / 2).toFixed(0) : (diameter / 50.8).toFixed(2);
+                
+                excavationPoints.push(
+                  <View key={pos} style={[
+                    styles.excavationTableRow,
+                    pos === 0 && styles.excavationTableRowFirst,
+                    pos >= maxPos - step/2 && styles.excavationTableRowLast
+                  ]}>
+                    <Text style={styles.excavationDataCell}>{displayPos}</Text>
+                    <Text style={styles.excavationDataCell}>{displayDiameter}</Text>
+                    <Text style={styles.excavationDataCell}>{displayRadius}</Text>
+                  </View>
+                );
+              }
+              return excavationPoints;
+            })()}
+          </ScrollView>
+        </View>
+        
+        <View style={styles.excavationTipContainer}>
+          <AppIcon name="information-circle" size={16} color="#3B82F6" />
+          <Text style={styles.excavationTip}>
+            <Text style={styles.excavationTipBold}>Dica:</Text> Use o raio para marcar com compasso na madeira
+          </Text>
         </View>
       </View>
       
-      <View style={styles.technicalLegend}>
-        <Text style={styles.legendTitle}>📐 Vista Técnica - Perfil do Bore Interno</Text>
-        <Text style={styles.legendSubtitle}>
-          Comprimento: {svgDimensions.maxPosition.toFixed(1)}cm | 
-          Bore: ⌀{svgDimensions.minDiameter.toFixed(0)}-{svgDimensions.maxDiameter.toFixed(0)}mm
-        </Text>
+      {/* Enhanced legend with measurement guide */}
+      <View style={styles.fixedLegend}>
+        <View style={styles.legendHeader}>
+          <AppIcon name="analytics" size={16} color="#6B7280" />
+          <Text style={styles.fixedLegendTitle}>Geometria - Perfil do Bore Interno</Text>
+        </View>
+        
+        {/* Professional measurement guide legend */}
+        <View style={styles.measurementLegend}>
+          <Text style={styles.measurementLegendTitle}>📐 Formato Texto: Posição Diâmetro (em mm)</Text>
+          <View style={styles.measurementLegendItems}>
+            <View style={styles.measurementLegendItem}>
+              <View style={[styles.colorIndicator, { backgroundColor: colors?.error || '#DC2626' }]} />
+              <Text style={styles.measurementLegendText}>Posição (mm) - Superior</Text>
+            </View>
+            <View style={styles.measurementLegendItem}>
+              <View style={[styles.colorIndicator, { backgroundColor: colors?.primary || '#059669' }]} />
+              <Text style={styles.measurementLegendText}>Diâmetro (mm) - Inferior</Text>
+            </View>
+            <View style={styles.measurementLegendItem}>
+              <View style={[styles.colorIndicator, { backgroundColor: colors?.textSecondary || '#6B7280' }]} />
+              <Text style={styles.measurementLegendText}>Linhas guia</Text>
+            </View>
+          </View>
+          <Text style={styles.measurementLegendNote}>
+            💡 Exemplo: "0 29.5" = posição 0mm, diâmetro 29.5mm
+          </Text>
+        </View>
+        
+        <View style={styles.legendStats}>
+          <View style={styles.legendStat}>
+            <AppIcon name="ruler" size={12} color="#059669" />
+            <Text style={styles.legendStatText}>
+              {svgDimensions.maxPosition.toFixed(1)}cm
+            </Text>
+          </View>
+          <View style={styles.legendStat}>
+            <AppIcon name="location" size={12} color="#3B82F6" />
+            <Text style={styles.legendStatText}>
+              {validPoints.length} pontos
+            </Text>
+          </View>
+          <View style={styles.legendStat}>
+            <AppIcon name="musical-notes" size={12} color="#8B5CF6" />
+            <Text style={styles.legendStatText}>
+              {analysisResults?.[0]?.note ? `${analysisResults[0].note} ${analysisResults[0].frequency.toFixed(0)}Hz` : 'Analisar'}
+            </Text>
+          </View>
+        </View>
       </View>
-      
-      <Text style={styles.visualizationHint}>
-        {localizationService.t('geometryVisualizationDesc')}
-      </Text>
     </View>
   );
 });
@@ -564,7 +962,7 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
         <View style={styles.droneInfo}>
           <Text style={styles.droneLabel}>{localizationService.t('fundamental')}</Text>
           <Text style={styles.droneFrequency}>{firstResult.frequency.toFixed(2)} Hz</Text>
-          <Text style={styles.droneNote}>{firstResult.note}{firstResult.octave}</Text>
+          <Text style={styles.droneNote}>{firstResult.note} {firstResult.frequency.toFixed(0)}Hz</Text>
         </View>
         <View style={styles.droneAccuracy}>
           <Text style={styles.accuracyLabel}>{localizationService.t('quality')}</Text>
@@ -590,9 +988,7 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
           <View style={styles.analysisTable}>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderText, { flex: 0.6 }]}>H#</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.4 }]}>Freq (Hz)</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Nota</Text>
-              <Text style={[styles.tableHeaderText, { flex: 0.7 }]}>Oct</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.7 }]}>Nota + Freq</Text>
               <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Cents</Text>
               <Text style={[styles.tableHeaderText, { flex: 0.9 }]}>Ampl</Text>
               <Text style={[styles.tableHeaderText, { flex: 1.4 }]}>Razão</Text>
@@ -634,14 +1030,8 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
                   <Text style={[styles.tableCellText, { flex: 0.6, fontWeight: 'bold', color: index === 0 ? '#10B981' : '#374151' }]}>
                     {index === 0 ? 'F0' : `H${index}`}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.4, fontFamily: 'monospace' }]}>
-                    {result.frequency.toFixed(1)}
-                  </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.0, fontWeight: '600' }]}>
-                    {result.note || 'N/A'}
-                  </Text>
-                  <Text style={[styles.tableCellText, { flex: 0.7 }]}>
-                    {result.octave || '-'}
+                  <Text style={[styles.tableCellText, { flex: 1.7, fontWeight: '600', fontFamily: 'monospace' }]}>
+                    {result.note || 'N/A'} {result.frequency.toFixed(0)}Hz
                   </Text>
                   <Text style={[
                     styles.tableCellText, 
@@ -677,7 +1067,7 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
             <View style={styles.summaryRow}>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryLabel}>🎵 Tom Fundamental</Text>
-                <Text style={styles.summaryValue}>{results[0]?.note}{results[0]?.octave}</Text>
+                <Text style={styles.summaryValue}>{results[0]?.note} {results[0]?.frequency.toFixed(0)}Hz</Text>
                 <Text style={styles.summarySubvalue}>{results[0]?.frequency.toFixed(1)} Hz</Text>
               </View>
               <View style={styles.summaryCard}>
@@ -724,10 +1114,6 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
                   <Text style={styles.metadataValue}>{(metadata.averageRadius * 2).toFixed(1)} mm</Text>
                 </View>
                 <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Volume Interno</Text>
-                  <Text style={styles.metadataValue}>{(metadata.volume / 1000).toFixed(2)} L</Text>
-                </View>
-                <View style={styles.metadataItem}>
                   <Text style={styles.metadataLabel}>Impedância Média</Text>
                   <Text style={styles.metadataValue}>
                     {metadata.impedanceProfile?.length ? 
@@ -765,25 +1151,22 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
           })}
         >
           <Text style={styles.soundPreviewText}>
-            {localizationService.t('playDrone')}
+            🎵 {localizationService.t('playDrone')}
+          </Text>
+          <Text style={[styles.soundPreviewText, styles.frequencyText]}>
+            {firstResult.frequency.toFixed(1)}Hz
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.soundPreviewButton, styles.harmonicsButton]}
-          onPress={() => handlePlaySound('harmonics', results.map(r => r.frequency))}
+          style={[styles.soundPreviewButton, styles.trombetasButton]}
+          onPress={() => handlePlaySound('trombetas', results)}
         >
           <Text style={styles.soundPreviewText}>
-            {localizationService.t('playHarmonics')}
+            🎺 Trombetas
           </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.soundPreviewButton, styles.fullSpectrumButton]}
-          onPress={() => handlePlaySound('full', results.map(r => r.frequency))}
-        >
-          <Text style={styles.soundPreviewText}>
-            {localizationService.t('playFullSpectrum')}
+          <Text style={[styles.soundPreviewText, styles.notesText]}>
+            {results.map(r => `${r.note} ${r.frequency.toFixed(0)}Hz`).join(' → ')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -797,6 +1180,8 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const [analysisResults, setAnalysisResults] = useState([]);
   const [analysisMetadata, setAnalysisMetadata] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+  const colors = currentTheme.colors;
   const [showResults, setShowResults] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
   const [visualizationZoom, setVisualizationZoom] = useState(1.0);
@@ -873,6 +1258,19 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
     };
     
     initializePreferences();
+  }, []);
+
+  // Theme change listener
+  useEffect(() => {
+    const handleThemeChange = (newTheme) => {
+      setCurrentTheme(newTheme);
+    };
+
+    themeService.addThemeChangeListener(handleThemeChange);
+    
+    return () => {
+      themeService.removeThemeChangeListener(handleThemeChange);
+    };
   }, []);
 
   // Register refs with tutorial system
@@ -986,11 +1384,8 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
           const harmonics = data.harmonics || [];
           await audioEngine.playDrone(fundamental, 3000, 0.3, harmonics);
           break;
-        case 'harmonics':
-          await audioEngine.playHarmonics(data, 2000, 0.2);
-          break;
-        case 'full':
-          await audioEngine.playFullSpectrum(data, 4000, 0.25);
+        case 'trombetas':
+          await audioEngine.playTrombetas(data, 800, 0.4);
           break;
       }
     } catch (error) {
@@ -1229,11 +1624,11 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   };
 
   return (
-    <View style={styles.safeContainer}>
+    <SafeAreaView style={[styles.safeContainer, { backgroundColor: colors.background }]}>
       {/* <FloatingTipManager category="general"> */}
         <OptimizedScrollView
           ref={scrollViewRef}
-          style={styles.container}
+          style={[styles.container, { backgroundColor: colors.background }]}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
@@ -1268,6 +1663,16 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
             disabled={isAnalyzing}
           />
         </View>
+
+        <TuningSelector
+          onTuningChange={(tuning) => {
+            console.log('Tuning changed to:', tuning.name);
+            // Force re-analysis when tuning changes if there are results
+            if (analysisResults.length > 0) {
+              handleAnalyze();
+            }
+          }}
+        />
         
         <View ref={geometryInputRef}>
           <GeometryInput
@@ -1298,6 +1703,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
         setVisualizationMode={setVisualizationMode}
         panOffset={panOffset}
         setPanOffset={setPanOffset}
+        analysisResults={analysisResults}
       />
       
       <AnalysisResults 
@@ -1501,7 +1907,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
       {/* Removed modal components - now using navigation */}
       </OptimizedScrollView>
       {/* </FloatingTipManager> */}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -1541,6 +1947,7 @@ const styles = StyleSheet.create({
   },
   svgContainerWrapper: {
     marginBottom: spacing.md,
+    marginHorizontal: 2, // Minimal side margins for full width
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
     elevation: 2,
@@ -1548,9 +1955,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    alignItems: 'center', // Center the content
+    justifyContent: 'center', // Center vertically
   },
   svgScrollContainer: {
-    maxHeight: 300, // Limit height for better UX
+    maxHeight: deviceInfo.isTablet ? 500 : 400, // Increased height limit
+    minHeight: deviceInfo.isTablet ? 200 : 150, // Minimum height
   },
   svgContainer: {
     alignItems: 'center',
@@ -1686,6 +2096,44 @@ const styles = StyleSheet.create({
   infoItem: {
     alignItems: 'center',
   },
+  
+  // New responsive info cards
+  geometryInfoResponsive: {
+    flexDirection: deviceInfo.isTablet ? 'row' : 'column',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flex: deviceInfo.isTablet ? 1 : undefined,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  infoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  infoCardTitle: {
+    fontSize: typography.small,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginLeft: spacing.xs,
+  },
+  infoCardValue: {
+    fontSize: deviceInfo.isTablet ? typography.h3 : typography.h4,
+    fontWeight: '700',
+    color: '#1F2937',
+    fontFamily: 'monospace',
+  },
   infoLabel: {
     fontSize: typography.caption,
     fontWeight: '600',
@@ -1697,11 +2145,111 @@ const styles = StyleSheet.create({
     color: '#10B981',
     marginTop: 2,
   },
+  
+  // Excavation data table styles
+  excavationDataContainer: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    maxHeight: 400,
+  },
+  excavationDataTitle: {
+    fontSize: typography.h3,
+    fontWeight: '700',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  excavationDataSubtitle: {
+    fontSize: typography.small,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    fontStyle: 'italic',
+  },
+  excavationTable: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  excavationTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#374151',
+    paddingVertical: spacing.sm,
+  },
+  excavationHeaderCell: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: typography.small,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    paddingHorizontal: spacing.xs,
+  },
+  excavationTableScrollView: {
+    maxHeight: 200,
+  },
+  excavationTableRow: {
+    flexDirection: 'row',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  excavationTableRowFirst: {
+    backgroundColor: '#F0F9FF',
+  },
+  excavationTableRowLast: {
+    backgroundColor: '#FEF2F2',
+  },
+  excavationDataCell: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: typography.small,
+    fontWeight: '600',
+    color: '#374151',
+    paddingHorizontal: spacing.xs,
+  },
+  excavationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  excavationTipContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  excavationTip: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    fontStyle: 'italic',
+  },
+  excavationTipBold: {
+    fontWeight: '700',
+    color: '#10B981',
+  },
   visualizationHint: {
     fontSize: typography.caption,
     color: '#6B7280',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  settingsRow: {
+    flexDirection: deviceInfo.isTablet ? 'row' : 'column',
+    gap: spacing.md,
+    alignItems: deviceInfo.isTablet ? 'flex-start' : 'stretch',
+  },
+  themeToggle: {
+    alignSelf: deviceInfo.isTablet ? 'flex-start' : 'center',
+    marginTop: deviceInfo.isTablet ? spacing.lg : 0,
   },
   technicalLegend: {
     backgroundColor: '#F8FAFC',
@@ -1723,6 +2271,52 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  fixedLegend: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginTop: spacing.sm,
+    marginHorizontal: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    position: 'relative',
+    zIndex: 10, // Always on top
+  },
+  fixedLegendTitle: {
+    fontSize: typography.small,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  fixedLegendSubtitle: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  legendHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  legendStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  legendStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  legendStatText: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    fontWeight: '600',
   },
   legendGrid: {
     flexDirection: 'row',
@@ -1748,6 +2342,54 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     fontWeight: '500',
     flex: 1,
+  },
+  
+  // Measurement legend styles
+  measurementLegend: {
+    backgroundColor: '#FAFBFC',
+    borderRadius: 6,
+    padding: spacing.sm,
+    marginVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  measurementLegendTitle: {
+    fontSize: typography.small,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  measurementLegendItems: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  measurementLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    flex: 1,
+    minWidth: '30%',
+  },
+  colorIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 6,
+  },
+  measurementLegendText: {
+    fontSize: typography.caption,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  measurementLegendNote: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
   
   // Analysis results styles
@@ -1866,26 +2508,37 @@ const styles = StyleSheet.create({
   },
   soundPreviewButton: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: 8,
-    marginHorizontal: 2,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 12,
+    marginHorizontal: spacing.xs,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
   },
   droneButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#059669',
   },
-  harmonicsButton: {
-    backgroundColor: '#3B82F6',
-  },
-  fullSpectrumButton: {
-    backgroundColor: '#8B5CF6',
+  trombetasButton: {
+    backgroundColor: '#DC2626',
   },
   soundPreviewText: {
     color: '#FFFFFF',
-    fontSize: typography.caption,
-    fontWeight: '600',
+    fontSize: typography.small,
+    fontWeight: '700',
     textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  frequencyText: {
+    fontSize: typography.caption,
+    fontWeight: '500',
+    opacity: 0.9,
+  },
+  notesText: {
+    fontSize: typography.caption,
+    fontWeight: '500',
+    opacity: 0.9,
+    maxWidth: '100%',
   },
   
   // Professional analysis table styles

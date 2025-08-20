@@ -40,7 +40,10 @@
       "Bash(timeout 15 npx expo start --no-dev --port 8087)",
       "Bash(cp:*)",
       "Bash(npm:*)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(npx netlify-cli:*)",
+      "Bash(npx serve:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

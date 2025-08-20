@@ -1,48 +1,74 @@
-import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Text, View, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getDeviceInfo, getTypography, getSpacing, getLayoutStyles } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
 import { AppIcon } from './IconSystem';
+import { ThemeToggle } from './ThemeToggle';
+import { themeService } from '../services/theme/ThemeService';
 
 const deviceInfo = getDeviceInfo();
 const typography = getTypography();
 const spacing = getSpacing();
 
 export const AppHeader = () => {
+  const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+
+  useEffect(() => {
+    const handleThemeChange = (newTheme) => {
+      setCurrentTheme(newTheme);
+    };
+
+    themeService.addThemeChangeListener(handleThemeChange);
+    
+    return () => {
+      themeService.removeThemeChangeListener(handleThemeChange);
+    };
+  }, []);
+
+  const colors = currentTheme.colors;
+
   return (
-    <View style={styles.headerContainer}>
-      <LinearGradient
-        colors={['#0F172A', '#1E293B', '#059669']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
+      {/* Theme toggle in top right */}
+      <View style={styles.topBar}>
+        <View style={styles.spacer} />
+        <ThemeToggle />
+      </View>
       
       {/* Main Logo Area */}
       <View style={styles.logoContainer}>
-        <View style={styles.logoIconContainer}>
-          <AppIcon name="music" size={deviceInfo.isTablet ? 40 : 32} color="#FFFFFF" />
-        </View>
+        <Image 
+          source={require('../../assets/didgemap.png')} 
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <View style={styles.logoTextContainer}>
-          <Text style={styles.headerTitle}>{localizationService.t('appName')}</Text>
-          <Text style={styles.headerSubtitle}>{localizationService.t('appSubtitle')}</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            {localizationService.t('appSubtitle')}
+          </Text>
         </View>
       </View>
       
       {/* Quick Features as modern cards */}
       <View style={styles.headerFeatures}>
-        <View style={styles.featureCard}>
-          <AppIcon name="wave" size={16} color="#10B981" />
-          <Text style={styles.featureCardText}>{localizationService.t('acousticAnalysis')}</Text>
+        <View style={[styles.featureCard, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
+          <AppIcon name="wave" size={16} color={colors.success} />
+          <Text style={[styles.featureCardText, { color: colors.textSecondary }]}>
+            {localizationService.t('acousticAnalysis')}
+          </Text>
         </View>
-        <View style={styles.featureCard}>
-          <AppIcon name="chart" size={16} color="#3B82F6" />
-          <Text style={styles.featureCardText}>{localizationService.t('visualization')}</Text>
+        <View style={[styles.featureCard, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
+          <AppIcon name="chart" size={16} color={colors.secondary} />
+          <Text style={[styles.featureCardText, { color: colors.textSecondary }]}>
+            {localizationService.t('visualization')}
+          </Text>
         </View>
-        <View style={styles.featureCard}>
-          <AppIcon name="sound" size={16} color="#8B5CF6" />
-          <Text style={styles.featureCardText}>{localizationService.t('audioPreview')}</Text>
+        <View style={[styles.featureCard, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
+          <AppIcon name="sound" size={16} color={colors.accent} />
+          <Text style={[styles.featureCardText, { color: colors.textSecondary }]}>
+            {localizationService.t('audioPreview')}
+          </Text>
         </View>
       </View>
     </View>
@@ -51,54 +77,54 @@ export const AppHeader = () => {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    overflow: 'hidden',
-    minHeight: deviceInfo.isTablet ? 180 : deviceInfo.isLargeDevice ? 140 : 120,
+    minHeight: deviceInfo.isTablet ? 160 : deviceInfo.isLargeDevice ? 130 : 120,
     position: 'relative',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  logoContainer: {
+  topBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    width: '100%',
+    marginBottom: spacing.sm,
   },
-  logoIconContainer: {
-    width: deviceInfo.isTablet ? 52 : 44,
-    height: deviceInfo.isTablet ? 52 : 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: (deviceInfo.isTablet ? 52 : 44) / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  logoTextContainer: {
-    alignItems: 'flex-start',
+  spacer: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: deviceInfo.isTablet ? typography.h1 * 1.2 : typography.h1,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'left',
+  whiteBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  logoImage: {
+    width: deviceInfo.isTablet ? 400 : 300,
+    height: deviceInfo.isTablet ? 113 : 85,
     marginBottom: spacing.xs,
-    textShadow: '0px 2px 8px rgba(0,0,0,0.3)',
-    letterSpacing: 0.5,
+  },
+  logoTextContainer: {
+    alignItems: 'center',
   },
   headerSubtitle: {
-    fontSize: typography.small,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'left',
+    fontSize: deviceInfo.isTablet ? typography.body : typography.small,
+    color: '#6B7280',
+    textAlign: 'center',
     fontWeight: '500',
-    maxWidth: deviceInfo.isTablet ? 400 : 280,
-    lineHeight: typography.small * 1.3,
+    maxWidth: deviceInfo.isTablet ? 400 : 320,
+    lineHeight: (deviceInfo.isTablet ? typography.body : typography.small) * 1.4,
+    letterSpacing: 0.2,
   },
   headerFeatures: {
     flexDirection: 'row',
@@ -108,25 +134,27 @@ const styles = StyleSheet.create({
     maxWidth: deviceInfo.width - spacing.xl * 2,
   },
   featureCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 90,
+    minWidth: 88,
     flex: 1,
     marginHorizontal: spacing.xs,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   featureCardText: {
     fontSize: typography.caption,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#475569',
     marginTop: spacing.xs,
     textAlign: 'center',
   },

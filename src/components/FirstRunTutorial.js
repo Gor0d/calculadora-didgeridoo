@@ -8,7 +8,8 @@ import {
   Animated,
   Dimensions,
   StatusBar,
-  BackHandler
+  BackHandler,
+  Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 // TutorialManager will be imported dynamically
@@ -249,7 +250,15 @@ export const FirstRunTutorial = ({
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.stepIndicator}>
-                <Text style={styles.stepIcon}>{step.icon}</Text>
+                {step.id === 'intro_1' || (step.icon && step.icon.includes('👋')) ? (
+                  <Image 
+                    source={require('../../assets/didgemap.png')} 
+                    style={styles.stepLogoImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <Text style={styles.stepIcon}>{step.icon}</Text>
+                )}
               </View>
               <View style={styles.progressContainer}>
                 <Text style={styles.progressText}>
@@ -373,6 +382,10 @@ const styles = StyleSheet.create({
   },
   stepIcon: {
     fontSize: 20,
+  },
+  stepLogoImage: {
+    width: 32,
+    height: 32,
   },
   progressContainer: {
     flex: 1,

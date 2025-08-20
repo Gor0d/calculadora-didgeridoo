@@ -4,6 +4,8 @@
  * Enhanced with offline capabilities
  */
 
+import { tuningService } from '../tuning/TuningService';
+
 export class AcousticEngine {
   constructor() {
     // Physical constants
@@ -11,7 +13,6 @@ export class AcousticEngine {
     this.AIR_DENSITY = 1.225; // kg/m³ at 20°C
     
     // Musical constants
-    this.A4_FREQUENCY = 440; // Hz
     this.SEMITONE_RATIO = Math.pow(2, 1/12);
     
     // Didgeridoo specific constants
@@ -353,15 +354,18 @@ export class AcousticEngine {
   frequencyToNote(frequency) {
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     
+    // Get current A4 frequency from tuning service
+    const A4_FREQUENCY = tuningService.getA4Frequency();
+    
     // Calculate semitones from A4
-    const semitones = Math.round(12 * Math.log2(frequency / this.A4_FREQUENCY));
+    const semitones = Math.round(12 * Math.log2(frequency / A4_FREQUENCY));
     
     // Calculate octave and note
     const octave = Math.floor((semitones + 57) / 12);
     const noteIndex = ((semitones + 57) % 12 + 12) % 12;
     
     // Calculate cents deviation
-    const exactSemitones = 12 * Math.log2(frequency / this.A4_FREQUENCY);
+    const exactSemitones = 12 * Math.log2(frequency / A4_FREQUENCY);
     const centDiff = Math.round((exactSemitones - semitones) * 100);
     
     return {

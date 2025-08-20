@@ -81,12 +81,26 @@ export const AppIcon = ({
         return <MaterialIcons name="language" size={size} color={color} {...props} />;
       case 'units':
         return <MaterialCommunityIcons name="ruler" size={size} color={color} {...props} />;
+      case 'ruler':
+        return <MaterialCommunityIcons name="ruler" size={size} color={color} {...props} />;
       case 'offline':
         return <MaterialCommunityIcons name="wifi-off" size={size} color={color} {...props} />;
       case 'online':
         return <MaterialCommunityIcons name="wifi" size={size} color={color} {...props} />;
       case 'performance':
         return <MaterialCommunityIcons name="speedometer" size={size} color={color} {...props} />;
+      
+      // Ícones de documento e arquivos
+      case 'document':
+        return <MaterialIcons name="description" size={size} color={color} {...props} />;
+      case 'droplet':
+        return <Ionicons name="water-outline" size={size} color={color} {...props} />;
+      
+      // Ícones de tema
+      case 'moon':
+        return <Ionicons name="moon-outline" size={size} color={color} {...props} />;
+      case 'sunny':
+        return <Ionicons name="sunny-outline" size={size} color={color} {...props} />;
       
       // Ícones de tutorial
       case 'tutorial':
@@ -129,10 +143,24 @@ export const AppIcon = ({
       // Ícones de mídia e som
       case 'music':
         return <Ionicons name="musical-notes-outline" size={size} color={color} {...props} />;
+      case 'musical-notes':
+        return <Ionicons name="musical-notes-outline" size={size} color={color} {...props} />;
       case 'sound':
         return <Ionicons name="volume-medium-outline" size={size} color={color} {...props} />;
       case 'chart':
         return <Ionicons name="bar-chart-outline" size={size} color={color} {...props} />;
+      
+      // Ícones de localização e medição
+      case 'location':
+        return <Ionicons name="location-outline" size={size} color={color} {...props} />;
+      case 'resize':
+        return <MaterialCommunityIcons name="resize" size={size} color={color} {...props} />;
+      case 'construct':
+        return <Ionicons name="construct-outline" size={size} color={color} {...props} />;
+      case 'information-circle':
+        return <Ionicons name="information-circle-outline" size={size} color={color} {...props} />;
+      case 'analytics':
+        return <Ionicons name="analytics-outline" size={size} color={color} {...props} />;
       
       // Ícone especial do didgeridoo (customizado)
       case 'didgeridoo':

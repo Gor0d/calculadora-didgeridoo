@@ -53,3 +53,4 @@ nul
 .idea/
 *.swp
 *.swo
+.vercel

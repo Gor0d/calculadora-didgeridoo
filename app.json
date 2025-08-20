@@ -4,7 +4,7 @@
     "slug": "didgemap-calculadora",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/didgemap-flat.png",
     "userInterfaceStyle": "light",
     "description": "Calculadora profissional de didgeridoo com análise acústica avançada, visualização de geometria e preview sonoro em tempo real.",
     "platforms": [
@@ -52,12 +52,12 @@
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.didgemap.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png",
-      "name": "Didgemap",
+      "favicon": "./assets/didgemap-flat.png",
+      "name": "Didgemap - Calculadora Didgeridoo",
       "shortName": "Didgemap",
       "lang": "pt-BR",
       "scope": "/",
-      "themeColor": "#6366F1",
+      "themeColor": "#CD853F",
       "backgroundColor": "#ffffff",
       "display": "standalone",
       "orientation": "portrait",

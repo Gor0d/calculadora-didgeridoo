@@ -322,6 +322,78 @@ export class AudioEngine {
     this.oscillators = [];
   }
 
+  async playTrombetas(notes, noteDuration = 800, volume = 0.4) {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      console.log(`🎺 Playing trombetas sequence:`, {
+        notes: notes.map(note => `${note.note}${note.octave}`),
+        noteDuration: `${noteDuration}ms`,
+        totalDuration: `${notes.length * noteDuration}ms`
+      });
+      
+      if (this.audioContext) {
+        this.stopAll();
+        
+        // Play each note in sequence
+        notes.forEach((noteData, index) => {
+          const startTime = this.audioContext.currentTime + (index * noteDuration / 1000);
+          this.createNoteOscillator(noteData.frequency, volume, noteDuration, startTime);
+        });
+        
+      } else {
+        // Mobile fallback - play each note with delay
+        for (let i = 0; i < notes.length; i++) {
+          setTimeout(async () => {
+            await this.playMobileTone(notes[i].frequency, noteDuration, volume, []);
+          }, i * noteDuration);
+        }
+      }
+      
+    } catch (error) {
+      console.warn('Trombetas playback failed:', error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }
+
+  createNoteOscillator(frequency, volume, duration, startTime = null) {
+    if (!this.audioContext) return;
+    
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+    const filter = this.audioContext.createBiquadFilter();
+    
+    // Configure oscillator for trumpet-like sound
+    oscillator.type = 'sawtooth';
+    oscillator.frequency.setValueAtTime(frequency, startTime || this.audioContext.currentTime);
+    
+    // Configure filter for brass instrument character
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(frequency * 1.5, startTime || this.audioContext.currentTime);
+    filter.Q.setValueAtTime(2, startTime || this.audioContext.currentTime);
+    
+    // Quick attack and decay for trumpet articulation
+    const start = startTime || this.audioContext.currentTime;
+    const end = start + duration / 1000;
+    
+    gainNode.gain.setValueAtTime(0, start);
+    gainNode.gain.linearRampToValueAtTime(volume, start + 0.05); // Quick attack
+    gainNode.gain.setValueAtTime(volume * 0.9, start + 0.1);
+    gainNode.gain.setValueAtTime(volume * 0.8, end - 0.1);
+    gainNode.gain.linearRampToValueAtTime(0, end); // Quick release
+    
+    // Connect audio graph
+    oscillator.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+    
+    // Start and schedule stop
+    oscillator.start(start);
+    oscillator.stop(end);
+    
+    this.oscillators.push({ oscillator, gainNode, filter });
+  }
+
   setVolume(volume) {
     // Store volume for future use
     this.volume = volume;

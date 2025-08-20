@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Text, 
   View, 
@@ -10,6 +10,7 @@ import { AppIcon } from './IconSystem';
 import { getDeviceInfo, getTypography, getSpacing, getResponsiveDimensions } from '../utils/responsive';
 import { unitConverter } from '../services/units/UnitConverter';
 import { localizationService } from '../services/i18n/LocalizationService';
+import { themeService } from '../services/theme/ThemeService';
 
 const deviceInfo = getDeviceInfo();
 const typography = getTypography();
@@ -28,17 +29,33 @@ export const GeometryInput = ({
   geometryStats,
   currentUnit = 'metric'
 }) => {
+  const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+  const colors = currentTheme.colors;
+
+  useEffect(() => {
+    const handleThemeChange = (newTheme) => {
+      setCurrentTheme(newTheme);
+    };
+
+    themeService.addThemeChangeListener(handleThemeChange);
+    
+    return () => {
+      themeService.removeThemeChangeListener(handleThemeChange);
+    };
+  }, []);
+
   return (
-    <View style={styles.geometryContainer}>
-      <Text style={styles.inputTitle}>{localizationService.t('geometryTitle')}</Text>
+    <View style={[styles.geometryContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+      <Text style={[styles.inputTitle, { color: colors.textPrimary }]}>{localizationService.t('geometryTitle')}</Text>
       
       {currentFileName && (
         <View style={styles.fileNameBadge}>
-          <Text style={styles.fileNameText}>📄 {currentFileName}</Text>
+          <AppIcon name="document" size={14} color="#6B7280" />
+          <Text style={[styles.fileNameText, { color: colors.textSecondary }]}>{currentFileName}</Text>
         </View>
       )}
       
-      <Text style={styles.inputSubtitle}>
+      <Text style={[styles.inputSubtitle, { color: colors.textSecondary }]}>
         {currentUnit === 'metric' 
           ? localizationService.t('geometryFormat') 
           : localizationService.t('geometryFormatImperial')
@@ -46,7 +63,7 @@ export const GeometryInput = ({
       </Text>
       
       <TextInput
-        style={styles.geometryInput}
+        style={[styles.geometryInput, { backgroundColor: colors.surfaceBackground, borderColor: colors.border, color: colors.textPrimary }]}
         value={geometry}
         onChangeText={onGeometryChange}
         placeholder={unitConverter.getExampleGeometry(currentUnit)}
@@ -58,34 +75,33 @@ export const GeometryInput = ({
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
         <View style={styles.validationErrorContainer}>
-          <Text style={styles.validationErrorText}>
-            ⚠️ {validationErrors[0].message}
+          <AppIcon name="warning" size={16} color="#DC2626" />
+          <Text style={[styles.validationErrorText, { color: colors.error }]}>
+            {validationErrors[0].message}
           </Text>
         </View>
       )}
       
-      {/* Geometry Stats */}
+      {/* Geometry Stats - Only 2 parameters as requested */}
       {geometryStats && (
-        <View style={styles.geometryStatsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>{localizationService.t('length')}</Text>
-            <Text style={styles.statValue}>
-              {unitConverter.formatLength(geometryStats.totalLength, currentUnit)}
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>{localizationService.t('diameter')}</Text>
-            <Text style={styles.statValue}>
-              {unitConverter.formatDiameter(geometryStats.minDiameter, currentUnit)}-{unitConverter.formatDiameter(geometryStats.maxDiameter, currentUnit)}
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>{localizationService.t('points')}</Text>
-            <Text style={styles.statValue}>{geometryStats.pointCount}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>{localizationService.t('volume')}</Text>
-            <Text style={styles.statValue}>{localizationService.formatNumber(geometryStats.volume / 1000, 1)}L</Text>
+        <View style={[styles.geometryStatsContainer, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
+          <View style={styles.statsGrid}>
+            <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
+              <View style={styles.statHeader}>
+                <AppIcon name="ruler" size={14} color="#059669" />
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Comprimento Efetivo</Text>
+              </View>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                {unitConverter.formatLength(geometryStats.totalLength, currentUnit)}
+              </Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
+              <View style={styles.statHeader}>
+                <AppIcon name="droplet" size={14} color="#DC2626" />
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Volume Interno</Text>
+              </View>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{localizationService.formatNumber(geometryStats.volume / 1000, 1)}L</Text>
+            </View>
           </View>
         </View>
       )}
@@ -96,7 +112,7 @@ export const GeometryInput = ({
           onPress={onAnalyze}
           disabled={isAnalyzing || !geometry.trim()}
         >
-          <Text style={styles.buttonText}>
+          <Text style={[styles.buttonText, { color: colors.textPrimary }]}>
             {isAnalyzing ? localizationService.t('analyzing') : localizationService.t('analyze')}
           </Text>
         </TouchableOpacity>
@@ -106,7 +122,7 @@ export const GeometryInput = ({
           onPress={onToggleVisualization}
           disabled={!geometry.trim()}
         >
-          <Text style={styles.buttonText}>
+          <Text style={[styles.buttonText, { color: colors.textPrimary }]}>
             {showVisualization ? localizationService.t('hide') : localizationService.t('visualize')}
           </Text>
         </TouchableOpacity>
@@ -178,43 +194,75 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     lineHeight: typography.body * 1.4,
   },
+  fileNameBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.sm,
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  fileNameText: {
+    fontSize: typography.caption,
+    color: '#64748B',
+    fontWeight: '500',
+  },
   validationErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderLeftWidth: 4,
     borderLeftColor: '#EF4444',
     borderRadius: spacing.sm,
     padding: spacing.md,
     marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   validationErrorText: {
+    flex: 1,
     fontSize: typography.bodySmall,
     color: '#DC2626',
     fontWeight: '500',
   },
   geometryStatsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: spacing.sm,
+    backgroundColor: '#F8FAFC',
+    borderRadius: spacing.md,
     padding: spacing.md,
     marginTop: spacing.sm,
     borderWidth: 1,
-    borderColor: '#22C55E',
+    borderColor: '#E2E8F0',
   },
-  statItem: {
-    alignItems: 'center',
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statCard: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: spacing.sm,
+    padding: spacing.sm,
+    marginHorizontal: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+    gap: spacing.xs,
   },
   statLabel: {
     fontSize: typography.caption,
-    color: '#16A34A',
+    color: '#6B7280',
     fontWeight: '600',
-    marginBottom: spacing.xs,
   },
   statValue: {
     fontSize: typography.bodySmall,
-    fontWeight: '600',
-    color: '#15803D',
+    fontWeight: '700',
+    color: '#374151',
+    textAlign: 'center',
   },
   inputActions: {
     flexDirection: 'row',
