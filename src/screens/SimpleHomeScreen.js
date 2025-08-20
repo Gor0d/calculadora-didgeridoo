@@ -1110,8 +1110,15 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
                   <Text style={styles.metadataValue}>{metadata.effectiveLength.toFixed(1)} cm</Text>
                 </View>
                 <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Diâmetro Médio</Text>
-                  <Text style={styles.metadataValue}>{(metadata.averageRadius * 2).toFixed(1)} mm</Text>
+                  <Text style={styles.metadataLabel}>Volume Interno</Text>
+                  <Text style={styles.metadataValue}>
+                    {(() => {
+                      // Calculate internal volume from geometry stats if available
+                      const volume = metadata.volume || (metadata.averageRadius ? 
+                        Math.PI * Math.pow(metadata.averageRadius, 2) * metadata.effectiveLength / 10 : 0);
+                      return (volume / 1000).toFixed(1) + 'L';
+                    })()}
+                  </Text>
                 </View>
                 <View style={styles.metadataItem}>
                   <Text style={styles.metadataLabel}>Impedância Média</Text>
@@ -1121,17 +1128,6 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
                       : 'N/A'
                     }
                   </Text>
-                </View>
-                <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Método de Cálculo</Text>
-                  <Text style={styles.metadataValue}>
-                    {metadata.calculationMethod === 'online_advanced' ? '🟢 Avançado' : 
-                     metadata.calculationMethod === 'simplified_fallback' ? '🟡 Simplificado' : '🔴 Básico'}
-                  </Text>
-                </View>
-                <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Correções Aplicadas</Text>
-                  <Text style={styles.metadataValue}>Extremidade + Boca</Text>
                 </View>
               </View>
             </View>
@@ -2617,7 +2613,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   metadataItem: {
-    width: '48%',
+    width: '32%',
     marginBottom: spacing.sm,
     backgroundColor: '#FFFFFF',
     padding: spacing.sm,
