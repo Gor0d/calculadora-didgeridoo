@@ -175,7 +175,7 @@ class LocalizationService {
         reset: 'Resetar',
         
         // Navigation
-        home: 'Início',
+        home: 'Calculadora',
         projects: 'Projetos',
         
         // Additional translations
@@ -380,7 +380,7 @@ class LocalizationService {
         reset: 'Reset',
         
         // Navigation
-        home: 'Home',
+        home: 'Calculator',
         projects: 'Projects',
         
         // Additional translations
