@@ -50,23 +50,29 @@ export const AppHeader = () => {
         </View>
       </View>
       
-      {/* Quick Features as modern cards */}
-      <View style={styles.headerFeatures}>
-        <View style={[styles.featureCard, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
-          <AppIcon name="wave" size={16} color={colors.success} />
-          <Text style={[styles.featureCardText, { color: colors.textSecondary }]}>
+      {/* Features as simple text with separators */}
+      <View style={styles.featuresLine}>
+        <View style={styles.featureItem}>
+          <AppIcon name="wave" size={14} color={colors.success} />
+          <Text style={[styles.featureText, { color: colors.textSecondary }]}>
             {localizationService.t('acousticAnalysis')}
           </Text>
         </View>
-        <View style={[styles.featureCard, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
-          <AppIcon name="chart" size={16} color={colors.secondary} />
-          <Text style={[styles.featureCardText, { color: colors.textSecondary }]}>
+        
+        <View style={[styles.separator, { backgroundColor: colors.border }]} />
+        
+        <View style={styles.featureItem}>
+          <AppIcon name="chart" size={14} color={colors.secondary} />
+          <Text style={[styles.featureText, { color: colors.textSecondary }]}>
             {localizationService.t('visualization')}
           </Text>
         </View>
-        <View style={[styles.featureCard, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
-          <AppIcon name="sound" size={16} color={colors.accent} />
-          <Text style={[styles.featureCardText, { color: colors.textSecondary }]}>
+        
+        <View style={[styles.separator, { backgroundColor: colors.border }]} />
+        
+        <View style={styles.featureItem}>
+          <AppIcon name="sound" size={14} color={colors.accent} />
+          <Text style={[styles.featureText, { color: colors.textSecondary }]}>
             {localizationService.t('audioPreview')}
           </Text>
         </View>
@@ -126,36 +132,27 @@ const styles = StyleSheet.create({
     lineHeight: (deviceInfo.isTablet ? typography.body : typography.small) * 1.4,
     letterSpacing: 0.2,
   },
-  headerFeatures: {
+  featuresLine: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.sm,
-    maxWidth: deviceInfo.width - spacing.xl * 2,
-  },
-  featureCard: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 88,
-    flex: 1,
-    marginHorizontal: spacing.xs,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  featureCardText: {
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  featureText: {
     fontSize: typography.caption,
-    fontWeight: '600',
-    color: '#475569',
-    marginTop: spacing.xs,
-    textAlign: 'center',
+    fontWeight: '500',
+    marginLeft: spacing.xs,
+  },
+  separator: {
+    width: 1,
+    height: 16,
+    marginHorizontal: spacing.md,
+    opacity: 0.3,
   },
 });
