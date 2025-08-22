@@ -200,7 +200,7 @@ export const GeometryInput = ({
                       style={styles.removeButton}
                       onPress={() => removePair(index)}
                     >
-                      <AppIcon name="delete" size={14} color="#EF4444" />
+                      <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -510,9 +510,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   removeButton: {
-    padding: spacing.xs,
-    borderRadius: 4,
+    padding: spacing.sm,
+    borderRadius: 6,
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 30,
+    minHeight: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   tableRowWarning: {
     backgroundColor: 'rgba(245, 158, 11, 0.1)',

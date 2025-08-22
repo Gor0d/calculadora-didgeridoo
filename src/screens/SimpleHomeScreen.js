@@ -973,12 +973,11 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
           {/* Table Header */}
           <View style={styles.analysisTable}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, { flex: 0.6 }]}>H#</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.7 }]}>Nota + Freq</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Freq [Hz]</Text>
+              <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Nota</Text>
+              <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Oitava</Text>
               <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Cents</Text>
-              <Text style={[styles.tableHeaderText, { flex: 0.9 }]}>Ampl</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.4 }]}>Razão</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Status</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Ampl %</Text>
             </View>
             
             {/* Table Rows */}
@@ -1013,11 +1012,26 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
                   !isPlayable && styles.tableRowWeak,
                   index === 0 && styles.fundamentalRow
                 ]}>
-                  <Text style={[styles.tableCellText, { flex: 0.6, fontWeight: 'bold', color: index === 0 ? '#10B981' : '#374151' }]}>
-                    {index === 0 ? 'F0' : `H${index}`}
+                  <Text style={[styles.tableCellText, { flex: 1.2, fontFamily: 'monospace' }]}>
+                    {result.frequency.toFixed(0)}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.7, fontWeight: '600', fontFamily: 'monospace' }]}>
-                    {result.note || 'N/A'} {result.frequency.toFixed(0)}Hz
+                  <Text style={[styles.tableCellText, { flex: 0.8, fontWeight: '600' }]}>
+                    {(() => {
+                      if (!result.note) return '-';
+                      const notePart = result.note.replace(/\d+$/, '');
+                      return notePart || '-';
+                    })()}
+                  </Text>
+                  <Text style={[styles.tableCellText, { flex: 0.8, fontFamily: 'monospace' }]}>
+                    {(() => {
+                      if (!result.frequency) return '-';
+                      // Calcular oitava baseada na frequência
+                      const A4 = 440;
+                      const C0 = A4 * Math.pow(2, -4.75);
+                      const noteNumber = Math.round(12 * Math.log2(result.frequency / C0));
+                      const octave = Math.floor(noteNumber / 12);
+                      return octave.toString();
+                    })()}
                   </Text>
                   <Text style={[
                     styles.tableCellText, 
@@ -1030,18 +1044,16 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
                   ]}>
                     {result.centDiff >= 0 ? '+' : ''}{(result.centDiff || 0).toFixed(0)}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 0.9, fontFamily: 'monospace' }]}>
-                    {((result.amplitude || 0) * 100).toFixed(0)}%
-                  </Text>
-                  <Text style={[styles.tableCellText, { 
-                    flex: 1.4, 
-                    fontFamily: 'monospace',
-                    color: inharmonicity < 0.1 ? '#10B981' : inharmonicity < 0.3 ? '#F59E0B' : '#EF4444'
-                  }]}>
-                    {harmonicRatio.toFixed(2)}
-                  </Text>
-                  <Text style={[styles.tableCellText, { flex: 1.0, fontSize: 11 }]}>
-                    {statusIcon} {statusText}
+                  <Text style={[
+                    styles.tableCellText, 
+                    { 
+                      flex: 1.2, 
+                      fontFamily: 'monospace',
+                      color: (result.amplitude || 0) > 0.5 ? '#10B981' : 
+                             (result.amplitude || 0) > 0.3 ? '#F59E0B' : '#6B7280'
+                    }
+                  ]}>
+                    {((result.amplitude || 0) * 100).toFixed(1)}
                   </Text>
                 </View>
               );
