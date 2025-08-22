@@ -15,159 +15,133 @@ const typography = getTypography();
 const spacing = getSpacing();
 
 export const UnitSelector = ({ currentUnit, onUnitChange, disabled = false }) => {
-  const units = [
-    { key: 'metric', label: localizationService.t('metric'), sublabel: localizationService.t('metricSubLabel') },
-    { key: 'imperial', label: localizationService.t('imperial'), sublabel: localizationService.t('imperialSubLabel') },
-  ];
+  const handleToggleUnit = () => {
+    if (!disabled) {
+      const nextUnit = currentUnit === 'metric' ? 'imperial' : 'metric';
+      onUnitChange(nextUnit);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{localizationService.t('unitSystem')}</Text>
-      
-      <View style={styles.unitOptions}>
-        {units.map((unit) => (
-          <TouchableOpacity
-            key={unit.key}
-            style={[
-              styles.unitOption,
-              currentUnit === unit.key && styles.unitOptionActive,
-              disabled && styles.unitOptionDisabled,
-            ]}
-            onPress={() => !disabled && onUnitChange(unit.key)}
-            disabled={disabled}
-          >
-            <View style={styles.unitContent}>
-              <Text style={[
-                styles.unitLabel,
-                currentUnit === unit.key && styles.unitLabelActive,
-                disabled && styles.unitLabelDisabled,
-              ]}>
-                {unit.label}
-              </Text>
-              <Text style={[
-                styles.unitSublabel,
-                currentUnit === unit.key && styles.unitSublabelActive,
-                disabled && styles.unitSublabelDisabled,
-              ]}>
-                {unit.sublabel}
-              </Text>
-            </View>
-            
-            {currentUnit === unit.key && (
-              <View style={styles.checkmark}>
-                <AppIcon name="check" size={14} color="#FFFFFF" />
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
+      <View style={styles.switchContainer}>
+        <AppIcon name="ruler" size={12} color="#6B7280" />
+        <Text style={styles.switchLabel}>Unidades:</Text>
+        
+        <TouchableOpacity
+          style={[
+            styles.switch,
+            currentUnit === 'imperial' && styles.switchActive,
+            disabled && styles.switchDisabled
+          ]}
+          onPress={handleToggleUnit}
+          activeOpacity={0.8}
+          disabled={disabled}
+        >
+          <View style={styles.switchTrack}>
+            <Text style={[
+              styles.switchText,
+              styles.switchTextLeft,
+              currentUnit === 'metric' && styles.switchTextActive
+            ]}>cm</Text>
+            <Text style={[
+              styles.switchText,
+              styles.switchTextRight,
+              currentUnit === 'imperial' && styles.switchTextActive
+            ]}>in</Text>
+          </View>
+          <View style={[
+            styles.switchThumb,
+            currentUnit === 'imperial' && styles.switchThumbActive
+          ]} />
+        </TouchableOpacity>
+        
+        <Text style={styles.unitLabel}>
+          {currentUnit === 'metric' ? 'Métrico' : 'Imperial'}
+        </Text>
       </View>
-      
-      <Text style={styles.helpText}>
-        {currentUnit === 'metric' 
-          ? localizationService.t('metricHelp')
-          : localizationService.t('imperialHelp')
-        }
-      </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    marginHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  title: {
-    fontSize: typography.body,
-    fontWeight: '600',
-    color: '#0F172A',
-    textAlign: 'left',
-    marginBottom: spacing.sm,
-    letterSpacing: 0.2,
-  },
-  unitOptions: {
-    flexDirection: 'row',
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 6,
-    marginBottom: spacing.md,
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginVertical: spacing.xs,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  unitOption: {
-    flex: 1,
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  switchLabel: {
+    fontSize: typography.caption,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  switch: {
+    position: 'relative',
+    width: 70,
+    height: 30,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  switchActive: {
+    backgroundColor: '#10B981',
+  },
+  switchDisabled: {
+    opacity: 0.5,
+  },
+  switchTrack: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'transparent',
-    borderRadius: 10,
-    padding: spacing.md,
-    minHeight: 40,
+    paddingHorizontal: 8,
   },
-  unitOptionActive: {
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+  switchThumb: {
+    position: 'absolute',
+    width: 26,
+    height: 26,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 13,
+    left: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 1,
   },
-  unitOptionDisabled: {
-    opacity: 0.5,
+  switchThumbActive: {
+    left: 42,
   },
-  unitContent: {
-    flex: 1,
-    alignItems: 'center',
+  switchText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
   },
-  unitLabel: {
-    fontSize: typography.small,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
+  switchTextLeft: {
+    marginLeft: 2,
   },
-  unitLabelActive: {
+  switchTextRight: {
+    marginRight: 2,
+  },
+  switchTextActive: {
     color: '#FFFFFF',
   },
-  unitLabelDisabled: {
-    color: '#94A3B8',
-  },
-  unitSublabel: {
+  unitLabel: {
     fontSize: typography.caption,
-    color: '#64748B',
     fontWeight: '500',
-  },
-  unitSublabelActive: {
-    color: 'rgba(255,255,255,0.8)',
-  },
-  unitSublabelDisabled: {
-    color: '#CBD5E1',
-  },
-  checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
-  helpText: {
-    fontSize: typography.caption,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: typography.caption * 1.4,
-    fontStyle: 'italic',
+    color: '#6B7280',
   },
 });

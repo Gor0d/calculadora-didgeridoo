@@ -110,31 +110,22 @@ export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metr
             onPress={() => handleSelectExample(example, index)}
           >
             <View style={styles.cardContent}>
-              <Text style={[
-                styles.exampleName,
-                selectedExample === index && styles.exampleNameSelected
-              ]}>
-                {example.name}
-              </Text>
-              <Text style={styles.exampleDesc} numberOfLines={2} ellipsizeMode="tail">
-                {example.desc}
-              </Text>
-              <Text style={styles.exampleLines}>
-                {example.data.split('\n').length} {localizationService.t('points').toLowerCase()}
-              </Text>
+              <View style={styles.cardHeader}>
+                <Text style={[
+                  styles.exampleName,
+                  selectedExample === index && styles.exampleNameSelected
+                ]}>
+                  {example.name}
+                </Text>
+                <View style={styles.pointsBadge}>
+                  <Text style={styles.pointsText}>
+                    {example.data.split('\n').length}
+                  </Text>
+                </View>
+              </View>
             </View>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity 
-          style={[styles.exampleCard, styles.addCustomCard]}
-          onPress={() => Alert.alert(
-            localizationService.t('shareDesign') || 'Compartilhar Design',
-            localizationService.t('shareDesignDesc') || 'Envie suas medidas para adicionarmos aqui!'
-          )}
-        >
-          <AppIcon name="plus" size={24} color="#8B5CF6" />
-          <Text style={styles.addCustomLabel}>{localizationService.t('yourDesign') || 'Seu Design'}</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -196,9 +187,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   exampleCard: {
-    width: deviceInfo.isTablet ? 160 : 140,
-    minWidth: deviceInfo.isTablet ? 160 : 140,
-    minHeight: deviceInfo.isTablet ? 90 : 80,
+    width: deviceInfo.isTablet ? 180 : 160,
+    minWidth: deviceInfo.isTablet ? 180 : 160,
+    height: deviceInfo.isTablet ? 110 : 100,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
@@ -206,15 +197,33 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginRight: spacing.md,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cardContent: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     height: '100%',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pointsBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 8,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  pointsText: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+    color: '#64748B',
   },
   exampleCardSelected: {
     borderColor: '#10B981',
@@ -224,49 +233,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     transform: [{ scale: 1.03 }],
   },
-  addCustomCard: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#8B5CF6',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: deviceInfo.isTablet ? 90 : 80,
-  },
   exampleName: {
     fontSize: typography.small,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: spacing.xs,
     letterSpacing: 0.2,
+    flex: 1,
+    marginRight: spacing.xs,
   },
   exampleNameSelected: {
     color: '#059669',
-  },
-  exampleDesc: {
-    fontSize: typography.caption,
-    color: '#64748B',
-    marginVertical: spacing.xs,
-    lineHeight: typography.caption * 1.3,
-    textAlign: 'left',
-    flexShrink: 1,
-  },
-  exampleLines: {
-    fontSize: typography.caption,
-    color: '#94A3B8',
-    fontWeight: '500',
-    textAlign: 'left',
-  },
-  addCustomText: {
-    fontSize: typography.h3,
-    color: '#8B5CF6',
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  addCustomLabel: {
-    fontSize: typography.small,
-    fontWeight: '600',
-    color: '#8B5CF6',
-    textAlign: 'center',
   },
 });

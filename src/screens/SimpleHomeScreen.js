@@ -8,7 +8,8 @@ import {
   Alert,
   Platform,
   PanResponder,
-  Animated
+  Animated,
+  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path, Circle, Line, Rect, G, Text as SvgText } from 'react-native-svg';
@@ -88,6 +89,41 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       useNativeDriver: false,
     }).start();
   }, [panOffset, animatedPan]);
+
+  // Calculate real-time note estimation when no analysis results
+  const estimatedNote = useMemo(() => {
+    if (analysisResults.length > 0) {
+      return `${analysisResults[0].note} (${analysisResults[0].frequency.toFixed(0)}Hz)`;
+    }
+    
+    if (!geometry || !geometry.trim()) return 'N/A';
+    
+    try {
+      const points = unitConverter.parseGeometry(geometry, currentUnit);
+      if (points.length < 2) return 'N/A';
+      
+      // Quick frequency estimation based on geometry
+      const effectiveLength = Math.max(...points.map(p => p.position));
+      const averageDiameter = points.reduce((sum, p) => sum + p.diameter, 0) / points.length;
+      
+      // Simplified acoustic formula for fundamental frequency
+      const speedOfSound = 343; // m/s at 20°C
+      const lengthInMeters = effectiveLength / (currentUnit === 'metric' ? 100 : 39.37);
+      const frequency = speedOfSound / (2 * lengthInMeters);
+      
+      // Convert frequency to note
+      const A4 = 440;
+      const C0 = A4 * Math.pow(2, -4.75);
+      const noteNumber = Math.round(12 * Math.log2(frequency / C0));
+      const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const octave = Math.floor(noteNumber / 12);
+      const note = noteNames[noteNumber % 12];
+      
+      return `${note}${octave} (${frequency.toFixed(0)}Hz)`;
+    } catch (error) {
+      return 'N/A';
+    }
+  }, [geometry, currentUnit, analysisResults]);
 
   // Helper function to calculate distance between two touches
   const getDistance = (touches) => {
@@ -749,38 +785,6 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
         )}
       </View>
       
-      {/* Responsive technical parameters - better for mobile */}
-      <View style={styles.geometryInfoResponsive}>
-        <View style={styles.infoCard}>
-          <View style={styles.infoCardHeader}>
-            <AppIcon name="ruler" size={16} color="#059669" />
-            <Text style={styles.infoCardTitle}>Comprimento</Text>
-          </View>
-          <Text style={styles.infoCardValue}>
-            {svgDimensions.maxPosition.toFixed(1)} {currentUnit === 'metric' ? 'cm' : 'in'}
-          </Text>
-        </View>
-        
-        <View style={styles.infoCard}>
-          <View style={styles.infoCardHeader}>
-            <AppIcon name="construct" size={16} color="#3B82F6" />
-            <Text style={styles.infoCardTitle}>Pontos</Text>
-          </View>
-          <Text style={styles.infoCardValue}>
-            {validPoints.length}
-          </Text>
-        </View>
-        
-        <View style={styles.infoCard}>
-          <View style={styles.infoCardHeader}>
-            <AppIcon name="sound" size={16} color="#F59E0B" />
-            <Text style={styles.infoCardTitle}>Afinação</Text>
-          </View>
-          <Text style={styles.infoCardValue}>
-            {analysisResults.length > 0 ? `${analysisResults[0].note} (${analysisResults[0].frequency.toFixed(0)}Hz)` : 'N/A'}
-          </Text>
-        </View>
-      </View>
 
       {/* Technical excavation data - exactly what's needed for carving */}
       <View style={styles.excavationDataContainer}>
@@ -899,7 +903,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           <View style={styles.legendStat}>
             <AppIcon name="musical-notes" size={12} color="#8B5CF6" />
             <Text style={styles.legendStatText}>
-              {analysisResults?.[0]?.note ? `${analysisResults[0].note} ${Math.round(analysisResults[0].frequency)}Hz` : 'Analisar'}
+              {estimatedNote !== 'N/A' ? estimatedNote : 'Analisar'}
             </Text>
           </View>
         </View>
@@ -910,13 +914,17 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
 
 // AnalysisResults Component
 const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata }) => {
-  const [showOnlyTrombetas, setShowOnlyTrombetas] = useState(false);
+  const [isPlayingHarmonics, setIsPlayingHarmonics] = useState(false);
+  const [showHarmonicsModal, setShowHarmonicsModal] = useState(false);
   
-  const handlePlaySound = useCallback((type, data) => {
-    if (type === 'trombetas') {
-      setShowOnlyTrombetas(true);
-    } else if (type === 'drone') {
-      setShowOnlyTrombetas(false);
+  const handlePlaySound = useCallback(async (type, data) => {
+    if (type === 'harmonics_sequence') {
+      setIsPlayingHarmonics(true);
+      // Duration = number of harmonics * 1000ms each
+      const totalDuration = data.length * 1000;
+      setTimeout(() => {
+        setIsPlayingHarmonics(false);
+      }, totalDuration);
     }
     onPlaySound(type, data);
   }, [onPlaySound]);
@@ -934,9 +942,8 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
     <View style={styles.resultsContainer}>
       <Text style={styles.resultsTitle}>{localizationService.t('analysisResults')}</Text>
       
-      {!showOnlyTrombetas && (
-        <>
-          {/* Fundamental Frequency Section */}
+      <>
+        {/* Fundamental Frequency Section */}
       <View style={styles.droneResult}>
         <View style={styles.droneInfo}>
           <Text style={styles.droneLabel}>{localizationService.t('fundamental')}</Text>
@@ -1113,43 +1120,9 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
           )}
         </>
       )}
-        </>
-      )}
       
-      {showOnlyTrombetas && (
-        <View style={styles.trombetasOnlyContainer}>
-          <Text style={styles.trombetasTitle}>🎺 Visualização de Trombetas</Text>
-          <Text style={styles.trombetasSubtitle}>Sequência harmônica para trombetas</Text>
-          
-          <View style={styles.trombetasSequence}>
-            {results.slice(0, 6).map((result, index) => (
-              <View key={index} style={styles.trombetaNote}>
-                <Text style={styles.trombetaNoteNumber}>#{index + 1}</Text>
-                <Text style={styles.trombetaNoteValue}>{result.note}</Text>
-                <Text style={styles.trombetaFrequency}>{result.frequency.toFixed(0)}Hz</Text>
-              </View>
-            ))}
-          </View>
-          
-          <TouchableOpacity
-            style={[styles.soundPreviewButton, styles.backToDroneButton]}
-            onPress={() => handlePlaySound('drone', {
-              fundamental: firstResult.frequency,
-              harmonics: results.slice(1, 4).map(r => ({
-                frequency: r.frequency,
-                amplitude: r.amplitude || (0.8 / (results.indexOf(r) + 1))
-              }))
-            })}
-          >
-            <Text style={styles.soundPreviewText}>
-              ↩️ Voltar para análise completa
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
       
-      {!showOnlyTrombetas && (
-        <View style={styles.soundPreviewContainer}>
+      <View style={styles.soundPreviewContainer}>
         <TouchableOpacity
           style={[styles.soundPreviewButton, styles.droneButton]}
           onPress={() => handlePlaySound('drone', {
@@ -1169,18 +1142,117 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.soundPreviewButton, styles.trombetasButton]}
-          onPress={() => handlePlaySound('trombetas', results)}
+          style={[
+            styles.soundPreviewButton, 
+            styles.trombetasButton,
+            isPlayingHarmonics && styles.playingButton
+          ]}
+          onPress={() => handlePlaySound('harmonics_sequence', results)}
+          disabled={isPlayingHarmonics}
         >
           <Text style={styles.soundPreviewText}>
-            🎺 Trombetas
+            {isPlayingHarmonics ? '🎵 Tocando...' : '🎵 Sequência'}
           </Text>
           <Text style={[styles.soundPreviewText, styles.notesText]}>
-            {results.map(r => `${r.note} ${r.frequency.toFixed(0)}Hz`).join(' → ')}
+            {results.slice(0, 3).map(r => r.note).join(' → ')}...
           </Text>
         </TouchableOpacity>
-        </View>
-      )}
+        
+        <TouchableOpacity
+          style={[styles.soundPreviewButton, styles.exploreButton]}
+          onPress={() => setShowHarmonicsModal(true)}
+        >
+          <Text style={styles.soundPreviewText}>
+            🎼 Explorar
+          </Text>
+          <Text style={[styles.soundPreviewText, styles.notesText]}>
+            {results.length} harmônicos
+          </Text>
+        </TouchableOpacity>
+      </View>
+      </>
+
+      {/* Harmonics Modal */}
+      <Modal
+        visible={showHarmonicsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowHarmonicsModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>🎼 Explorar Harmônicos</Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowHarmonicsModal(false)}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            <Text style={styles.modalSubtitle}>
+              Toque em qualquer harmônico para escutar individualmente
+            </Text>
+            
+            <View style={styles.harmonicsGrid}>
+              {results.map((harmonic, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.harmonicCard,
+                    index === 0 && styles.fundamentalCard
+                  ]}
+                  onPress={() => handlePlaySound('drone', {
+                    fundamental: harmonic.frequency,
+                    harmonics: []
+                  })}
+                >
+                  <View style={styles.harmonicCardHeader}>
+                    <Text style={styles.harmonicNumber}>
+                      {index === 0 ? 'Fund.' : `H${index}`}
+                    </Text>
+                    <Text style={styles.harmonicNote}>{harmonic.note}</Text>
+                  </View>
+                  
+                  <Text style={styles.harmonicFreq}>
+                    {harmonic.frequency.toFixed(1)}Hz
+                  </Text>
+                  
+                  <Text style={styles.harmonicCents}>
+                    {harmonic.centDiff > 0 ? '+' : ''}{harmonic.centDiff} cents
+                  </Text>
+                  
+                  <View style={styles.amplitudeBar}>
+                    <View 
+                      style={[
+                        styles.amplitudeFill,
+                        { width: `${(harmonic.amplitude || 0.8) * 100}%` }
+                      ]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalActionButton,
+                  styles.sequenceButton,
+                  isPlayingHarmonics && styles.playingButton
+                ]}
+                onPress={() => handlePlaySound('harmonics_sequence', results)}
+                disabled={isPlayingHarmonics}
+              >
+                <Text style={styles.modalActionText}>
+                  {isPlayingHarmonics ? '🎵 Tocando Sequência...' : '🎵 Tocar Sequência Completa'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 });
@@ -1392,6 +1464,10 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
           break;
         case 'trombetas':
           await audioEngine.playTrombetas(data, 800, 0.4);
+          break;
+        case 'harmonics_sequence':
+          // Tocar harmônicos em sequência com pause entre cada um
+          await audioEngine.playHarmonicsSequence(data, 1000, 0.5);
           break;
       }
     } catch (error) {
@@ -1879,8 +1955,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center', // Center vertically
   },
   svgScrollContainer: {
-    maxHeight: deviceInfo.isTablet ? 500 : 400, // Increased height limit
-    minHeight: deviceInfo.isTablet ? 200 : 150, // Minimum height
+    maxHeight: deviceInfo.isTablet ? 600 : 500, // Increased height limit
+    minHeight: deviceInfo.isTablet ? 300 : 250, // Minimum height
   },
   svgContainer: {
     alignItems: 'center',
@@ -2015,44 +2091,6 @@ const styles = StyleSheet.create({
   },
   infoItem: {
     alignItems: 'center',
-  },
-  
-  // New responsive info cards
-  geometryInfoResponsive: {
-    flexDirection: deviceInfo.isTablet ? 'row' : 'column',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    flex: deviceInfo.isTablet ? 1 : undefined,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  infoCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  infoCardTitle: {
-    fontSize: typography.small,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginLeft: spacing.xs,
-  },
-  infoCardValue: {
-    fontSize: deviceInfo.isTablet ? typography.h3 : typography.h4,
-    fontWeight: '700',
-    color: '#1F2937',
-    fontFamily: 'monospace',
   },
   infoLabel: {
     fontSize: typography.caption,
@@ -2370,12 +2408,12 @@ const styles = StyleSheet.create({
     color: '#065F46',
   },
   droneFrequency: {
-    fontSize: typography.h2,
+    fontSize: typography.h3,
     fontWeight: '900',
     color: '#10B981',
   },
   droneNote: {
-    fontSize: typography.h3,
+    fontSize: typography.body,
     fontWeight: '700',
     color: '#059669',
   },
@@ -2388,7 +2426,7 @@ const styles = StyleSheet.create({
     color: '#065F46',
   },
   accuracyValue: {
-    fontSize: typography.h3,
+    fontSize: typography.body,
     fontWeight: '700',
   },
   accuracyStatus: {
@@ -2397,14 +2435,14 @@ const styles = StyleSheet.create({
     color: '#065F46',
   },
   harmonicsTitle: {
-    fontSize: typography.h3,
+    fontSize: typography.body,
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: spacing.xs,
     textAlign: 'center',
   },
   harmonicsSubtitle: {
-    fontSize: typography.small,
+    fontSize: typography.caption,
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: spacing.md,
@@ -2446,19 +2484,26 @@ const styles = StyleSheet.create({
   },
   soundPreviewButton: {
     flex: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
     borderRadius: 12,
     marginHorizontal: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 80,
+    minHeight: 75,
   },
   droneButton: {
     backgroundColor: '#059669',
   },
   trombetasButton: {
     backgroundColor: '#DC2626',
+  },
+  exploreButton: {
+    backgroundColor: '#3B82F6',
+  },
+  playingButton: {
+    backgroundColor: '#059669',
+    opacity: 0.8,
   },
   soundPreviewText: {
     color: '#FFFFFF',
@@ -2566,7 +2611,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     color: '#FFFFFF',
-    fontSize: typography.caption,
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
     paddingVertical: spacing.xs,
@@ -2594,7 +2639,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   tableCellText: {
-    fontSize: typography.caption,
+    fontSize: 11,
     color: '#374151',
     textAlign: 'center',
     paddingHorizontal: 2,
@@ -2787,6 +2832,142 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   exportButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalTitle: {
+    fontSize: typography.h2,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: typography.h3,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  modalContent: {
+    flex: 1,
+    padding: spacing.lg,
+  },
+  modalSubtitle: {
+    fontSize: typography.body,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    fontStyle: 'italic',
+  },
+  harmonicsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xl,
+  },
+  harmonicCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  fundamentalCard: {
+    borderColor: '#10B981',
+    borderWidth: 2,
+    backgroundColor: '#F0FDF4',
+  },
+  harmonicCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  harmonicNumber: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+    color: '#6B7280',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  harmonicNote: {
+    fontSize: typography.h3,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  harmonicFreq: {
+    fontSize: typography.body,
+    fontWeight: '600',
+    color: '#059669',
+    marginBottom: spacing.xs,
+  },
+  harmonicCents: {
+    fontSize: typography.caption,
+    color: '#6B7280',
+    marginBottom: spacing.sm,
+  },
+  amplitudeBar: {
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  amplitudeFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+    borderRadius: 2,
+  },
+  modalActions: {
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  modalActionButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sequenceButton: {
+    backgroundColor: '#DC2626',
+  },
+  modalActionText: {
     color: '#FFFFFF',
     fontSize: typography.body,
     fontWeight: '700',

@@ -356,6 +356,41 @@ export class AudioEngine {
     }
   }
 
+  async playHarmonicsSequence(harmonics, noteDuration = 1000, volume = 0.5) {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      console.log(`🎵 Playing harmonics sequence:`, {
+        harmonics: harmonics.map(h => `${h.note} ${h.frequency.toFixed(0)}Hz`),
+        noteDuration: `${noteDuration}ms`,
+        totalDuration: `${harmonics.length * noteDuration}ms`
+      });
+      
+      if (this.audioContext) {
+        this.stopAll();
+        
+        // Play each harmonic in sequence
+        harmonics.forEach((harmonic, index) => {
+          const startTime = this.audioContext.currentTime + (index * noteDuration / 1000);
+          // Use a sine wave for cleaner harmonic tones
+          this.createHarmonicOscillator(harmonic.frequency, volume, noteDuration, startTime);
+        });
+        
+      } else {
+        // Mobile fallback - play each harmonic with delay
+        for (let i = 0; i < harmonics.length; i++) {
+          setTimeout(async () => {
+            await this.playMobileTone(harmonics[i].frequency, noteDuration, volume, []);
+          }, i * noteDuration);
+        }
+      }
+      
+    } catch (error) {
+      console.warn('Harmonics sequence playback failed:', error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }
+
   createNoteOscillator(frequency, volume, duration, startTime = null) {
     if (!this.audioContext) return;
     
@@ -392,6 +427,36 @@ export class AudioEngine {
     oscillator.stop(end);
     
     this.oscillators.push({ oscillator, gainNode, filter });
+  }
+
+  createHarmonicOscillator(frequency, volume, duration, startTime = null) {
+    if (!this.audioContext) return;
+    
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+    
+    // Configure oscillator for pure harmonic tone
+    oscillator.type = 'sine'; // Pure sine wave for clean harmonics
+    oscillator.frequency.setValueAtTime(frequency, startTime || this.audioContext.currentTime);
+    
+    // Smooth envelope for harmonic sequence
+    const start = startTime || this.audioContext.currentTime;
+    const end = start + duration / 1000;
+    
+    gainNode.gain.setValueAtTime(0, start);
+    gainNode.gain.linearRampToValueAtTime(volume, start + 0.1); // Gentle attack
+    gainNode.gain.setValueAtTime(volume * 0.9, end - 0.2);
+    gainNode.gain.linearRampToValueAtTime(0, end); // Gentle release
+    
+    // Connect audio graph
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+    
+    // Start and schedule stop
+    oscillator.start(start);
+    oscillator.stop(end);
+    
+    this.oscillators.push({ oscillator, gainNode });
   }
 
   setVolume(volume) {

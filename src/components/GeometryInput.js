@@ -32,8 +32,9 @@ export const GeometryInput = ({
   currentUnit = 'metric'
 }) => {
   const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
-  const [tableMode, setTableMode] = useState(false);
+  const [tableMode, setTableMode] = useState(true);
   const [geometryPairs, setGeometryPairs] = useState([{ position: '', diameter: '' }]);
+  const [lastGeometry, setLastGeometry] = useState('');
   const colors = currentTheme.colors;
 
   useEffect(() => {
@@ -48,23 +49,31 @@ export const GeometryInput = ({
     };
   }, []);
 
-  // Parse geometry string into pairs for table mode
+  // Parse geometry string into pairs - only when geometry changes from external source (templates)
   useEffect(() => {
-    if (geometry && tableMode) {
-      try {
-        const points = unitConverter.parseGeometry(geometry, currentUnit);
-        const pairs = points.map(point => ({
-          position: point.position.toString(),
-          diameter: point.diameter.toString()
-        }));
-        if (pairs.length > 0) {
-          setGeometryPairs([...pairs, { position: '', diameter: '' }]);
+    // Only sync when geometry changed externally (not from our own edits)
+    if (geometry !== lastGeometry) {
+      setLastGeometry(geometry);
+      
+      if (geometry) {
+        try {
+          const points = unitConverter.parseGeometry(geometry, currentUnit);
+          const pairs = points.map(point => ({
+            position: point.position.toString(),
+            diameter: point.diameter.toString()
+          }));
+          if (pairs.length > 0) {
+            setGeometryPairs([...pairs, { position: '', diameter: '' }]);
+          }
+        } catch (error) {
+          // Keep current pairs if parsing fails
         }
-      } catch (error) {
-        // Keep current pairs if parsing fails
+      } else {
+        // If geometry is empty, reset to single empty pair
+        setGeometryPairs([{ position: '', diameter: '' }]);
       }
     }
-  }, [geometry, currentUnit, tableMode]);
+  }, [geometry, currentUnit, lastGeometry]);
 
   // Calculate real-time note estimation
   const estimatedNote = useMemo(() => {
@@ -109,8 +118,10 @@ export const GeometryInput = ({
     setGeometryPairs(newPairs);
     
     // Convert pairs back to geometry string
+    // Keep pairs that have at least one field filled, but only convert complete pairs to geometry
     const validPairs = newPairs.filter(pair => pair.position && pair.diameter);
     const geometryString = validPairs.map(pair => `${pair.position} ${pair.diameter}`).join('\n');
+    setLastGeometry(geometryString); // Update tracking to prevent sync loop
     onGeometryChange(geometryString);
   };
 
@@ -128,6 +139,7 @@ export const GeometryInput = ({
       
       const validPairs = newPairs.filter(pair => pair.position && pair.diameter);
       const geometryString = validPairs.map(pair => `${pair.position} ${pair.diameter}`).join('\n');
+      setLastGeometry(geometryString); // Update tracking to prevent sync loop
       onGeometryChange(geometryString);
     }
   };
@@ -143,42 +155,12 @@ export const GeometryInput = ({
         </View>
       )}
       
-      <View style={styles.modeToggle}>
-        <TouchableOpacity
-          style={[styles.modeButton, !tableMode && styles.modeButtonActive]}
-          onPress={() => setTableMode(false)}
-        >
-          <AppIcon name="construct" size={16} color={!tableMode ? '#FFFFFF' : '#64748B'} />
-          <Text style={[styles.modeButtonText, { color: !tableMode ? '#FFFFFF' : '#64748B' }]}>Texto</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modeButton, tableMode && styles.modeButtonActive]}
-          onPress={() => setTableMode(true)}
-        >
-          <AppIcon name="analytics" size={16} color={tableMode ? '#FFFFFF' : '#64748B'} />
-          <Text style={[styles.modeButtonText, { color: tableMode ? '#FFFFFF' : '#64748B' }]}>Tabela</Text>
-        </TouchableOpacity>
-      </View>
-      
       <Text style={[styles.inputSubtitle, { color: colors.textSecondary }]}>
         {currentUnit === 'metric' 
-          ? (tableMode ? '📏 Posição 0 = bocal, crescente = final. Posição(cm), Diâmetro(mm)' : 'Formato: posição(cm) diâmetro(mm)')
-          : (tableMode ? '📏 Posição 0 = bocal, crescente = final. Posição("), Diâmetro(")' : 'Formato: posição(") diâmetro(")')}
+          ? '📏 Posição 0 = bocal, crescente = final. Posição(cm), Diâmetro(mm)' 
+          : '📏 Posição 0 = bocal, crescente = final. Posição("), Diâmetro(")'}
       </Text>
       
-      {!tableMode ? (
-        <View style={styles.spreadsheetContainer}>
-          <TextInput
-            style={[styles.geometryInput, styles.spreadsheetInput, { backgroundColor: colors.surfaceBackground, borderColor: colors.border, color: colors.textPrimary }]}
-            value={geometry}
-            onChangeText={onGeometryChange}
-            placeholder={unitConverter.getExampleGeometry(currentUnit)}
-            multiline
-            textAlignVertical="top"
-            placeholderTextColor="#94A3B8"
-          />
-        </View>
-      ) : (
         <View style={[styles.analysisTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <View style={[styles.tableHeader, { backgroundColor: colors.primary || '#1F2937' }]}>
             <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Posição</Text>
@@ -226,7 +208,6 @@ export const GeometryInput = ({
             ))}
           </ScrollView>
         </View>
-      )}
       
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
@@ -238,38 +219,6 @@ export const GeometryInput = ({
         </View>
       )}
       
-      {/* Geometry Stats - 3 parameters: comprimento/nota/volume médio */}
-      {geometryStats && (
-        <View style={[styles.geometryStatsContainer, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
-          <View style={styles.statsGrid}>
-            <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
-              <View style={styles.statHeader}>
-                <AppIcon name="ruler" size={14} color="#059669" />
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Comprimento</Text>
-              </View>
-              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
-                {unitConverter.formatLength(geometryStats.totalLength, currentUnit)}
-              </Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
-              <View style={styles.statHeader}>
-                <AppIcon name="sound" size={14} color="#3B82F6" />
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Nota</Text>
-              </View>
-              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
-                {estimatedNote || 'N/A'}
-              </Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: colors.background, borderColor: colors.borderLight }]}>
-              <View style={styles.statHeader}>
-                <AppIcon name="volume" size={14} color="#F59E0B" />
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Volume Médio</Text>
-              </View>
-              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{localizationService.formatNumber(geometryStats.volume / 1000, 1)}L</Text>
-            </View>
-          </View>
-        </View>
-      )}
       
       <View style={styles.inputActions}>
         <TouchableOpacity
@@ -291,6 +240,21 @@ export const GeometryInput = ({
             {showVisualization ? localizationService.t('hide') : localizationService.t('visualize')}
           </Text>
         </TouchableOpacity>
+        
+        {geometry.trim() && (
+          <TouchableOpacity
+            style={[styles.button, styles.resetButton]}
+            onPress={() => {
+              setGeometryPairs([{ position: '', diameter: '' }]);
+              setLastGeometry('');
+              onGeometryChange('');
+            }}
+          >
+            <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+              Redefinir
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
       
     </View>
@@ -413,50 +377,12 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontWeight: '500',
   },
-  geometryStatsContainer: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: spacing.md,
-    padding: spacing.md,
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  statsGrid: {
-    flexDirection: deviceInfo.isTablet ? 'row' : 'column',
-    justifyContent: 'space-between',
-    gap: spacing.xs,
-  },
-  statCard: {
-    flex: deviceInfo.isTablet ? 1 : undefined,
-    backgroundColor: '#FFFFFF',
-    borderRadius: spacing.sm,
-    padding: spacing.sm,
-    marginHorizontal: deviceInfo.isTablet ? spacing.xs : 0,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  statHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-    gap: spacing.xs,
-  },
-  statLabel: {
-    fontSize: typography.caption,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  statValue: {
-    fontSize: typography.bodySmall,
-    fontWeight: '700',
-    color: '#374151',
-    textAlign: 'center',
-  },
   inputActions: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.lg,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: spacing.xs,
   },
   button: {
     flex: 1,
@@ -464,7 +390,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: spacing.xs,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -484,6 +409,14 @@ const styles = StyleSheet.create({
     shadowColor: '#22D3EE',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  resetButton: {
+    backgroundColor: '#EF4444',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 4,
   },
