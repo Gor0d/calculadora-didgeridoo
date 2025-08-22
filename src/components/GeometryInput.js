@@ -470,6 +470,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F2937',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
+    alignItems: 'center',
+    minHeight: 48,
   },
   tableHeaderText: {
     color: '#FFFFFF',
@@ -488,6 +490,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     alignItems: 'center',
+    minHeight: 54,
   },
   tableRowEven: {
     backgroundColor: '#F9FAFB',
@@ -503,11 +506,14 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     backgroundColor: 'transparent',
     fontFamily: 'monospace',
+    minHeight: 44,
+    textAlignVertical: 'center',
   },
   tableCell: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xs,
+    minHeight: 44,
   },
   removeButton: {
     padding: spacing.sm,
