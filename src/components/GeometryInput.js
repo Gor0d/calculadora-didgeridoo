@@ -163,9 +163,9 @@ export const GeometryInput = ({
       
         <View style={[styles.analysisTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <View style={[styles.tableHeader, { backgroundColor: colors.primary || '#1F2937' }]}>
-            <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Posição</Text>
-            <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Diâmetro</Text>
-            <Text style={[styles.tableHeaderText, { flex: 0.6 }]}>Ação</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Posição</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Diâmetro</Text>
+            <Text style={[styles.tableHeaderText, { flex: 0.7 }]}>Ação</Text>
           </View>
           <ScrollView style={styles.tableScrollView} nestedScrollEnabled>
             {geometryPairs.map((pair, index) => (
@@ -177,7 +177,7 @@ export const GeometryInput = ({
                 <TextInput
                   style={[
                     styles.tableCellInput, 
-                    { flex: 1.2, color: colors.textPrimary },
+                    { flex: 1.0, color: colors.textPrimary },
                     isPositionOrderIncorrect(geometryPairs, index) && styles.inputWarning
                   ]}
                   value={pair.position}
@@ -187,14 +187,14 @@ export const GeometryInput = ({
                   keyboardType="numeric"
                 />
                 <TextInput
-                  style={[styles.tableCellInput, { flex: 1.2, color: colors.textPrimary }]}
+                  style={[styles.tableCellInput, { flex: 1.0, color: colors.textPrimary }]}
                   value={pair.diameter}
                   onChangeText={(value) => handlePairChange(index, 'diameter', value)}
                   placeholder={currentUnit === 'metric' ? '25' : '1.0'}
                   placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                 />
-                <View style={[styles.tableCell, { flex: 0.6 }]}>
+                <View style={[styles.tableCell, { flex: 0.7 }]}>
                   {geometryPairs.length > 1 && index < geometryPairs.length - 1 && (
                     <TouchableOpacity
                       style={styles.removeButton}
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
   },
   tableScrollView: {
     maxHeight: 300,
