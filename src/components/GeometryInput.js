@@ -200,7 +200,7 @@ export const GeometryInput = ({
                       style={styles.removeButton}
                       onPress={() => removePair(index)}
                     >
-                      <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: 'bold', lineHeight: 18 }}>✕</Text>
+                      <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: 'bold', lineHeight: 16 }}>✕</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -468,29 +468,29 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#1F2937',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     alignItems: 'center',
-    minHeight: 44,
+    minHeight: 40,
   },
   tableHeaderText: {
     color: '#FFFFFF',
-    fontSize: typography.caption,
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 2,
   },
   tableScrollView: {
     maxHeight: 300,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     alignItems: 'center',
-    minHeight: 50,
+    minHeight: 44,
   },
   tableRowEven: {
     backgroundColor: '#F9FAFB',
@@ -499,31 +499,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   tableCellInput: {
-    fontSize: typography.caption,
+    fontSize: 12,
     textAlign: 'center',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
     borderWidth: 0,
     backgroundColor: 'transparent',
     fontFamily: 'monospace',
-    minHeight: 40,
+    minHeight: 36,
     textAlignVertical: 'center',
   },
   tableCell: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    minHeight: 40,
+    paddingHorizontal: 4,
+    minHeight: 36,
   },
   removeButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 4,
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 32,
-    minHeight: 32,
+    minWidth: 28,
+    minHeight: 28,
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.4)',
   },
