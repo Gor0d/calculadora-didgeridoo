@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
 import { AppIcon } from './IconSystem';
 import { tuningService } from '../services/tuning/TuningService';
@@ -27,68 +27,45 @@ export const TuningSelector = ({ onTuningChange }) => {
     };
   }, [onTuningChange]);
 
-  const handleTuningSelect = (tuning) => {
-    tuningService.setTuning(tuning.key);
+  const handleToggleTuning = () => {
+    const nextTuning = currentTuning.key === 'standard' ? 'alternative' : 'standard';
+    tuningService.setTuning(nextTuning);
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <AppIcon name="sound" size={16} color="#6B7280" />
-        <Text style={styles.headerText}>Afinação de Referência</Text>
+      <View style={styles.switchContainer}>
+        <AppIcon name="sound" size={12} color="#6B7280" />
+        <Text style={styles.switchLabel}>Afinação:</Text>
+        
+        <TouchableOpacity
+          style={[
+            styles.switch,
+            currentTuning.key === 'alternative' && styles.switchActive
+          ]}
+          onPress={handleToggleTuning}
+          activeOpacity={0.8}
+        >
+          <View style={styles.switchTrack}>
+            <Text style={[
+              styles.switchText,
+              styles.switchTextLeft,
+              currentTuning.key === 'standard' && styles.switchTextActive
+            ]}>440</Text>
+            <Text style={[
+              styles.switchText,
+              styles.switchTextRight,
+              currentTuning.key === 'alternative' && styles.switchTextActive
+            ]}>432</Text>
+          </View>
+          <View style={[
+            styles.switchThumb,
+            currentTuning.key === 'alternative' && styles.switchThumbActive
+          ]} />
+        </TouchableOpacity>
+        
+        <Text style={styles.hzLabel}>Hz</Text>
       </View>
-      
-      <View style={styles.optionsContainer}>
-        {tuningOptions.map((tuning) => (
-          <TouchableOpacity
-            key={tuning.key}
-            style={[
-              styles.optionButton,
-              currentTuning.key === tuning.key && styles.selectedOption
-            ]}
-            onPress={() => handleTuningSelect(tuning)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.optionContent}>
-              <View style={styles.frequencyContainer}>
-                <Text style={[
-                  styles.frequencyText,
-                  currentTuning.key === tuning.key && styles.selectedFrequencyText
-                ]}>
-                  {tuning.frequency}Hz
-                </Text>
-                {tuning.key === 'standard' && (
-                  <View style={styles.standardBadge}>
-                    <Text style={styles.standardBadgeText}>Padrão</Text>
-                  </View>
-                )}
-                {tuning.key === 'alternative' && (
-                  <View style={styles.alternativeBadge}>
-                    <Text style={styles.alternativeBadgeText}>Natural</Text>
-                  </View>
-                )}
-              </View>
-              
-              <Text style={[
-                styles.optionText,
-                currentTuning.key === tuning.key && styles.selectedOptionText
-              ]}>
-                {tuning.name}
-              </Text>
-              
-              {currentTuning.key === tuning.key && (
-                <View style={styles.checkIcon}>
-                  <AppIcon name="checkmark" size={16} color="#FFFFFF" />
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-      
-      <Text style={styles.infoText}>
-        A afinação afeta todas as notas calculadas e a reprodução de áudio
-      </Text>
     </View>
   );
 };
@@ -96,105 +73,78 @@ export const TuningSelector = ({ onTuningChange }) => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: spacing.md,
-    marginVertical: spacing.sm,
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginVertical: spacing.xs,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  headerContainer: {
+  switchContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  headerText: {
-    fontSize: typography.body,
-    fontWeight: '600',
-    color: '#374151',
-    marginLeft: spacing.xs,
-  },
-  optionsContainer: {
-    flexDirection: deviceInfo.isTablet ? 'row' : 'column',
-    gap: spacing.sm,
-  },
-  optionButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: spacing.sm,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    flex: deviceInfo.isTablet ? 1 : undefined,
-  },
-  selectedOption: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#3B82F6',
-  },
-  optionContent: {
-    position: 'relative',
-    alignItems: 'center',
-  },
-  frequencyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  frequencyText: {
-    fontSize: typography.h3,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  selectedFrequencyText: {
-    color: '#FFFFFF',
-  },
-  standardBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: spacing.xs,
-  },
-  alternativeBadge: {
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: spacing.xs,
-  },
-  standardBadgeText: {
-    fontSize: typography.caption,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  alternativeBadgeText: {
-    fontSize: typography.caption,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  optionText: {
-    fontSize: typography.small,
-    color: '#6B7280',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  selectedOptionText: {
-    color: '#E5E7EB',
-  },
-  checkIcon: {
-    position: 'absolute',
-    top: -spacing.xs,
-    right: -spacing.xs,
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xs,
   },
-  infoText: {
+  switchLabel: {
     fontSize: typography.caption,
+    fontWeight: '500',
     color: '#6B7280',
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    fontStyle: 'italic',
+  },
+  switch: {
+    position: 'relative',
+    width: 70,
+    height: 30,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  switchActive: {
+    backgroundColor: '#3B82F6',
+  },
+  switchTrack: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  switchThumb: {
+    position: 'absolute',
+    width: 26,
+    height: 26,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 13,
+    left: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 1,
+  },
+  switchThumbActive: {
+    left: 42,
+  },
+  switchText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
+  },
+  switchTextLeft: {
+    marginLeft: 2,
+  },
+  switchTextRight: {
+    marginRight: 2,
+  },
+  switchTextActive: {
+    color: '#FFFFFF',
+  },
+  hzLabel: {
+    fontSize: typography.caption,
+    fontWeight: '500',
+    color: '#6B7280',
   },
 });

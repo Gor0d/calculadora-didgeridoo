@@ -43,7 +43,8 @@
       "Bash(vercel:*)",
       "Bash(npx netlify-cli:*)",
       "Bash(npx serve:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npx metro build:*)"
     ],
     "deny": []
   }

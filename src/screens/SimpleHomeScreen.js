@@ -20,16 +20,12 @@ import { ProjectManager } from '../components/ProjectManager';
 import { AdvancedExport } from '../components/AdvancedExport';
 import { TutorialOverlay } from '../components/TutorialOverlay';
 import { FirstRunTutorial } from '../components/FirstRunTutorial';
-import { TipCard, FloatingTipManager, DailyTipCard } from '../components/TipCard';
-import { TipsSettings } from '../components/TipsSettings';
 import { PerformanceSettings } from '../components/PerformanceSettings';
 import { OptimizedScrollView, OptimizedTouchableOpacity, OptimizedText } from '../components/OptimizedComponents';
 import { AppIcon } from '../components/IconSystem';
-import { Visualization3D } from '../components/Visualization3D';
-import { AIRecommendations } from '../components/AIRecommendations';
 import { TuningSelector } from '../components/TuningSelector';
 import { themeService } from '../services/theme/ThemeService';
-import { useTutorial, useTips } from '../hooks/useTutorial';
+import { useTutorial } from '../hooks/useTutorial';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceInfo, getTypography, getSpacing, scale } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
@@ -628,10 +624,10 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
               if (x >= svgDimensions.margin && x <= svgDimensions.svgWidth - svgDimensions.margin) {
                 measurements.push(
                   <G key={`text-format-${positionMm}`}>
-                    {/* Position in mm - TOP */}
+                    {/* Position in mm - TOP (inside graph) */}
                     <SvgText
                       x={x}
-                      y={yTop - (isSmallScreen ? 10 : 14)}
+                      y={Math.max(svgDimensions.margin + 15, yTop - (isSmallScreen ? 10 : 14))}
                       fontSize={fontSize}
                       fill={colors?.error || "#DC2626"}
                       textAnchor="middle"
@@ -641,10 +637,10 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
                       {displayPosition}
                     </SvgText>
                     
-                    {/* Diameter in mm - BOTTOM */}
+                    {/* Diameter in mm - BOTTOM (inside graph) */}
                     <SvgText
                       x={x}
-                      y={yBottom + (isSmallScreen ? 12 : 16)}
+                      y={Math.min(svgDimensions.svgHeight - svgDimensions.margin - 5, yBottom + (isSmallScreen ? 12 : 16))}
                       fontSize={fontSize}
                       fill={colors?.primary || "#059669"}
                       textAnchor="middle"
@@ -767,42 +763,21 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
         
         <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
-            <AppIcon name="droplet" size={16} color="#3B82F6" />
-            <Text style={styles.infoCardTitle}>Volume</Text>
+            <AppIcon name="construct" size={16} color="#3B82F6" />
+            <Text style={styles.infoCardTitle}>Pontos</Text>
           </View>
           <Text style={styles.infoCardValue}>
-            {(() => {
-              // Calculate internal volume using cylindrical segments
-              let totalVolume = 0;
-              for (let i = 0; i < validPoints.length - 1; i++) {
-                const p1 = validPoints[i];
-                const p2 = validPoints[i + 1];
-                const length = Math.abs(p2.position - p1.position); // in mm
-                const avgRadius = (p1.diameter + p2.diameter) / 4; // convert diameter to radius in mm
-                const segmentVolume = Math.PI * avgRadius * avgRadius * length; // mm³
-                totalVolume += segmentVolume;
-              }
-              
-              if (currentUnit === 'metric') {
-                // Convert mm³ to liters (1 liter = 1,000,000 mm³)
-                const volumeLiters = totalVolume / 1000000;
-                return `${volumeLiters.toFixed(2)}L`;
-              } else {
-                // Convert mm³ to cubic inches (1 in³ = 16,387 mm³)
-                const volumeInches = totalVolume / 16387;
-                return `${volumeInches.toFixed(2)}in³`;
-              }
-            })()}
+            {validPoints.length}
           </Text>
         </View>
         
         <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
-            <AppIcon name="resize" size={16} color="#F59E0B" />
-            <Text style={styles.infoCardTitle}>Faixa Ø</Text>
+            <AppIcon name="sound" size={16} color="#F59E0B" />
+            <Text style={styles.infoCardTitle}>Afinação</Text>
           </View>
           <Text style={styles.infoCardValue}>
-            {svgDimensions.minDiameter.toFixed(0)}-{svgDimensions.maxDiameter.toFixed(0)}mm
+            {analysisResults.length > 0 ? `${analysisResults[0].note} (${analysisResults[0].frequency.toFixed(0)}Hz)` : 'N/A'}
           </Text>
         </View>
       </View>
@@ -811,10 +786,9 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       <View style={styles.excavationDataContainer}>
         <View style={styles.excavationHeader}>
           <AppIcon name="construct" size={18} color="#059669" />
-          <Text style={styles.excavationDataTitle}>Dados Técnicos de Escavação</Text>
+          <Text style={styles.excavationDataTitle}>Dados de Geometria</Text>
         </View>
         <Text style={styles.excavationDataSubtitle}>
-          Diâmetros a cada {currentUnit === 'metric' ? '10cm' : '4"'} - Para marcar no tronco
         </Text>
         
         <View style={styles.excavationTable}>
@@ -887,8 +861,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
       {/* Enhanced legend with measurement guide */}
       <View style={styles.fixedLegend}>
         <View style={styles.legendHeader}>
-          <AppIcon name="analytics" size={16} color="#6B7280" />
-          <Text style={styles.fixedLegendTitle}>Geometria - Perfil do Bore Interno</Text>
+          <Text style={styles.fixedLegendTitle}>LEGENDA</Text>
         </View>
         
         {/* Professional measurement guide legend */}
@@ -908,9 +881,6 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
               <Text style={styles.measurementLegendText}>Linhas guia</Text>
             </View>
           </View>
-          <Text style={styles.measurementLegendNote}>
-            💡 Exemplo: "0 29.5" = posição 0mm, diâmetro 29.5mm
-          </Text>
         </View>
         
         <View style={styles.legendStats}>
@@ -929,7 +899,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           <View style={styles.legendStat}>
             <AppIcon name="musical-notes" size={12} color="#8B5CF6" />
             <Text style={styles.legendStatText}>
-              {analysisResults?.[0]?.note ? `${analysisResults[0].note} ${analysisResults[0].frequency.toFixed(0)}Hz` : 'Analisar'}
+              {analysisResults?.[0]?.note ? `${analysisResults[0].note} ${Math.round(analysisResults[0].frequency)}Hz` : 'Analisar'}
             </Text>
           </View>
         </View>
@@ -940,7 +910,14 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
 
 // AnalysisResults Component
 const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata }) => {
+  const [showOnlyTrombetas, setShowOnlyTrombetas] = useState(false);
+  
   const handlePlaySound = useCallback((type, data) => {
+    if (type === 'trombetas') {
+      setShowOnlyTrombetas(true);
+    } else if (type === 'drone') {
+      setShowOnlyTrombetas(false);
+    }
     onPlaySound(type, data);
   }, [onPlaySound]);
 
@@ -957,7 +934,9 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
     <View style={styles.resultsContainer}>
       <Text style={styles.resultsTitle}>{localizationService.t('analysisResults')}</Text>
       
-      {/* Fundamental Frequency Section */}
+      {!showOnlyTrombetas && (
+        <>
+          {/* Fundamental Frequency Section */}
       <View style={styles.droneResult}>
         <View style={styles.droneInfo}>
           <Text style={styles.droneLabel}>{localizationService.t('fundamental')}</Text>
@@ -1134,8 +1113,43 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
           )}
         </>
       )}
+        </>
+      )}
       
-      <View style={styles.soundPreviewContainer}>
+      {showOnlyTrombetas && (
+        <View style={styles.trombetasOnlyContainer}>
+          <Text style={styles.trombetasTitle}>🎺 Visualização de Trombetas</Text>
+          <Text style={styles.trombetasSubtitle}>Sequência harmônica para trombetas</Text>
+          
+          <View style={styles.trombetasSequence}>
+            {results.slice(0, 6).map((result, index) => (
+              <View key={index} style={styles.trombetaNote}>
+                <Text style={styles.trombetaNoteNumber}>#{index + 1}</Text>
+                <Text style={styles.trombetaNoteValue}>{result.note}</Text>
+                <Text style={styles.trombetaFrequency}>{result.frequency.toFixed(0)}Hz</Text>
+              </View>
+            ))}
+          </View>
+          
+          <TouchableOpacity
+            style={[styles.soundPreviewButton, styles.backToDroneButton]}
+            onPress={() => handlePlaySound('drone', {
+              fundamental: firstResult.frequency,
+              harmonics: results.slice(1, 4).map(r => ({
+                frequency: r.frequency,
+                amplitude: r.amplitude || (0.8 / (results.indexOf(r) + 1))
+              }))
+            })}
+          >
+            <Text style={styles.soundPreviewText}>
+              ↩️ Voltar para análise completa
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {!showOnlyTrombetas && (
+        <View style={styles.soundPreviewContainer}>
         <TouchableOpacity
           style={[styles.soundPreviewButton, styles.droneButton]}
           onPress={() => handlePlaySound('drone', {
@@ -1165,7 +1179,8 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
             {results.map(r => `${r.note} ${r.frequency.toFixed(0)}Hz`).join(' → ')}
           </Text>
         </TouchableOpacity>
-      </View>
+        </View>
+      )}
     </View>
   );
 });
@@ -1212,12 +1227,8 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const [firstRunStep, setFirstRunStep] = useState(0);
   const [isFirstRun, setIsFirstRun] = useState(false);
   const [userSettings, setUserSettings] = useState({});
-  const [shouldShowTips, setShouldShowTips] = useState(false);
   const [isQuickExporting, setIsQuickExporting] = useState(false);
   const [showPerformanceSettings, setShowPerformanceSettings] = useState(false);
-  const [showTipsSettings, setShowTipsSettings] = useState(false);
-  const [show3DVisualization, setShow3DVisualization] = useState(false);
-  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   const [currentProject, setCurrentProject] = useState(null);
   const [performanceInitialized, setPerformanceInitialized] = useState(false);
 
@@ -1228,7 +1239,6 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
     hasGeometry: !!geometry.trim()
   });
   
-  const tips = useTips('analysis');
 
   // Refs for tutorial targets
   const appHeaderRef = useRef(null);
@@ -1508,12 +1518,6 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
       setAnalysisMetadata(metadata);
       setShowResults(true);
       
-      // Show contextual tip for first analysis
-      if (resultsArray.length > 0 && !currentProject) {
-        setTimeout(() => {
-          tips.showTipForCategory('analysis');
-        }, 2000);
-      }
       
       // Auto-save analysis
       const projectName = currentFileName || `Analysis_${new Date().toISOString().slice(0,10)}`;
@@ -1765,65 +1769,6 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
             </View>
           )}
 
-          {/* Feature Buttons Row */}
-          <View style={styles.newFeaturesContainer}>
-            <TouchableOpacity
-              style={[styles.featureButton, styles.disabledFeatureButton]}
-              activeOpacity={0.7}
-              onPress={() => {
-                Alert.alert(
-                  '🎨 Visualização 3D',
-                  'Esta funcionalidade estará disponível em breve!\n\n• Visualização 3D interativa\n• Análise visual de ondas sonoras\n• Simulação de ressonância\n• Controles de ângulo e zoom',
-                  [{ text: 'OK', style: 'default' }]
-                );
-              }}
-            >
-              <Text style={styles.featureButtonText}>🔒 3D</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.featureButton, styles.disabledFeatureButton]}
-              activeOpacity={0.7}
-              onPress={() => {
-                Alert.alert(
-                  '🤖 Recomendações de IA',
-                  'Esta funcionalidade estará disponível em breve!\n\n• Chat inteligente com IA\n• Análise de áudio gravado\n• Sugestões personalizadas\n• Recomendações por tom',
-                  [{ text: 'OK', style: 'default' }]
-                );
-              }}
-            >
-              <Text style={styles.featureButtonText}>🔒 IA</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.featureButton}
-              activeOpacity={0.7}
-              onPress={() => {
-                console.log('Tips Settings button pressed');
-                navigation.navigate('TipsSettings');
-              }}
-            >
-              <Text style={styles.featureButtonText}>⚙️ Dicas</Text>
-            </TouchableOpacity>
-
-            {/* Daily Tip Button - Only if enabled */}
-            {shouldShowTips && (
-              <TouchableOpacity
-                style={styles.featureButton}
-                onPress={() => {
-                  if (tips.currentTip) {
-                    tips.clearTip();
-                  } else {
-                    tips.getTip();
-                  }
-                }}
-              >
-                <Text style={styles.featureButtonText}>
-                  {tips.currentTip ? '❌' : '💡'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
         </View>
       )}
 
@@ -1855,14 +1800,6 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
         />
       )}
 
-      {/* Dica do Dia - Apenas se usuário habilitou */}
-      {shouldShowTips && (
-        <DailyTipCard
-          visible={!!tips.currentTip}
-          tip={tips.currentTip}
-          onClose={tips.clearTip}
-        />
-      )}
 
       {/* First Run Tutorial - DESABILITADO PARA APRESENTAÇÃO */}
       {false && (
@@ -1886,19 +1823,6 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
           }}
         />
       )}
-      {/* Tips Settings */}
-      <TipsSettings
-        visible={showTipsSettings}
-        onClose={() => {
-          setShowTipsSettings(false);
-          // Atualizar configurações de dicas
-          const checkTipsSettings = async () => {
-            const newSetting = userPreferences.shouldShowDailyTips();
-            setShouldShowTips(newSetting);
-          };
-          checkTipsSettings();
-        }}
-      />
 
       {/* Removed modal components - now using navigation */}
       </OptimizedScrollView>
@@ -2140,6 +2064,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#10B981',
     marginTop: 2,
+  },
+  
+  // Legend styles
+  legendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  legendText: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+    fontFamily: 'monospace',
   },
   
   // Excavation data table styles
@@ -2537,6 +2479,73 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   
+  // Trombetas-only visualization styles
+  trombetasOnlyContainer: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  trombetasTitle: {
+    fontSize: typography.h3,
+    fontWeight: '700',
+    color: '#DC2626',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  trombetasSubtitle: {
+    fontSize: typography.small,
+    color: '#B91C1C',
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    fontStyle: 'italic',
+  },
+  trombetasSequence: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  trombetaNote: {
+    width: '30%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: spacing.sm,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  trombetaNoteNumber: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+    color: '#991B1B',
+    marginBottom: spacing.xs,
+  },
+  trombetaNoteValue: {
+    fontSize: typography.h4,
+    fontWeight: '700',
+    color: '#DC2626',
+    marginBottom: spacing.xs,
+  },
+  trombetaFrequency: {
+    fontSize: typography.caption,
+    fontWeight: '500',
+    color: '#B91C1C',
+    fontFamily: 'monospace',
+  },
+  backToDroneButton: {
+    backgroundColor: '#059669',
+    marginTop: spacing.sm,
+  },
+  
   // Professional analysis table styles
   analysisTable: {
     backgroundColor: '#FFFFFF',
@@ -2781,39 +2790,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.body,
     fontWeight: '700',
-  },
-  newFeaturesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-  },
-  featureButton: {
-    flex: 1,
-    backgroundColor: '#2563EB',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: scale(48),
-    minWidth: scale(48),
-    marginHorizontal: spacing.xs,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  disabledFeatureButton: {
-    backgroundColor: '#9CA3AF',
-    opacity: 0.7,
-  },
-  featureButtonText: {
-    color: '#FFFFFF',
-    fontSize: typography.small,
-    fontWeight: '600',
-    textAlign: 'center',
   },
 });
