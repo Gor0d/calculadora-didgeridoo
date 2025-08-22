@@ -163,9 +163,9 @@ export const GeometryInput = ({
       
         <View style={[styles.analysisTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <View style={[styles.tableHeader, { backgroundColor: colors.primary || '#1F2937' }]}>
-            <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Posição</Text>
-            <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Diâmetro</Text>
-            <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Ação</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.4 }]}>Posição</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.4 }]}>Diâmetro</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Ação</Text>
           </View>
           <ScrollView style={styles.tableScrollView} nestedScrollEnabled>
             {geometryPairs.map((pair, index) => (
@@ -177,7 +177,7 @@ export const GeometryInput = ({
                 <TextInput
                   style={[
                     styles.tableCellInput, 
-                    { flex: 1.2, color: colors.textPrimary },
+                    { flex: 1.4, color: colors.textPrimary },
                     isPositionOrderIncorrect(geometryPairs, index) && styles.inputWarning
                   ]}
                   value={pair.position}
@@ -187,20 +187,20 @@ export const GeometryInput = ({
                   keyboardType="numeric"
                 />
                 <TextInput
-                  style={[styles.tableCellInput, { flex: 1.2, color: colors.textPrimary }]}
+                  style={[styles.tableCellInput, { flex: 1.4, color: colors.textPrimary }]}
                   value={pair.diameter}
                   onChangeText={(value) => handlePairChange(index, 'diameter', value)}
                   placeholder={currentUnit === 'metric' ? '25' : '1.0'}
                   placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                 />
-                <View style={[styles.tableCell, { flex: 0.8 }]}>
+                <View style={[styles.tableCell, { flex: 1.0 }]}>
                   {geometryPairs.length > 1 && index < geometryPairs.length - 1 && (
                     <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() => removePair(index)}
                     >
-                      <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
+                      <Text style={{ color: '#EF4444', fontSize: 18, fontWeight: 'bold', lineHeight: 20 }}>✕</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -486,11 +486,11 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     alignItems: 'center',
-    minHeight: 54,
+    minHeight: 60,
   },
   tableRowEven: {
     backgroundColor: '#F9FAFB',
@@ -499,32 +499,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   tableCellInput: {
-    fontSize: typography.caption,
+    fontSize: typography.small,
     textAlign: 'center',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
     borderWidth: 0,
     backgroundColor: 'transparent',
     fontFamily: 'monospace',
-    minHeight: 44,
+    minHeight: 48,
     textAlignVertical: 'center',
   },
   tableCell: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    minHeight: 48,
+    paddingVertical: spacing.xs,
   },
   removeButton: {
-    padding: spacing.sm,
-    borderRadius: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 30,
-    minHeight: 30,
+    minWidth: 40,
+    minHeight: 40,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+    marginHorizontal: 4,
   },
   tableRowWarning: {
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
