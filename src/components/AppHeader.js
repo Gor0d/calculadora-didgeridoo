@@ -5,6 +5,7 @@ import { getDeviceInfo, getTypography, getSpacing, getLayoutStyles } from '../ut
 import { localizationService } from '../services/i18n/LocalizationService';
 import { AppIcon } from './IconSystem';
 import { ThemeToggle } from './ThemeToggle';
+import { DynamicLogo } from './DynamicLogo';
 import { themeService } from '../services/theme/ThemeService';
 
 const deviceInfo = getDeviceInfo();
@@ -37,12 +38,8 @@ export const AppHeader = () => {
       </View>
       
       {/* Main Logo Area */}
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/didgemap.png')} 
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
+      <View style={styles.logoSection}>
+        <DynamicLogo theme={currentTheme} />
         <View style={styles.logoTextContainer}>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             {localizationService.t('appSubtitle')}
@@ -111,14 +108,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#FFFFFF',
   },
-  logoContainer: {
+  logoSection: {
     alignItems: 'center',
     marginBottom: spacing.md,
-  },
-  logoImage: {
-    width: deviceInfo.isTablet ? 400 : 300,
-    height: deviceInfo.isTablet ? 113 : 85,
-    marginBottom: spacing.xs,
   },
   logoTextContainer: {
     alignItems: 'center',

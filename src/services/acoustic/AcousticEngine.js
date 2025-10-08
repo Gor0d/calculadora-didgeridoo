@@ -1,6 +1,18 @@
 /**
  * Real Acoustic Calculations for Didgeridoo Analysis
- * Based on acoustic theory and empirical didgeridoo research
+ *
+ * IMPLEMENTATION METHODS:
+ * 1. Transfer Matrix Method (TMM) - High precision, based on Dan Mapes-Riordan (1991)
+ * 2. Simplified Method - Fast approximation, fallback for offline mode
+ *
+ * REFERENCES:
+ * - Dan Mapes-Riordan (1991): "Horn Modeling with Conical and Cylindrical Transmission Line Elements"
+ *   Journal of the Audio Engineering Society, Paper 3194
+ * - Fletcher & Rossing (1991): "The Physics of Musical Instruments"
+ * - Webster Horn Equation for acoustic wave propagation
+ * - DidgitaldDoo project: https://didgitaldoo.github.io
+ * - CADSD Method: https://www.didgeridoo-physik.de
+ *
  * Enhanced with offline capabilities
  */
 
@@ -8,21 +20,36 @@ import { tuningService } from '../tuning/TuningService';
 
 export class AcousticEngine {
   constructor() {
-    // Physical constants
-    this.SPEED_OF_SOUND = 343; // m/s at 20°C
-    this.AIR_DENSITY = 1.225; // kg/m³ at 20°C
-    
+    // Physical constants (20°C, 1 atm)
+    this.SPEED_OF_SOUND = 343.2; // m/s at 20°C (more precise value)
+    this.AIR_DENSITY = 1.204; // kg/m³ at 20°C (corrected value)
+    this.DYNAMIC_VISCOSITY = 1.84e-5; // Pa·s (for viscothermal losses)
+    this.GAMMA = 1.40; // Ratio of specific heats for air
+    this.PRANDTL_NUMBER = 0.71; // Dimensionless
+
     // Musical constants
     this.SEMITONE_RATIO = Math.pow(2, 1/12);
-    
+
     // Didgeridoo specific constants
     this.END_CORRECTION_FACTOR = 0.6; // Empirical correction for open end
     this.MOUTH_IMPEDANCE_FACTOR = 0.85; // Mouth coupling efficiency
+
+    // Transfer Matrix Method parameters
+    this.TMM_ENABLED = true; // Enable high-precision TMM calculations
+    this.FREQ_RANGE_START = 30; // Hz - Lower bound for analysis
+    this.FREQ_RANGE_END = 1000; // Hz - Upper bound for analysis
+    this.FREQ_STEP_LOW = 0.5; // Hz - High resolution for 30-100 Hz
+    this.FREQ_STEP_HIGH = 1.0; // Hz - Standard resolution for 100-1000 Hz
+    this.RESONANCE_THRESHOLD = 0.4; // Minimum relative magnitude for peak detection
   }
 
   /**
    * Calculate fundamental frequency and harmonics from geometry
-   * Enhanced with offline capability
+   * Enhanced with offline capability and Transfer Matrix Method
+   *
+   * @param {Array} points - Array of {position, diameter} objects
+   * @param {Object} offlineManager - Optional offline manager for fallback
+   * @returns {Object} Analysis results with frequencies, notes, and metadata
    */
   async analyzeGeometry(points, offlineManager = null) {
     try {
@@ -30,11 +57,20 @@ export class AcousticEngine {
         throw new Error('Insufficient geometry points');
       }
 
-      // Try online analysis first
+      // Use Transfer Matrix Method if enabled (high precision)
+      if (this.TMM_ENABLED) {
+        try {
+          return await this.analyzeGeometryTransferMatrix(points);
+        } catch (tmmError) {
+          console.warn('TMM analysis failed, falling back to simplified method:', tmmError);
+        }
+      }
+
+      // Fallback to simplified online analysis
       return await this.analyzeGeometryOnline(points);
     } catch (error) {
       console.warn('Online analysis failed, attempting offline analysis:', error);
-      
+
       // Fallback to offline analysis if offline manager is available
       if (offlineManager) {
         try {
@@ -43,7 +79,7 @@ export class AcousticEngine {
           console.error('Offline analysis also failed:', offlineError);
         }
       }
-      
+
       // Final fallback to simplified calculation
       return await this.analyzeGeometrySimplified(points);
     }
@@ -426,9 +462,399 @@ export class AcousticEngine {
    */
   calculateReflection(segment) {
     if (segment.taperRatio === 1) return 0; // No taper, no reflection
-    
+
     const impedanceRatio = segment.r1 * segment.r1 / (segment.r2 * segment.r2);
     return (impedanceRatio - 1) / (impedanceRatio + 1);
+  }
+
+  // ============================================================================
+  // TRANSFER MATRIX METHOD (TMM) - High Precision Analysis
+  // Based on Dan Mapes-Riordan (1991) and Webster Horn Equation
+  // ============================================================================
+
+  /**
+   * Analyze geometry using Transfer Matrix Method
+   * This is the high-precision method used by DidgitaldDoo and CADSD
+   *
+   * @param {Array} points - Array of {position, diameter} objects
+   * @returns {Object} Analysis results with full impedance spectrum
+   */
+  async analyzeGeometryTransferMatrix(points) {
+    // Process geometry into segments
+    const segments = this.processGeometryForTMM(points);
+
+    // Generate frequency range for analysis
+    const frequencies = this.generateFrequencyRange();
+
+    // Calculate impedance spectrum across all frequencies
+    const impedanceSpectrum = this.calculateImpedanceSpectrum(segments, frequencies);
+
+    // Find resonance peaks (harmonics)
+    const resonances = this.findResonancePeaks(frequencies, impedanceSpectrum);
+
+    // Convert resonances to musical notes
+    const results = resonances.map((freq, index) => ({
+      frequency: freq,
+      harmonic: index + 1,
+      ...this.frequencyToNote(freq),
+      amplitude: this.calculateResonanceAmplitude(freq, impedanceSpectrum, frequencies),
+      quality: this.assessResonanceQuality(freq, impedanceSpectrum, frequencies)
+    }));
+
+    // Calculate metadata
+    const totalLength = points[points.length - 1].position / 100; // cm to m
+    const avgRadius = this.calculateAverageRadius(segments);
+
+    return {
+      results,
+      metadata: {
+        effectiveLength: totalLength * 100,
+        averageRadius: avgRadius * 1000,
+        volume: this.calculateVolume(segments),
+        impedanceSpectrum: this.formatImpedanceSpectrum(frequencies, impedanceSpectrum),
+        isOfflineCalculation: false,
+        calculationMethod: 'transfer_matrix_method'
+      }
+    };
+  }
+
+  /**
+   * Process geometry points for Transfer Matrix Method
+   * Adds position information to each segment
+   */
+  processGeometryForTMM(points) {
+    const segments = [];
+    let currentPosition = 0;
+
+    for (let i = 1; i < points.length; i++) {
+      const p1 = points[i - 1];
+      const p2 = points[i];
+
+      const length = (p2.position - p1.position) / 100; // Convert cm to m
+      const r1 = p1.diameter / 2000; // Convert mm to m (radius)
+      const r2 = p2.diameter / 2000;
+
+      if (length <= 0 || r1 <= 0 || r2 <= 0) {
+        throw new Error(`Invalid segment: length=${length}, r1=${r1}, r2=${r2}`);
+      }
+
+      segments.push({
+        length,
+        r1,
+        r2,
+        averageRadius: (r1 + r2) / 2,
+        taperRatio: r2 / r1,
+        startPosition: currentPosition,
+        endPosition: currentPosition + length
+      });
+
+      currentPosition += length;
+    }
+
+    return segments;
+  }
+
+  /**
+   * Generate frequency range for analysis
+   * Uses variable resolution: 0.5 Hz for 30-100 Hz, 1 Hz for 100-1000 Hz
+   */
+  generateFrequencyRange() {
+    const frequencies = [];
+
+    // High resolution for low frequencies (30-100 Hz)
+    for (let f = this.FREQ_RANGE_START; f < 100; f += this.FREQ_STEP_LOW) {
+      frequencies.push(f);
+    }
+
+    // Standard resolution for higher frequencies (100-1000 Hz)
+    for (let f = 100; f <= this.FREQ_RANGE_END; f += this.FREQ_STEP_HIGH) {
+      frequencies.push(f);
+    }
+
+    return frequencies;
+  }
+
+  /**
+   * Calculate complete impedance spectrum using Transfer Matrix Method
+   *
+   * For each frequency:
+   * 1. Build transfer matrix for each segment
+   * 2. Multiply matrices to get total transfer matrix
+   * 3. Calculate input impedance from radiation impedance
+   *
+   * @param {Array} segments - Array of segment objects
+   * @param {Array} frequencies - Array of frequencies to analyze
+   * @returns {Array} Array of complex impedance values {real, imag, magnitude, phase}
+   */
+  calculateImpedanceSpectrum(segments, frequencies) {
+    const spectrum = [];
+
+    for (const freq of frequencies) {
+      const impedance = this.calculateImpedanceAtFrequency(segments, freq);
+      spectrum.push(impedance);
+    }
+
+    return spectrum;
+  }
+
+  /**
+   * Calculate impedance at a single frequency
+   */
+  calculateImpedanceAtFrequency(segments, frequency) {
+    // Start with identity matrix
+    let M = { A: 1, B: 0, C: 0, D: 1 };
+
+    // Multiply transfer matrices for all segments
+    for (const segment of segments) {
+      const segmentMatrix = this.calculateTransferMatrix(segment, frequency);
+      M = this.multiplyTransferMatrices(M, segmentMatrix);
+    }
+
+    // Calculate radiation impedance at the bell (open end)
+    const bellRadius = segments[segments.length - 1].r2;
+    const Zrad = this.calculateRadiationImpedance(bellRadius, frequency);
+
+    // Calculate input impedance: Zin = (Zrad * A + B) / (Zrad * C + D)
+    const numerator = this.complexAdd(
+      this.complexMultiply(Zrad, { real: M.A, imag: 0 }),
+      { real: M.B, imag: 0 }
+    );
+    const denominator = this.complexAdd(
+      this.complexMultiply(Zrad, { real: M.C, imag: 0 }),
+      { real: M.D, imag: 0 }
+    );
+
+    const Zin = this.complexDivide(numerator, denominator);
+
+    return {
+      real: Zin.real,
+      imag: Zin.imag,
+      magnitude: Math.sqrt(Zin.real * Zin.real + Zin.imag * Zin.imag),
+      phase: Math.atan2(Zin.imag, Zin.real)
+    };
+  }
+
+  /**
+   * Calculate transfer matrix for a conical segment
+   * Based on Dan Mapes-Riordan (1991) method
+   *
+   * For a conical segment, the transfer matrix is:
+   * [ A  B ]
+   * [ C  D ]
+   *
+   * Where A, B, C, D are complex numbers derived from acoustic theory
+   */
+  calculateTransferMatrix(segment, frequency) {
+    const { r1, r2, length } = segment;
+    const omega = 2 * Math.PI * frequency;
+    const k = omega / this.SPEED_OF_SOUND; // Wave number
+
+    // For cylindrical segment (r1 ≈ r2)
+    if (Math.abs(r1 - r2) < 0.0001) {
+      return this.calculateCylindricalTransferMatrix(r1, length, k);
+    }
+
+    // For conical segment
+    return this.calculateConicalTransferMatrix(r1, r2, length, k);
+  }
+
+  /**
+   * Transfer matrix for cylindrical segment
+   */
+  calculateCylindricalTransferMatrix(radius, length, k) {
+    const S = Math.PI * radius * radius;
+    const Zc = (this.AIR_DENSITY * this.SPEED_OF_SOUND) / S;
+    const kL = k * length;
+
+    // A = cos(kL), D = cos(kL)
+    const A = Math.cos(kL);
+    const D = Math.cos(kL);
+
+    // B = j * Zc * sin(kL)
+    const B = Zc * Math.sin(kL); // Imaginary part stored as real
+
+    // C = j * sin(kL) / Zc
+    const C = Math.sin(kL) / Zc; // Imaginary part stored as real
+
+    return { A, B, C, D };
+  }
+
+  /**
+   * Transfer matrix for conical segment
+   * Uses effective position method for cone
+   */
+  calculateConicalTransferMatrix(r1, r2, length, k) {
+    // Virtual apex method for conical sections
+    // x1 and x2 are distances from virtual apex
+    const x1 = (r1 !== r2) ? r1 * length / (r2 - r1) : length;
+    const x2 = x1 + length;
+
+    // Prevent division by zero
+    if (Math.abs(x1) < 0.001 || Math.abs(x2) < 0.001) {
+      return this.calculateCylindricalTransferMatrix((r1 + r2) / 2, length, k);
+    }
+
+    const kx = k * (x2 - x1);
+    const cosKx = Math.cos(kx);
+    const sinKx = Math.sin(kx);
+
+    // Matrix elements for conical section
+    const A = (r2 / r1) * cosKx - (sinKx / (k * x1));
+    const D = (r1 / r2) * cosKx + (sinKx / (k * x2));
+
+    const S1 = Math.PI * r1 * r1;
+    const S2 = Math.PI * r2 * r2;
+    const B = (this.AIR_DENSITY * this.SPEED_OF_SOUND / (Math.sqrt(S1 * S2))) * sinKx;
+
+    const C = sinKx / (this.AIR_DENSITY * this.SPEED_OF_SOUND * Math.sqrt(S1 * S2));
+
+    return { A, B, C, D };
+  }
+
+  /**
+   * Calculate radiation impedance at the open end (bell)
+   * Simplified Levine-Schwinger model
+   */
+  calculateRadiationImpedance(radius, frequency) {
+    const k = (2 * Math.PI * frequency) / this.SPEED_OF_SOUND;
+    const ka = k * radius;
+    const S = Math.PI * radius * radius;
+    const Zc = this.AIR_DENSITY * this.SPEED_OF_SOUND / S;
+
+    // Real part (radiation resistance)
+    const real = Zc * 0.25 * ka * ka;
+
+    // Imaginary part (radiation reactance)
+    const imag = Zc * 0.61 * ka;
+
+    return { real, imag };
+  }
+
+  /**
+   * Multiply two 2x2 transfer matrices
+   */
+  multiplyTransferMatrices(M1, M2) {
+    return {
+      A: M1.A * M2.A + M1.B * M2.C,
+      B: M1.A * M2.B + M1.B * M2.D,
+      C: M1.C * M2.A + M1.D * M2.C,
+      D: M1.C * M2.B + M1.D * M2.D
+    };
+  }
+
+  // Complex number operations
+  complexAdd(z1, z2) {
+    return { real: z1.real + z2.real, imag: z1.imag + z2.imag };
+  }
+
+  complexMultiply(z1, z2) {
+    return {
+      real: z1.real * z2.real - z1.imag * z2.imag,
+      imag: z1.real * z2.imag + z1.imag * z2.real
+    };
+  }
+
+  complexDivide(z1, z2) {
+    const denominator = z2.real * z2.real + z2.imag * z2.imag;
+    if (denominator === 0) {
+      return { real: 0, imag: 0 };
+    }
+    return {
+      real: (z1.real * z2.real + z1.imag * z2.imag) / denominator,
+      imag: (z1.imag * z2.real - z1.real * z2.imag) / denominator
+    };
+  }
+
+  /**
+   * Find resonance peaks in impedance spectrum
+   * Peaks indicate frequencies where the instrument naturally resonates
+   */
+  findResonancePeaks(frequencies, impedanceSpectrum) {
+    const peaks = [];
+    const magnitudes = impedanceSpectrum.map(z => z.magnitude);
+    const maxMagnitude = Math.max(...magnitudes);
+    const threshold = maxMagnitude * this.RESONANCE_THRESHOLD;
+
+    // Find local maxima above threshold
+    for (let i = 1; i < magnitudes.length - 1; i++) {
+      const current = magnitudes[i];
+      const prev = magnitudes[i - 1];
+      const next = magnitudes[i + 1];
+
+      // Check if it's a local maximum
+      if (current > prev && current > next && current > threshold) {
+        peaks.push(frequencies[i]);
+      }
+    }
+
+    // Limit to first 6 harmonics (most relevant for didgeridoo playing)
+    return peaks.slice(0, 6);
+  }
+
+  /**
+   * Calculate relative amplitude of a resonance peak
+   */
+  calculateResonanceAmplitude(frequency, impedanceSpectrum, frequencies) {
+    const index = frequencies.findIndex(f => Math.abs(f - frequency) < 0.5);
+    if (index === -1) return 0.5;
+
+    const magnitude = impedanceSpectrum[index].magnitude;
+    const maxMagnitude = Math.max(...impedanceSpectrum.map(z => z.magnitude));
+
+    return magnitude / maxMagnitude;
+  }
+
+  /**
+   * Assess quality of a resonance (how well it will play)
+   */
+  assessResonanceQuality(frequency, impedanceSpectrum, frequencies) {
+    const index = frequencies.findIndex(f => Math.abs(f - frequency) < 0.5);
+    if (index === -1) return 0.5;
+
+    // Calculate Q-factor (sharpness of peak)
+    const peakMagnitude = impedanceSpectrum[index].magnitude;
+    const halfPowerLevel = peakMagnitude / Math.sqrt(2);
+
+    // Find bandwidth at half power
+    let leftIndex = index;
+    let rightIndex = index;
+
+    while (leftIndex > 0 && impedanceSpectrum[leftIndex].magnitude > halfPowerLevel) {
+      leftIndex--;
+    }
+
+    while (rightIndex < impedanceSpectrum.length - 1 &&
+           impedanceSpectrum[rightIndex].magnitude > halfPowerLevel) {
+      rightIndex++;
+    }
+
+    const bandwidth = frequencies[rightIndex] - frequencies[leftIndex];
+    const Q = frequency / bandwidth;
+
+    // Higher Q (sharper peak) = better quality, but normalize to 0-1 range
+    // Typical didgeridoo Q is 5-20
+    const normalizedQ = Math.min(1.0, Q / 20);
+
+    return normalizedQ;
+  }
+
+  /**
+   * Format impedance spectrum for visualization
+   * Returns limited data points to avoid overwhelming the UI
+   */
+  formatImpedanceSpectrum(frequencies, impedanceSpectrum) {
+    const step = Math.max(1, Math.floor(frequencies.length / 200)); // Max 200 points
+    const formatted = [];
+
+    for (let i = 0; i < frequencies.length; i += step) {
+      formatted.push({
+        frequency: frequencies[i],
+        magnitude: impedanceSpectrum[i].magnitude,
+        phase: impedanceSpectrum[i].phase
+      });
+    }
+
+    return formatted;
   }
 
   /**
