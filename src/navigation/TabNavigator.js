@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, StyleSheet } from 'react-native';
 import { getDeviceInfo, getTypography, getSpacing, getIconSizes } from '../utils/responsive';
 import { AppIcon } from '../components/IconSystem';
 import { localizationService } from '../services/i18n/LocalizationService';
+import { themeService } from '../services/theme/ThemeService';
 import { SimpleHomeScreen } from '../screens/SimpleHomeScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 
@@ -15,31 +16,51 @@ const iconSizes = getIconSizes();
 
 const TabIcon = ({ iconName, color, focused }) => (
   <View style={[styles.tabIconContainer, focused && styles.tabIconFocused]}>
-    <AppIcon 
-      name={iconName} 
-      size={iconSizes.tabIcon} 
-      color={color} 
+    <AppIcon
+      name={iconName}
+      size={iconSizes.tabIcon}
+      color={color}
     />
   </View>
 );
 
-export const TabNavigator = ({ 
-  currentLanguage, 
-  onLanguageChange, 
-  currentUnit, 
+export const TabNavigator = ({
+  currentLanguage,
+  onLanguageChange,
+  currentUnit,
   onUnitChange,
   onExportData,
   onImportData,
   onResetApp,
   onResetOnboarding
 }) => {
+  // Theme support
+  const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+  const colors = currentTheme.colors;
+
+  useEffect(() => {
+    const handleThemeChange = (newTheme) => {
+      setCurrentTheme(newTheme);
+    };
+
+    themeService.addThemeChangeListener(handleThemeChange);
+
+    return () => {
+      themeService.removeThemeChangeListener(handleThemeChange);
+    };
+  }, []);
+
   return (
     <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarStyle: styles.tabBar,
-          tabBarActiveTintColor: '#10B981',
-          tabBarInactiveTintColor: '#9CA3AF',
+          tabBarStyle: {
+            ...styles.tabBar,
+            backgroundColor: colors.cardBackground,
+            borderTopColor: colors.border,
+          },
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textSecondary,
           tabBarLabelStyle: styles.tabBarLabel,
           tabBarItemStyle: styles.tabBarItem,
         }}

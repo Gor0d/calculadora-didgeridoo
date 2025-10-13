@@ -25,6 +25,8 @@ import { PerformanceSettings } from '../components/PerformanceSettings';
 import { OptimizedScrollView, OptimizedTouchableOpacity, OptimizedText } from '../components/OptimizedComponents';
 import { AppIcon } from '../components/IconSystem';
 import { TuningSelector } from '../components/TuningSelector';
+import { ImpedanceSpectrumChart } from '../components/ImpedanceSpectrumChart';
+import { TuningDisplay } from '../components/TuningDisplay';
 import { themeService } from '../services/theme/ThemeService';
 import { useTutorial } from '../hooks/useTutorial';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -323,8 +325,8 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
   if (!isVisible || !geometry || !geometry.trim() || points.length < 2 || !svgDimensions) return null;
 
   return (
-    <View style={styles.visualizationContainer}>
-      <Text style={styles.visualizationTitle}>
+    <View style={[styles.visualizationContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+      <Text style={[styles.visualizationTitle, { color: colors.text }]}>
         {localizationService.t('geometryVisualization')}
       </Text>
       
@@ -916,7 +918,11 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
 const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata }) => {
   const [isPlayingHarmonics, setIsPlayingHarmonics] = useState(false);
   const [showHarmonicsModal, setShowHarmonicsModal] = useState(false);
-  
+
+  // Theme support
+  const [currentTheme] = useState(themeService.getCurrentTheme());
+  const colors = currentTheme.colors;
+
   const handlePlaySound = useCallback(async (type, data) => {
     if (type === 'harmonics_sequence') {
       setIsPlayingHarmonics(true);
@@ -930,7 +936,7 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
   }, [onPlaySound]);
 
   if (!isVisible || !results || results.length === 0) return null;
-  
+
   // Safety check for first result
   const firstResult = results[0];
   if (!firstResult || typeof firstResult.frequency !== 'number') {
@@ -939,19 +945,19 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
   }
 
   return (
-    <View style={styles.resultsContainer}>
-      <Text style={styles.resultsTitle}>{localizationService.t('analysisResults')}</Text>
+    <View style={[styles.resultsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+      <Text style={[styles.resultsTitle, { color: colors.text }]}>{localizationService.t('analysisResults')}</Text>
       
       <>
         {/* Fundamental Frequency Section */}
-      <View style={styles.droneResult}>
+      <View style={[styles.droneResult, { backgroundColor: colors.surfaceBackground }]}>
         <View style={styles.droneInfo}>
-          <Text style={styles.droneLabel}>{localizationService.t('fundamental')}</Text>
-          <Text style={styles.droneFrequency}>{firstResult.frequency.toFixed(2)} Hz</Text>
-          <Text style={styles.droneNote}>{firstResult.note} {firstResult.frequency.toFixed(0)}Hz</Text>
+          <Text style={[styles.droneLabel, { color: colors.textSecondary }]}>{localizationService.t('fundamental')}</Text>
+          <Text style={[styles.droneFrequency, { color: colors.text }]}>{firstResult.frequency.toFixed(2)} Hz</Text>
+          <Text style={[styles.droneNote, { color: colors.textSecondary }]}>{firstResult.note} {firstResult.frequency.toFixed(0)}Hz</Text>
         </View>
         <View style={styles.droneAccuracy}>
-          <Text style={styles.accuracyLabel}>{localizationService.t('quality')}</Text>
+          <Text style={[styles.accuracyLabel, { color: colors.textSecondary }]}>{localizationService.t('quality')}</Text>
           <Text style={[
             styles.accuracyValue,
             { color: Math.abs(firstResult.centDiff) < 10 ? '#10B981' : '#EF4444' }
@@ -963,16 +969,16 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
           </Text>
         </View>
       </View>
-      
+
       {/* Professional Analysis Table */}
       {results.length > 0 && (
         <>
-          <Text style={styles.harmonicsTitle}>📊 Análise Profissional de Harmônicos</Text>
-          <Text style={styles.harmonicsSubtitle}>Baseada em cálculos acústicos avançados para didgeridoo</Text>
+          <Text style={[styles.harmonicsTitle, { color: colors.text }]}>📊 Análise Profissional de Harmônicos</Text>
+          <Text style={[styles.harmonicsSubtitle, { color: colors.textSecondary }]}>Baseada em cálculos acústicos avançados para didgeridoo</Text>
           
           {/* Table Header */}
-          <View style={styles.analysisTable}>
-            <View style={styles.tableHeader}>
+          <View style={[styles.analysisTable, { backgroundColor: colors.surfaceBackground, borderColor: colors.border }]}>
+            <View style={[styles.tableHeader, { backgroundColor: colors.primary }]}>
               <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Freq [Hz]</Text>
               <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Nota</Text>
               <Text style={[styles.tableHeaderText, { flex: 0.8 }]}>Oitava</Text>
@@ -1008,21 +1014,21 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
               return (
                 <View key={index} style={[
                   styles.tableRow,
-                  index % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd,
+                  { backgroundColor: index % 2 === 0 ? colors.cardBackground : colors.surfaceBackground },
                   !isPlayable && styles.tableRowWeak,
-                  index === 0 && styles.fundamentalRow
+                  index === 0 && { borderLeftColor: colors.primary, borderLeftWidth: 4 }
                 ]}>
-                  <Text style={[styles.tableCellText, { flex: 1.2, fontFamily: 'monospace' }]}>
+                  <Text style={[styles.tableCellText, { flex: 1.2, fontFamily: 'monospace', color: colors.text }]}>
                     {result.frequency.toFixed(0)}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 0.8, fontWeight: '600' }]}>
+                  <Text style={[styles.tableCellText, { flex: 0.8, fontWeight: '600', color: colors.text }]}>
                     {(() => {
                       if (!result.note) return '-';
                       const notePart = result.note.replace(/\d+$/, '');
                       return notePart || '-';
                     })()}
                   </Text>
-                  <Text style={[styles.tableCellText, { flex: 0.8, fontFamily: 'monospace' }]}>
+                  <Text style={[styles.tableCellText, { flex: 0.8, fontFamily: 'monospace', color: colors.text }]}>
                     {(() => {
                       if (!result.frequency) return '-';
                       // Calcular oitava baseada na frequência
@@ -1100,28 +1106,28 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
           
           {/* Technical Parameters */}
           {metadata && (
-            <View style={styles.metadataContainer}>
-              <Text style={styles.metadataTitle}>🔬 Parâmetros Técnicos</Text>
+            <View style={[styles.metadataContainer, { backgroundColor: colors.surfaceBackground }]}>
+              <Text style={[styles.metadataTitle, { color: colors.text }]}>🔬 Parâmetros Técnicos</Text>
               <View style={styles.metadataGrid}>
-                <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Comprimento Efetivo</Text>
-                  <Text style={styles.metadataValue}>{metadata.effectiveLength.toFixed(1)} cm</Text>
+                <View style={[styles.metadataItem, { backgroundColor: colors.cardBackground }]}>
+                  <Text style={[styles.metadataLabel, { color: colors.textSecondary }]}>Comprimento Efetivo</Text>
+                  <Text style={[styles.metadataValue, { color: colors.primary }]}>{metadata.effectiveLength.toFixed(1)} cm</Text>
                 </View>
-                <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Volume Interno</Text>
-                  <Text style={styles.metadataValue}>
+                <View style={[styles.metadataItem, { backgroundColor: colors.cardBackground }]}>
+                  <Text style={[styles.metadataLabel, { color: colors.textSecondary }]}>Volume Interno</Text>
+                  <Text style={[styles.metadataValue, { color: colors.primary }]}>
                     {(() => {
                       // Calculate internal volume from geometry stats if available
-                      const volume = metadata.volume || (metadata.averageRadius ? 
+                      const volume = metadata.volume || (metadata.averageRadius ?
                         Math.PI * Math.pow(metadata.averageRadius, 2) * metadata.effectiveLength / 10 : 0);
                       return (volume / 1000).toFixed(1) + 'L';
                     })()}
                   </Text>
                 </View>
-                <View style={styles.metadataItem}>
-                  <Text style={styles.metadataLabel}>Impedância Média</Text>
-                  <Text style={styles.metadataValue}>
-                    {metadata.impedanceProfile?.length ? 
+                <View style={[styles.metadataItem, { backgroundColor: colors.cardBackground }]}>
+                  <Text style={[styles.metadataLabel, { color: colors.textSecondary }]}>Impedância Média</Text>
+                  <Text style={[styles.metadataValue, { color: colors.primary }]}>
+                    {metadata.impedanceProfile?.length ?
                       (metadata.impedanceProfile.reduce((sum, p) => sum + p.impedance, 0) / metadata.impedanceProfile.length / 1000).toFixed(0) + 'k'
                       : 'N/A'
                     }
@@ -1277,6 +1283,9 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
   const colors = currentTheme.colors;
+
+  // Animated background color
+  const bgColorAnim = useRef(new Animated.Value(0)).current;
   const [showResults, setShowResults] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
   const [visualizationZoom, setVisualizationZoom] = useState(1.0);
@@ -1289,6 +1298,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showAdvancedExport, setShowAdvancedExport] = useState(false);
   const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false);
+  const [showImpedanceSpectrum, setShowImpedanceSpectrum] = useState(false);
 
   // Handle edited geometry from GeometryEditor
   useEffect(() => {
@@ -1350,18 +1360,34 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
     initializePreferences();
   }, []);
 
-  // Theme change listener
+  // Theme change listener with animated background
   useEffect(() => {
     const handleThemeChange = (newTheme) => {
       setCurrentTheme(newTheme);
+
+      // Animate background color transition
+      Animated.timing(bgColorAnim, {
+        toValue: newTheme.name === 'Dark' ? 1 : 0,
+        duration: 500,
+        useNativeDriver: false,
+      }).start();
     };
 
     themeService.addThemeChangeListener(handleThemeChange);
-    
+
+    // Set initial animation value
+    bgColorAnim.setValue(currentTheme.name === 'Dark' ? 1 : 0);
+
     return () => {
       themeService.removeThemeChangeListener(handleThemeChange);
     };
   }, []);
+
+  // Interpolate background color
+  const animatedBackgroundColor = bgColorAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#FFFFFF', '#111827'], // Light -> Dark
+  });
 
   // Register refs with tutorial system
   useEffect(() => {
@@ -1712,11 +1738,11 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   };
 
   return (
-    <SafeAreaView style={[styles.safeContainer, { backgroundColor: colors.background }]}>
-      {/* <FloatingTipManager category="general"> */}
+    <SafeAreaView style={styles.safeContainer}>
+      <Animated.View style={[styles.animatedBackground, { backgroundColor: animatedBackgroundColor }]}>
         <OptimizedScrollView
           ref={scrollViewRef}
-          style={[styles.container, { backgroundColor: colors.background }]}
+          style={styles.container}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
@@ -1794,12 +1820,45 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
         analysisResults={analysisResults}
       />
       
-      <AnalysisResults 
+      {/* Tuning Display - Visualização limpa da afinação */}
+      <TuningDisplay
+        results={analysisResults}
+        visible={showResults}
+        onPlayNote={(result) => handlePlaySound('drone', {
+          fundamental: result.frequency,
+          harmonics: []
+        })}
+      />
+
+      <AnalysisResults
         results={analysisResults}
         isVisible={showResults}
         onPlaySound={handlePlaySound}
         metadata={analysisMetadata}
       />
+
+      {/* Impedance Spectrum Chart */}
+      {showResults && analysisMetadata?.impedanceSpectrum && (
+        <View style={styles.spectrumContainer}>
+          <TouchableOpacity
+            style={[styles.spectrumToggleButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowImpedanceSpectrum(!showImpedanceSpectrum)}
+          >
+            <Text style={styles.spectrumToggleText}>
+              {showImpedanceSpectrum ? '📉 Ocultar Espectro' : '📊 Mostrar Espectro de Impedância'}
+            </Text>
+          </TouchableOpacity>
+
+          {showImpedanceSpectrum && (
+            <ImpedanceSpectrumChart
+              impedanceSpectrum={analysisMetadata.impedanceSpectrum}
+              resonances={analysisResults}
+              visible={showImpedanceSpectrum}
+              onClose={() => setShowImpedanceSpectrum(false)}
+            />
+          )}
+        </View>
+      )}
 
       {/* Project Management Section */}
       {(geometry.trim() || currentProject) && (
@@ -1915,6 +1974,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
       {/* Removed modal components - now using navigation */}
       </OptimizedScrollView>
       {/* </FloatingTipManager> */}
+      </Animated.View>
     </SafeAreaView>
   );
 };
@@ -1922,11 +1982,12 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+  },
+  animatedBackground: {
+    flex: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingBottom: spacing.xxl + 60, // Extra padding for tab bar
@@ -2983,5 +3044,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.body,
     fontWeight: '700',
+  },
+
+  // Impedance Spectrum styles
+  spectrumContainer: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.lg,
+  },
+  spectrumToggleButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  spectrumToggleText: {
+    color: '#FFFFFF',
+    fontSize: typography.body,
+    fontWeight: '600',
   },
 });

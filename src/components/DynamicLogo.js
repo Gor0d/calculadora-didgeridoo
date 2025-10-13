@@ -8,9 +8,14 @@ const spacing = getSpacing();
 export const DynamicLogo = ({ theme, style, ...props }) => {
   const isDark = theme?.name === 'Dark';
 
-  // Definir tamanhos responsivos
+  // Tamanhos responsivos - mesmo tamanho em ambos os modos
   const logoWidth = deviceInfo.isTablet ? 400 : 300;
   const logoHeight = deviceInfo.isTablet ? 113 : 85;
+
+  // Selecionar logo baseado no tema
+  const logoSource = isDark
+    ? require('../../assets/logo_dark.png')  // Logo branco para modo escuro
+    : require('../../assets/didgemap.png'); // Logo padrão para modo claro
 
   return (
     <View style={[
@@ -18,8 +23,8 @@ export const DynamicLogo = ({ theme, style, ...props }) => {
       isDark && styles.logoContainerDark,
       style
     ]}>
-      <Image 
-        source={require('../../assets/didgemap.png')} 
+      <Image
+        source={logoSource}
         style={[
           styles.logoImage,
           { width: logoWidth, height: logoHeight },
@@ -36,23 +41,11 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    // Modo claro - sem decoração
     backgroundColor: 'transparent',
   },
-  
+
   logoContainerDark: {
-    // Modo escuro - container com fundo sutil
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: 'transparent',
   },
   
   logoImage: {

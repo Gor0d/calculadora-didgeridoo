@@ -171,27 +171,27 @@ export const GeometryInput = ({
             {geometryPairs.map((pair, index) => (
               <View key={index} style={[
                 styles.tableRow,
-                index % 2 === 0 ? styles.tableRowEven : styles.tableRowOdd,
+                { backgroundColor: index % 2 === 0 ? colors.cardBackground : colors.surfaceBackground },
                 isPositionOrderIncorrect(geometryPairs, index) && styles.tableRowWarning
               ]}>
                 <TextInput
                   style={[
-                    styles.tableCellInput, 
-                    { flex: 1.0, color: colors.textPrimary },
+                    styles.tableCellInput,
+                    { flex: 1.0, color: colors.text },
                     isPositionOrderIncorrect(geometryPairs, index) && styles.inputWarning
                   ]}
                   value={pair.position}
                   onChangeText={(value) => handlePairChange(index, 'position', value)}
                   placeholder={currentUnit === 'metric' ? '0' : '0'}
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric"
                 />
                 <TextInput
-                  style={[styles.tableCellInput, { flex: 1.0, color: colors.textPrimary }]}
+                  style={[styles.tableCellInput, { flex: 1.0, color: colors.text }]}
                   value={pair.diameter}
                   onChangeText={(value) => handlePairChange(index, 'diameter', value)}
                   placeholder={currentUnit === 'metric' ? '25' : '1.0'}
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric"
                 />
                 <View style={[styles.tableCell, { flex: 0.7 }]}>

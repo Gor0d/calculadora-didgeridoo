@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
-  Alert, 
+import React, { useState, useEffect } from 'react';
+import {
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
   StyleSheet
 } from 'react-native';
 import { AppIcon } from './IconSystem';
@@ -13,6 +13,7 @@ import * as FileSystem from 'expo-file-system';
 import { getDeviceInfo, getTypography, getSpacing, getResponsiveDimensions } from '../utils/responsive';
 import { unitConverter } from '../services/units/UnitConverter';
 import { localizationService } from '../services/i18n/LocalizationService';
+import { themeService } from '../services/theme/ThemeService';
 
 const deviceInfo = getDeviceInfo();
 const typography = getTypography();
@@ -21,6 +22,20 @@ const dimensions = getResponsiveDimensions();
 
 export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metric', onNewProject }) => {
   const [selectedExample, setSelectedExample] = useState(null);
+  const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+  const colors = currentTheme.colors;
+
+  useEffect(() => {
+    const handleThemeChange = (newTheme) => {
+      setCurrentTheme(newTheme);
+    };
+
+    themeService.addThemeChangeListener(handleThemeChange);
+
+    return () => {
+      themeService.removeThemeChangeListener(handleThemeChange);
+    };
+  }, []);
   
   // Base examples in metric (cm/mm)
   const metricExamples = [
@@ -105,7 +120,8 @@ export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metr
             key={index}
             style={[
               styles.exampleCard,
-              selectedExample === index && styles.exampleCardSelected
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              selectedExample === index && { borderColor: colors.primary, borderWidth: 2 }
             ]}
             onPress={() => handleSelectExample(example, index)}
           >
@@ -113,11 +129,12 @@ export const QuickExamples = ({ onSelectExample, onLoadFile, currentUnit = 'metr
               <View style={styles.cardHeader}>
                 <Text style={[
                   styles.exampleName,
-                  selectedExample === index && styles.exampleNameSelected
+                  { color: colors.text },
+                  selectedExample === index && { color: colors.primary }
                 ]}>
                   {example.name}
                 </Text>
-                <View style={styles.pointsBadge}>
+                <View style={[styles.pointsBadge, { backgroundColor: colors.primary }]}>
                   <Text style={styles.pointsText}>
                     {example.data.split('\n').length}
                   </Text>

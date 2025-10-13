@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { getDeviceInfo, getTypography, getSpacing } from '../utils/responsive';
 import { localizationService } from '../services/i18n/LocalizationService';
+import { themeService } from '../services/theme/ThemeService';
 import { AppIcon } from '../components/IconSystem';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { UnitSelector } from '../components/UnitSelector';
@@ -22,10 +23,10 @@ const deviceInfo = getDeviceInfo();
 const typography = getTypography();
 const spacing = getSpacing();
 
-export const SettingsScreen = ({ 
-  currentLanguage, 
-  onLanguageChange, 
-  currentUnit, 
+export const SettingsScreen = ({
+  currentLanguage,
+  onLanguageChange,
+  currentUnit,
   onUnitChange,
   onExportData,
   onImportData,
@@ -38,6 +39,22 @@ export const SettingsScreen = ({
   const [showOfflineSettings, setShowOfflineSettings] = useState(false);
   const [showTutorialSettings, setShowTutorialSettings] = useState(false);
   const [showPerformanceSettings, setShowPerformanceSettings] = useState(false);
+
+  // Theme support
+  const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+  const colors = currentTheme.colors;
+
+  useEffect(() => {
+    const handleThemeChange = (newTheme) => {
+      setCurrentTheme(newTheme);
+    };
+
+    themeService.addThemeChangeListener(handleThemeChange);
+
+    return () => {
+      themeService.removeThemeChangeListener(handleThemeChange);
+    };
+  }, []);
 
   const handleExportData = () => {
     Alert.alert(
@@ -80,11 +97,11 @@ export const SettingsScreen = ({
   const buildNumber = "1";
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
         <LinearGradient
-          colors={['#059669', '#10B981']}
+          colors={[colors.primary, colors.success]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.headerTitleContainer}>
@@ -95,8 +112,8 @@ export const SettingsScreen = ({
       </View>
 
       {/* Language Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{localizationService.t('language')}</Text>
+      <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{localizationService.t('language')}</Text>
         <LanguageSelector
           currentLanguage={currentLanguage}
           onLanguageChange={onLanguageChange}
@@ -104,8 +121,8 @@ export const SettingsScreen = ({
       </View>
 
       {/* Unit Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{localizationService.t('unitSystem')}</Text>
+      <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{localizationService.t('unitSystem')}</Text>
         <UnitSelector
           currentUnit={currentUnit}
           onUnitChange={onUnitChange}
@@ -113,8 +130,8 @@ export const SettingsScreen = ({
       </View>
 
       {/* App Preferences */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{localizationService.t('preferences')}</Text>
+      <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{localizationService.t('preferences')}</Text>
         
         <View style={styles.preferenceItem}>
           <View style={styles.preferenceInfo}>
@@ -144,8 +161,8 @@ export const SettingsScreen = ({
       </View>
 
       {/* Data Management */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{localizationService.t('dataManagement')}</Text>
+      <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{localizationService.t('dataManagement')}</Text>
         
         <TouchableOpacity style={styles.actionButton} onPress={() => setShowTutorialSettings(true)}>
           <View style={styles.actionContent}>
@@ -234,8 +251,8 @@ export const SettingsScreen = ({
       </View>
 
       {/* App Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{localizationService.t('about')}</Text>
+      <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{localizationService.t('about')}</Text>
         
         <View style={styles.infoContainer}>
           <View style={styles.infoItem}>
