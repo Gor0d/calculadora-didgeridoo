@@ -328,8 +328,11 @@ export class AcousticEngine {
       }
       
       // Apply harmonic suppression for higher orders
-      const suppression = 1 / Math.sqrt(n);
-      if (Math.random() < suppression) { // Stochastic harmonic presence
+      // Amplitude decreases with harmonic number - deterministic approach
+      const amplitude = 1 / Math.sqrt(n);
+
+      // Include harmonic if amplitude is significant enough (>20%)
+      if (amplitude > 0.2) {
         harmonics.push(harmonic);
       }
     }
@@ -386,29 +389,38 @@ export class AcousticEngine {
 
   /**
    * Convert frequency to musical note
+   * High-precision implementation following standard music theory
    */
   frequencyToNote(frequency) {
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    
-    // Get current A4 frequency from tuning service
+
+    // Get current A4 frequency from tuning service (typically 440 Hz or 432 Hz)
     const A4_FREQUENCY = tuningService.getA4Frequency();
-    
-    // Calculate semitones from A4
-    const semitones = Math.round(12 * Math.log2(frequency / A4_FREQUENCY));
-    
-    // Calculate octave and note
-    const octave = Math.floor((semitones + 57) / 12);
-    const noteIndex = ((semitones + 57) % 12 + 12) % 12;
-    
-    // Calculate cents deviation
+
+    // Calculate exact semitones from A4 using logarithmic scale
+    // Formula: semitones = 12 * log2(f / A4)
     const exactSemitones = 12 * Math.log2(frequency / A4_FREQUENCY);
-    const centDiff = Math.round((exactSemitones - semitones) * 100);
-    
+
+    // Round to nearest semitone for note name
+    const roundedSemitones = Math.round(exactSemitones);
+
+    // Calculate cents deviation (1 semitone = 100 cents)
+    const cents = Math.round((exactSemitones - roundedSemitones) * 100);
+
+    // Convert semitones to note and octave
+    // A4 is at semitone 0, C0 is 57 semitones below A4
+    const noteNumber = roundedSemitones + 9; // +9 because A is 9 semitones from C
+    const octave = Math.floor(noteNumber / 12) + 4; // A4 is in octave 4
+    const noteIndex = ((noteNumber % 12) + 12) % 12; // Handle negative modulo
+
     return {
       note: noteNames[noteIndex],
       octave,
-      centDiff,
-      exactFrequency: frequency
+      cents, // Renamed from centDiff for clarity
+      centDiff: cents, // Keep for backward compatibility
+      exactFrequency: frequency,
+      // Additional precision info
+      exactSemitones: parseFloat(exactSemitones.toFixed(2))
     };
   }
 

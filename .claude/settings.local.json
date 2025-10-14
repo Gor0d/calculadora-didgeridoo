@@ -44,7 +44,11 @@
       "Bash(npx netlify-cli:*)",
       "Bash(npx serve:*)",
       "Bash(timeout:*)",
-      "Bash(npx metro build:*)"
+      "Bash(npx metro build:*)",
+      "Bash(git log:*)",
+      "Bash(npx jest:*)",
+      "Bash(dir:*)",
+      "Bash(move logo_dark.png assetslogo_dark.png)"
     ],
     "deny": []
   }
