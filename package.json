@@ -30,13 +30,15 @@
     "build:web": "expo export --platform web --output-dir build",
     "build:web:prod": "expo export --platform web --output-dir build --clear",
     "update:production": "eas update --branch production --message \"Production update\"",
-    "update:preview": "eas update --branch preview --message \"Preview update\"", 
+    "update:preview": "eas update --branch preview --message \"Preview update\"",
     "build:local:android": "eas build --platform android --profile preview --local",
     "build:quick": "eas build --platform android --profile preview",
     "deploy:web": "npm run build:web:prod",
     "setup:eas": "eas build:configure",
     "serve": "node simple-server.js",
-    "deploy": "npm run build:web && npm run serve"
+    "deploy": "npm run build:web && npm run serve",
+    "prebuild:check": "node pre-build-check.js",
+    "prebuild:full": "npm run prebuild:check && npm run test && npm run lint:check"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
@@ -63,6 +65,7 @@
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.3",
     "jspdf": "^3.0.1",
+    "prop-types": "^15.8.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-native": "0.79.5",

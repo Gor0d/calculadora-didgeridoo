@@ -37,10 +37,10 @@ export class AcousticEngine {
     // Transfer Matrix Method parameters
     this.TMM_ENABLED = true; // Enable high-precision TMM calculations
     this.FREQ_RANGE_START = 30; // Hz - Lower bound for analysis
-    this.FREQ_RANGE_END = 1000; // Hz - Upper bound for analysis
+    this.FREQ_RANGE_END = 1200; // Hz - Upper bound for analysis (increased for more harmonics)
     this.FREQ_STEP_LOW = 0.5; // Hz - High resolution for 30-100 Hz
-    this.FREQ_STEP_HIGH = 1.0; // Hz - Standard resolution for 100-1000 Hz
-    this.RESONANCE_THRESHOLD = 0.4; // Minimum relative magnitude for peak detection
+    this.FREQ_STEP_HIGH = 1.0; // Hz - Standard resolution for 100-1200 Hz
+    this.RESONANCE_THRESHOLD = 0.25; // Minimum relative magnitude for peak detection (reduced to catch more harmonics)
   }
 
   /**
@@ -237,18 +237,26 @@ export class AcousticEngine {
   calculateFundamental(effectiveLength, averageRadius, segments = null) {
     // Base calculation for uniform tube
     let baseFreq = this.SPEED_OF_SOUND / (4 * effectiveLength);
-    
+
+    // Apply taper correction - tapered instruments resonate higher
+    let taperCorrection = 1.0;
+    if (segments && segments.length > 0) {
+      const taperFactor = this.calculateTaperFactor(segments);
+      // Strong taper increases effective frequency significantly
+      taperCorrection = 1.0 + (taperFactor * 0.3); // Can increase up to 30%
+    }
+
     // Apply radius correction (larger radius = slightly lower frequency)
-    const radiusCorrection = 1 - (averageRadius * 0.1); // Empirical factor
-    
+    const radiusCorrection = 1 - (averageRadius * 0.05); // Reduced empirical factor
+
     // Apply refined mouthpiece correction if segments are available
     let mouthpieceCorrection = this.MOUTH_IMPEDANCE_FACTOR;
     if (segments && segments.length > 0) {
       mouthpieceCorrection = this.calculateMouthpieceCorrection(segments);
     }
-    
-    baseFreq *= mouthpieceCorrection;
-    
+
+    baseFreq *= mouthpieceCorrection * taperCorrection;
+
     return baseFreq * radiusCorrection;
   }
 
@@ -313,30 +321,30 @@ export class AcousticEngine {
    */
   calculateHarmonics(fundamental, segments) {
     const harmonics = [fundamental];
-    
+
     // Calculate taper factor
     const taperFactor = this.calculateTaperFactor(segments);
-    
-    // Generate first 6 harmonics
-    for (let n = 2; n <= 6; n++) {
+
+    // Generate first 12 harmonics (increased for complex geometries)
+    for (let n = 2; n <= 12; n++) {
       let harmonic = fundamental * n;
-      
+
       // Apply taper corrections (tapered instruments have shifted harmonics)
       if (n > 1) {
         const taperShift = taperFactor * Math.log(n) * 0.05; // Empirical
         harmonic *= (1 + taperShift);
       }
-      
+
       // Apply harmonic suppression for higher orders
       // Amplitude decreases with harmonic number - deterministic approach
       const amplitude = 1 / Math.sqrt(n);
 
-      // Include harmonic if amplitude is significant enough (>20%)
-      if (amplitude > 0.2) {
+      // Include harmonic if amplitude is significant enough (>15% - reduced threshold)
+      if (amplitude > 0.15) {
         harmonics.push(harmonic);
       }
     }
-    
+
     return harmonics;
   }
 
@@ -799,8 +807,8 @@ export class AcousticEngine {
       }
     }
 
-    // Limit to first 6 harmonics (most relevant for didgeridoo playing)
-    return peaks.slice(0, 6);
+    // Limit to first 12 harmonics (allow more harmonics for complex geometries)
+    return peaks.slice(0, 12);
   }
 
   /**

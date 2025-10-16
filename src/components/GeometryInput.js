@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Text, 
-  View, 
-  TextInput, 
-  TouchableOpacity, 
+import PropTypes from 'prop-types';
+import {
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
   StyleSheet,
-  ScrollView
+  ScrollView,
+  Clipboard,
+  Alert
 } from 'react-native';
 import { AppIcon } from './IconSystem';
 import { getDeviceInfo, getTypography, getSpacing, getResponsiveDimensions } from '../utils/responsive';
@@ -136,11 +139,70 @@ export const GeometryInput = ({
     if (geometryPairs.length > 1) {
       const newPairs = geometryPairs.filter((_, i) => i !== index);
       setGeometryPairs(newPairs);
-      
+
       const validPairs = newPairs.filter(pair => pair.position && pair.diameter);
       const geometryString = validPairs.map(pair => `${pair.position} ${pair.diameter}`).join('\n');
       setLastGeometry(geometryString); // Update tracking to prevent sync loop
       onGeometryChange(geometryString);
+    }
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const clipboardContent = await Clipboard.getString();
+
+      if (!clipboardContent || !clipboardContent.trim()) {
+        Alert.alert('Aviso', 'A área de transferência está vazia');
+        return;
+      }
+
+      // Parse clipboard content - support various formats
+      const lines = clipboardContent.trim().split('\n');
+      const parsedPairs = [];
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        // Try different separators: tab, comma, space, semicolon
+        let parts = trimmedLine.split('\t');
+        if (parts.length < 2) parts = trimmedLine.split(',');
+        if (parts.length < 2) parts = trimmedLine.split(';');
+        if (parts.length < 2) parts = trimmedLine.split(/\s+/);
+
+        if (parts.length >= 2) {
+          const position = parts[0].trim();
+          const diameter = parts[1].trim();
+
+          // Validate that they are numbers
+          if (!isNaN(parseFloat(position)) && !isNaN(parseFloat(diameter))) {
+            parsedPairs.push({ position, diameter });
+          }
+        }
+      }
+
+      if (parsedPairs.length === 0) {
+        Alert.alert(
+          'Erro ao Colar',
+          'Não foi possível extrair medidas válidas. Certifique-se de que cada linha contenha: posição e diâmetro separados por espaço, vírgula ou tab.\n\nExemplo:\n0 30\n100 35\n200 40'
+        );
+        return;
+      }
+
+      // Add empty row at the end
+      parsedPairs.push({ position: '', diameter: '' });
+      setGeometryPairs(parsedPairs);
+
+      // Convert to geometry string
+      const validPairs = parsedPairs.filter(pair => pair.position && pair.diameter);
+      const geometryString = validPairs.map(pair => `${pair.position} ${pair.diameter}`).join('\n');
+      setLastGeometry(geometryString);
+      onGeometryChange(geometryString);
+
+      Alert.alert('Sucesso', `${validPairs.length} medidas coladas com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao colar:', error);
+      Alert.alert('Erro', 'Não foi possível colar os dados');
     }
   };
 
@@ -156,11 +218,20 @@ export const GeometryInput = ({
       )}
       
       <Text style={[styles.inputSubtitle, { color: colors.textSecondary }]}>
-        {currentUnit === 'metric' 
-          ? '📏 Posição 0 = bocal, crescente = final. Posição(cm), Diâmetro(mm)' 
+        {currentUnit === 'metric'
+          ? '📏 Posição 0 = bocal, crescente = final. Posição(cm), Diâmetro(mm)'
           : '📏 Posição 0 = bocal, crescente = final. Posição("), Diâmetro(")'}
       </Text>
-      
+
+      {/* Paste Button */}
+      <TouchableOpacity
+        style={[styles.pasteButton, { backgroundColor: colors.primary || '#6366F1', borderColor: colors.border }]}
+        onPress={handlePasteFromClipboard}
+      >
+        <AppIcon name="clipboard" size={16} color="#FFFFFF" />
+        <Text style={styles.pasteButtonText}>📋 Colar Medidas</Text>
+      </TouchableOpacity>
+
         <View style={[styles.analysisTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
           <View style={[styles.tableHeader, { backgroundColor: colors.primary || '#1F2937' }]}>
             <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Posição</Text>
@@ -538,4 +609,49 @@ const styles = StyleSheet.create({
     borderColor: '#F59E0B',
     borderRadius: 4,
   },
+  pasteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6366F1',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#4F46E5',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pasteButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.bodySmall,
+    fontWeight: '600',
+  },
 });
+
+GeometryInput.propTypes = {
+  geometry: PropTypes.string.isRequired,
+  onGeometryChange: PropTypes.func.isRequired,
+  onAnalyze: PropTypes.func.isRequired,
+  isAnalyzing: PropTypes.bool.isRequired,
+  currentFileName: PropTypes.string,
+  onToggleVisualization: PropTypes.func.isRequired,
+  showVisualization: PropTypes.bool.isRequired,
+  validationErrors: PropTypes.arrayOf(PropTypes.shape({
+    message: PropTypes.string.isRequired,
+    line: PropTypes.number,
+  })).isRequired,
+  geometryStats: PropTypes.object,
+  currentUnit: PropTypes.oneOf(['metric', 'imperial']),
+};
+
+GeometryInput.defaultProps = {
+  currentFileName: null,
+  geometryStats: null,
+  currentUnit: 'metric',
+};
