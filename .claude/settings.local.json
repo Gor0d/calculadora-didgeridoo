@@ -52,7 +52,8 @@
       "Bash(findstr:*)",
       "Bash(xargs -I {} sh -c 'echo \"\"\"\"=== {} ===\"\"\"\" && grep -E \"\"\"\"^export (const|default|function)\"\"\"\" {}')",
       "Bash(del /f \"src\\components\\SaveStatusIndicator.js\" \"src\\components\\TipCard.js\" \"src\\components\\ResponsiveLayout.js\" \"src\\components\\MeasurementUnitSelector.js\" \"src\\hooks\\useAutoSave.js\" 2)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

@@ -103,9 +103,10 @@ export class AcousticEngine {
       const fundamentalFreq = this.SPEED_OF_SOUND / (2 * effectiveLength);
       
       // Generate basic harmonic series
+      // OPEN TUBE: ALL harmonics (not just odd!)
       const harmonics = [];
-      for (let n = 1; n <= 6; n++) {
-        const freq = fundamentalFreq * (2 * n - 1); // odd harmonics
+      for (let n = 1; n <= 12; n++) {
+        const freq = fundamentalFreq * n; // All harmonics for open tube
         if (freq >= 20 && freq <= 2000) {
           harmonics.push({
             frequency: freq,

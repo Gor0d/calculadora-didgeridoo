@@ -32,6 +32,7 @@ export const GeometryInput = ({
   currentUnit = 'metric'
 }) => {
   const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
+  const [inputFormat, setInputFormat] = useState('cm-mm'); // 'cm-mm' or 'mm-mm'
   const colors = currentTheme.colors;
 
   useEffect(() => {
@@ -46,12 +47,41 @@ export const GeometryInput = ({
     };
   }, []);
 
+  // Convert geometry based on input format
+  const convertGeometryFormat = (geometryText) => {
+    if (!geometryText || inputFormat === 'cm-mm') {
+      return geometryText; // No conversion needed
+    }
+
+    // Convert MM×MM to CM×MM
+    const lines = geometryText.split('\n');
+    const converted = lines.map(line => {
+      const trimmed = line.split('#')[0].trim();
+      if (!trimmed) return line;
+
+      const parts = trimmed.split(/\s+/);
+      if (parts.length >= 2) {
+        const positionMM = parseFloat(parts[0]);
+        const diameterMM = parts[1];
+
+        if (!isNaN(positionMM)) {
+          const positionCM = positionMM / 10;
+          return `${positionCM} ${diameterMM}`;
+        }
+      }
+      return line;
+    });
+
+    return converted.join('\n');
+  };
+
   // Calculate real-time note estimation
   const estimatedNote = useMemo(() => {
     if (!geometry || !geometry.trim()) return null;
-    
+
     try {
-      const points = unitConverter.parseGeometry(geometry, currentUnit);
+      const convertedGeometry = convertGeometryFormat(geometry);
+      const points = unitConverter.parseGeometry(convertedGeometry, currentUnit);
       if (points.length < 2) return null;
       
       // Quick frequency estimation based on geometry
@@ -81,17 +111,39 @@ export const GeometryInput = ({
   return (
     <View style={[styles.geometryContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
       <Text style={[styles.inputTitle, { color: colors.textPrimary }]}>{localizationService.t('geometryTitle')}</Text>
-      
+
+      {/* Input Format Toggle */}
+      <View style={styles.formatToggle}>
+        <TouchableOpacity
+          style={[styles.formatButton, inputFormat === 'cm-mm' && styles.formatButtonActive]}
+          onPress={() => setInputFormat('cm-mm')}
+        >
+          <Text style={[styles.formatButtonText, { color: inputFormat === 'cm-mm' ? '#FFFFFF' : colors.textSecondary }]}>
+            CM × MM
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.formatButton, inputFormat === 'mm-mm' && styles.formatButtonActive]}
+          onPress={() => setInputFormat('mm-mm')}
+        >
+          <Text style={[styles.formatButtonText, { color: inputFormat === 'mm-mm' ? '#FFFFFF' : colors.textSecondary }]}>
+            MM × MM
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {currentFileName && (
         <View style={styles.fileNameBadge}>
           <AppIcon name="document" size={14} color="#6B7280" />
           <Text style={[styles.fileNameText, { color: colors.textSecondary }]}>{currentFileName}</Text>
         </View>
       )}
-      
+
       <Text style={[styles.inputSubtitle, { color: colors.textSecondary }]}>
         {currentUnit === 'metric'
-          ? '📏 Posição 0 = bocal, crescente = final. Posição(cm), Diâmetro(mm)'
+          ? (inputFormat === 'cm-mm'
+              ? '📏 Posição(cm) × Diâmetro(mm). Ex: 0 30, 100 35...'
+              : '📏 Posição(mm) × Diâmetro(mm). Ex: 0 30, 1000 35...')
           : '📏 Posição 0 = bocal, crescente = final. Posição("), Diâmetro(")'}
       </Text>
 
@@ -105,7 +157,9 @@ export const GeometryInput = ({
         value={geometry}
         onChangeText={onGeometryChange}
         placeholder={currentUnit === 'metric'
-          ? "Exemplo:\n0 30\n100 35\n200 40\n...\n\nOu cole suas medidas aqui"
+          ? (inputFormat === 'cm-mm'
+              ? "Exemplo:\n0 30\n100 35\n200 40\n...\n\nOu cole suas medidas aqui"
+              : "Exemplo:\n0 30\n1000 35\n2000 40\n...\n\nOu cole suas medidas aqui")
           : "Exemplo:\n0 1.2\n4 1.4\n8 1.6\n...\n\nOu cole suas medidas aqui"
         }
         placeholderTextColor={colors.textSecondary}
@@ -329,7 +383,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  
+
+  // Format toggle styles
+  formatToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
+  },
+  formatButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formatButtonActive: {
+    backgroundColor: '#6366F1',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  formatButtonText: {
+    fontSize: typography.caption,
+    fontWeight: '600',
+  },
+
   // Mode toggle styles
   modeToggle: {
     flexDirection: 'row',

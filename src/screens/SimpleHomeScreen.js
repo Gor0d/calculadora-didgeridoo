@@ -813,8 +813,8 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
           <ScrollView style={styles.excavationTableScrollView} showsVerticalScrollIndicator={false}>
             {(() => {
               const excavationPoints = [];
-              const step = currentUnit === 'metric' ? 100 : 101.6; // 10cm or ~4 inches
-              const maxPos = svgDimensions.maxPosition * 10; // Convert to mm
+              const step = currentUnit === 'metric' ? 10 : 4; // 10cm or 4 inches
+              const maxPos = svgDimensions.maxPosition; // Already in cm
               
               for (let pos = 0; pos <= maxPos; pos += step) {
                 // Find the closest actual point or interpolate
@@ -835,7 +835,7 @@ const GeometryVisualization = React.memo(({ geometry, isVisible, currentUnit = '
                   diameter = validPoints[closestPointIndex].diameter;
                 }
                 
-                const displayPos = currentUnit === 'metric' ? (pos / 10).toFixed(0) : (pos / 254).toFixed(1);
+                const displayPos = currentUnit === 'metric' ? pos.toFixed(0) : (pos / 2.54).toFixed(1);
                 const displayDiameter = currentUnit === 'metric' ? diameter.toFixed(0) : (diameter / 25.4).toFixed(2);
                 const displayRadius = currentUnit === 'metric' ? (diameter / 2).toFixed(0) : (diameter / 50.8).toFixed(2);
                 
