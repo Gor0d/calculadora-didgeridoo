@@ -95,11 +95,15 @@ export class AcousticEngine {
       const totalLength = points[points.length - 1].position / 100; // cm to m
       const avgDiameter = points.reduce((sum, p) => sum + p.diameter, 0) / points.length;
       const avgRadius = avgDiameter / 2000; // mm to m
-      
-      // Simple frequency calculation for OPEN TUBE (both ends open)
-      // Add end correction for better accuracy
-      const endCorrection = this.END_CORRECTION_FACTOR * avgRadius;
-      const effectiveLength = totalLength + endCorrection;
+
+      // OPEN TUBE: Get specific radii for both ends
+      const bellRadius = points[points.length - 1].diameter / 2000; // mm to m (sino/bell)
+      const mouthRadius = points[0].diameter / 2000; // mm to m (bocal/mouthpiece)
+
+      // Add end corrections for BOTH ends (open-open tube)
+      const bellCorrection = this.END_CORRECTION_FACTOR * bellRadius;
+      const mouthCorrection = this.BELL_CORRECTION_FACTOR * mouthRadius;
+      const effectiveLength = totalLength + bellCorrection + mouthCorrection;
       const fundamentalFreq = this.SPEED_OF_SOUND / (2 * effectiveLength);
       
       // Generate basic harmonic series
