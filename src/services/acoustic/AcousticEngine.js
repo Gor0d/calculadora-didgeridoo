@@ -58,16 +58,21 @@ export class AcousticEngine {
         throw new Error('Insufficient geometry points');
       }
 
+      console.log('[AcousticEngine] Starting analysis with', points.length, 'points, TMM_ENABLED:', this.TMM_ENABLED);
+
       // Use Transfer Matrix Method if enabled (high precision)
       if (this.TMM_ENABLED) {
         try {
-          return await this.analyzeGeometryTransferMatrix(points);
+          const result = await this.analyzeGeometryTransferMatrix(points);
+          console.log('[AcousticEngine] TMM analysis successful, returning', result.results?.length, 'harmonics');
+          return result;
         } catch (tmmError) {
           console.warn('TMM analysis failed, falling back to simplified method:', tmmError);
         }
       }
 
       // Fallback to simplified online analysis
+      console.log('[AcousticEngine] Using simplified online analysis');
       return await this.analyzeGeometryOnline(points);
     } catch (error) {
       console.warn('Online analysis failed, attempting offline analysis:', error);
@@ -82,6 +87,7 @@ export class AcousticEngine {
       }
 
       // Final fallback to simplified calculation
+      console.log('[AcousticEngine] Using simplified calculation as final fallback');
       return await this.analyzeGeometrySimplified(points);
     }
   }
@@ -530,17 +536,23 @@ export class AcousticEngine {
    * @returns {Object} Analysis results with full impedance spectrum
    */
   async analyzeGeometryTransferMatrix(points) {
+    console.log('[TMM] Starting Transfer Matrix Method analysis');
+
     // Process geometry into segments
     const segments = this.processGeometryForTMM(points);
+    console.log('[TMM] Processed', segments.length, 'segments');
 
     // Generate frequency range for analysis
     const frequencies = this.generateFrequencyRange();
+    console.log('[TMM] Analyzing', frequencies.length, 'frequencies from', frequencies[0], 'to', frequencies[frequencies.length - 1], 'Hz');
 
     // Calculate impedance spectrum across all frequencies
     const impedanceSpectrum = this.calculateImpedanceSpectrum(segments, frequencies);
+    console.log('[TMM] Calculated impedance spectrum');
 
     // Find resonance peaks (harmonics)
     const resonances = this.findResonancePeaks(frequencies, impedanceSpectrum);
+    console.log('[TMM] Found', resonances.length, 'resonances:', resonances.map(f => f.toFixed(2) + 'Hz').join(', '));
 
     // Convert resonances to musical notes
     const results = resonances.map((freq, index) => ({
@@ -550,6 +562,8 @@ export class AcousticEngine {
       amplitude: this.calculateResonanceAmplitude(freq, impedanceSpectrum, frequencies),
       quality: this.assessResonanceQuality(freq, impedanceSpectrum, frequencies)
     }));
+
+    console.log('[TMM] Returning', results.length, 'results');
 
     // Calculate metadata
     const totalLength = points[points.length - 1].position / 100; // cm to m
@@ -823,22 +837,59 @@ export class AcousticEngine {
     const peaks = [];
     const magnitudes = impedanceSpectrum.map(z => z.magnitude);
     const maxMagnitude = Math.max(...magnitudes);
-    const threshold = maxMagnitude * this.RESONANCE_THRESHOLD;
+    const minMagnitude = Math.min(...magnitudes);
 
-    // Find local maxima above threshold
+    console.log('[TMM] Impedance magnitude range:', minMagnitude.toFixed(2), 'to', maxMagnitude.toFixed(2));
+
+    // NEW STRATEGY: Find ALL local maxima first, then sort by prominence
+    const localMaxima = [];
+
     for (let i = 1; i < magnitudes.length - 1; i++) {
       const current = magnitudes[i];
       const prev = magnitudes[i - 1];
       const next = magnitudes[i + 1];
 
-      // Check if it's a local maximum
-      if (current > prev && current > next && current > threshold) {
-        peaks.push(frequencies[i]);
+      // Check if it's a local maximum (no threshold yet)
+      if (current > prev && current > next) {
+        // Calculate prominence (how much this peak stands out from neighbors)
+        const windowSize = 20; // Look at ±20 points
+        const start = Math.max(0, i - windowSize);
+        const end = Math.min(magnitudes.length - 1, i + windowSize);
+
+        const localMin = Math.min(...magnitudes.slice(start, end + 1));
+        const prominence = current - localMin;
+
+        localMaxima.push({
+          frequency: frequencies[i],
+          magnitude: current,
+          prominence: prominence,
+          index: i
+        });
       }
     }
 
-    // Limit to first 12 harmonics (allow more harmonics for complex geometries)
-    return peaks.slice(0, 12);
+    console.log('[TMM] Found', localMaxima.length, 'local maxima');
+
+    // Sort by prominence (not absolute magnitude)
+    localMaxima.sort((a, b) => b.prominence - a.prominence);
+
+    // Take top 12 most prominent peaks
+    const significantPeaks = localMaxima.slice(0, 12);
+
+    // Sort back by frequency (ascending)
+    significantPeaks.sort((a, b) => a.frequency - b.frequency);
+
+    // Log the peaks we found
+    significantPeaks.forEach((peak, idx) => {
+      peaks.push(peak.frequency);
+      if (idx < 12) {
+        console.log('[TMM] Harmonic #' + (idx + 1) + ':', peak.frequency.toFixed(2), 'Hz, prominence:', peak.prominence.toExponential(2));
+      }
+    });
+
+    console.log('[TMM] Returning', peaks.length, 'resonances');
+
+    return peaks;
   }
 
   /**
