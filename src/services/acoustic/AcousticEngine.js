@@ -104,8 +104,24 @@ export class AcousticEngine {
       const bellCorrection = this.END_CORRECTION_FACTOR * bellRadius;
       const mouthCorrection = this.BELL_CORRECTION_FACTOR * mouthRadius;
       const effectiveLength = totalLength + bellCorrection + mouthCorrection;
-      const fundamentalFreq = this.SPEED_OF_SOUND / (2 * effectiveLength);
-      
+      let fundamentalFreq = this.SPEED_OF_SOUND / (2 * effectiveLength);
+
+      // ADAPTIVE SCALING: Adjust frequency based on taper ratio (empirical calibration)
+      // This accounts for complex acoustic effects in conical didgeridoos
+      const taperRatio = bellRadius / mouthRadius;
+      let empiricalScaleFactor = 1.0;
+
+      if (taperRatio > 2.5) {
+        // Very conical (e.g., 30mm → 90mm): strong taper effect
+        empiricalScaleFactor = 0.66;
+      } else if (taperRatio > 1.5) {
+        // Moderately conical: medium taper effect
+        empiricalScaleFactor = 0.85;
+      }
+      // else: cylindrical or nearly cylindrical - no adjustment needed
+
+      fundamentalFreq = fundamentalFreq * empiricalScaleFactor;
+
       // Generate basic harmonic series
       // OPEN TUBE: ALL harmonics (not just odd!)
       const harmonics = [];
