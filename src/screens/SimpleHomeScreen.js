@@ -1278,6 +1278,7 @@ const AnalysisResults = React.memo(({ results, isVisible, onPlaySound, metadata 
 // Main HomeScreen Component (renamed from SimpleHomeScreen)
 export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange, currentLanguage, onLanguageChange }) => {
   const [geometry, setGeometry] = useState('');
+  const [inputFormat, setInputFormat] = useState('cm-mm'); // 'cm-mm' or 'mm-mm'
   const [analysisResults, setAnalysisResults] = useState([]);
   const [analysisMetadata, setAnalysisMetadata] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -1580,9 +1581,32 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const debouncedValidation = useMemo(
     () => PerformanceManager.createOptimizedDebounce((text) => {
       if (text.trim()) {
-        const validation = unitConverter.validateGeometry(text, currentUnit);
+        // Convert geometry format if MM×MM is selected
+        let geometryToValidate = text;
+        if (inputFormat === 'mm-mm') {
+          const lines = text.split('\n');
+          const converted = lines.map(line => {
+            const trimmed = line.split('#')[0].trim();
+            if (!trimmed) return line;
+
+            const parts = trimmed.split(/\s+/);
+            if (parts.length >= 2) {
+              const positionMM = parseFloat(parts[0]);
+              const diameterMM = parts[1];
+
+              if (!isNaN(positionMM)) {
+                const positionCM = positionMM / 10;
+                return `${positionCM} ${diameterMM}`;
+              }
+            }
+            return line;
+          });
+          geometryToValidate = converted.join('\n');
+        }
+
+        const validation = unitConverter.validateGeometry(geometryToValidate, currentUnit);
         setValidationErrors(validation.valid ? [] : [validation.errors[0]]);
-        
+
         if (validation.valid && validation.points.length > 0) {
           setGeometryStats(getGeometryStats(validation.points));
         } else {
@@ -1593,7 +1617,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
         setGeometryStats(null);
       }
     }, 300),
-    [currentUnit]
+    [currentUnit, inputFormat]
   );
 
   const handleGeometryChange = useCallback((text) => {
@@ -1601,6 +1625,13 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
     setGeometry(safeText);
     debouncedValidation(safeText);
   }, [debouncedValidation]);
+
+  // Re-validate when inputFormat changes
+  useEffect(() => {
+    if (geometry) {
+      debouncedValidation(geometry);
+    }
+  }, [inputFormat, geometry, debouncedValidation]);
 
   const handleAnalyze = async () => {
     if (!geometry || !geometry.trim()) {
@@ -1611,7 +1642,31 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
       return;
     }
 
-    const validation = unitConverter.validateGeometry(geometry, currentUnit);
+    // Convert geometry format if MM×MM is selected
+    let geometryToAnalyze = geometry;
+    if (inputFormat === 'mm-mm') {
+      // Convert MM×MM to CM×MM
+      const lines = geometry.split('\n');
+      const converted = lines.map(line => {
+        const trimmed = line.split('#')[0].trim();
+        if (!trimmed) return line;
+
+        const parts = trimmed.split(/\s+/);
+        if (parts.length >= 2) {
+          const positionMM = parseFloat(parts[0]);
+          const diameterMM = parts[1];
+
+          if (!isNaN(positionMM)) {
+            const positionCM = positionMM / 10;
+            return `${positionCM} ${diameterMM}`;
+          }
+        }
+        return line;
+      });
+      geometryToAnalyze = converted.join('\n');
+    }
+
+    const validation = unitConverter.validateGeometry(geometryToAnalyze, currentUnit);
     if (!validation.valid) {
       Alert.alert(
         localizationService.t('validationError'),
@@ -1800,6 +1855,8 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
             validationErrors={validationErrors}
             geometryStats={geometryStats}
             currentUnit={currentUnit}
+            inputFormat={inputFormat}
+            onInputFormatChange={setInputFormat}
             tutorialRefs={{
               analyzeButton: analyzeButtonRef,
               visualizationToggle: visualizationToggleRef

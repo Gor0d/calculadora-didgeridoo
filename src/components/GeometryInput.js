@@ -19,20 +19,21 @@ const typography = getTypography();
 const spacing = getSpacing();
 const dimensions = getResponsiveDimensions();
 
-export const GeometryInput = ({ 
-  geometry, 
-  onGeometryChange, 
-  onAnalyze, 
-  isAnalyzing, 
-  currentFileName, 
-  onToggleVisualization, 
+export const GeometryInput = ({
+  geometry,
+  onGeometryChange,
+  onAnalyze,
+  isAnalyzing,
+  currentFileName,
+  onToggleVisualization,
   showVisualization,
   validationErrors,
   geometryStats,
-  currentUnit = 'metric'
+  currentUnit = 'metric',
+  inputFormat = 'cm-mm',
+  onInputFormatChange
 }) => {
   const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
-  const [inputFormat, setInputFormat] = useState('cm-mm'); // 'cm-mm' or 'mm-mm'
   const colors = currentTheme.colors;
 
   useEffect(() => {
@@ -116,7 +117,7 @@ export const GeometryInput = ({
       <View style={styles.formatToggle}>
         <TouchableOpacity
           style={[styles.formatButton, inputFormat === 'cm-mm' && styles.formatButtonActive]}
-          onPress={() => setInputFormat('cm-mm')}
+          onPress={() => onInputFormatChange?.('cm-mm')}
         >
           <Text style={[styles.formatButtonText, { color: inputFormat === 'cm-mm' ? '#FFFFFF' : colors.textSecondary }]}>
             CM × MM
@@ -124,7 +125,7 @@ export const GeometryInput = ({
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.formatButton, inputFormat === 'mm-mm' && styles.formatButtonActive]}
-          onPress={() => setInputFormat('mm-mm')}
+          onPress={() => onInputFormatChange?.('mm-mm')}
         >
           <Text style={[styles.formatButtonText, { color: inputFormat === 'mm-mm' ? '#FFFFFF' : colors.textSecondary }]}>
             MM × MM
