@@ -277,16 +277,21 @@ export class UnitConverter {
     const maxDiam = Math.max(...points.map(p => p.diameter));
     
     if (unit === 'metric') {
-      if (maxLength > 300) {
+      // Allow up to 400cm (4m) for flexibility, warn if over 300cm
+      if (maxLength > 400) {
         errors.push({
           type: 'length_warning',
-          message: 'Comprimento muito longo (>3m)'
+          message: 'Comprimento muito longo (>4m)'
         });
+      } else if (maxLength > 300) {
+        // Just a warning, not an error
+        console.warn('Comprimento longo (>3m), mas aceitável');
       }
-      if (minDiam < 10 || maxDiam > 100) {
+
+      if (minDiam < 10 || maxDiam > 150) {
         errors.push({
           type: 'diameter_warning',
-          message: 'Diâmetros fora da faixa típica (10-100mm)'
+          message: 'Diâmetros fora da faixa típica (10-150mm)'
         });
       }
     } else {

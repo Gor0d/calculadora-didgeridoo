@@ -5,10 +5,7 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Clipboard,
-  Alert
+  StyleSheet
 } from 'react-native';
 import { AppIcon } from './IconSystem';
 import { getDeviceInfo, getTypography, getSpacing, getResponsiveDimensions } from '../utils/responsive';
@@ -35,9 +32,6 @@ export const GeometryInput = ({
   currentUnit = 'metric'
 }) => {
   const [currentTheme, setCurrentTheme] = useState(themeService.getCurrentTheme());
-  const [tableMode, setTableMode] = useState(true);
-  const [geometryPairs, setGeometryPairs] = useState([{ position: '', diameter: '' }]);
-  const [lastGeometry, setLastGeometry] = useState('');
   const colors = currentTheme.colors;
 
   useEffect(() => {
@@ -46,37 +40,11 @@ export const GeometryInput = ({
     };
 
     themeService.addThemeChangeListener(handleThemeChange);
-    
+
     return () => {
       themeService.removeThemeChangeListener(handleThemeChange);
     };
   }, []);
-
-  // Parse geometry string into pairs - only when geometry changes from external source (templates)
-  useEffect(() => {
-    // Only sync when geometry changed externally (not from our own edits)
-    if (geometry !== lastGeometry) {
-      setLastGeometry(geometry);
-      
-      if (geometry) {
-        try {
-          const points = unitConverter.parseGeometry(geometry, currentUnit);
-          const pairs = points.map(point => ({
-            position: point.position.toString(),
-            diameter: point.diameter.toString()
-          }));
-          if (pairs.length > 0) {
-            setGeometryPairs([...pairs, { position: '', diameter: '' }]);
-          }
-        } catch (error) {
-          // Keep current pairs if parsing fails
-        }
-      } else {
-        // If geometry is empty, reset to single empty pair
-        setGeometryPairs([{ position: '', diameter: '' }]);
-      }
-    }
-  }, [geometry, currentUnit, lastGeometry]);
 
   // Calculate real-time note estimation
   const estimatedNote = useMemo(() => {
@@ -109,102 +77,6 @@ export const GeometryInput = ({
     }
   }, [geometry, currentUnit]);
 
-  const handlePairChange = (index, field, value) => {
-    const newPairs = [...geometryPairs];
-    newPairs[index] = { ...newPairs[index], [field]: value };
-    
-    // Add new empty row if last row is being filled
-    if (index === newPairs.length - 1 && (newPairs[index].position || newPairs[index].diameter)) {
-      newPairs.push({ position: '', diameter: '' });
-    }
-    
-    setGeometryPairs(newPairs);
-    
-    // Convert pairs back to geometry string
-    // Keep pairs that have at least one field filled, but only convert complete pairs to geometry
-    const validPairs = newPairs.filter(pair => pair.position && pair.diameter);
-    const geometryString = validPairs.map(pair => `${pair.position} ${pair.diameter}`).join('\n');
-    setLastGeometry(geometryString); // Update tracking to prevent sync loop
-    onGeometryChange(geometryString);
-  };
-
-  const isPositionOrderIncorrect = (pairs, index) => {
-    if (index === 0 || !pairs[index].position || !pairs[index-1].position) return false;
-    const currentPos = parseFloat(pairs[index].position);
-    const prevPos = parseFloat(pairs[index-1].position);
-    return currentPos <= prevPos;
-  };
-
-  const removePair = (index) => {
-    if (geometryPairs.length > 1) {
-      const newPairs = geometryPairs.filter((_, i) => i !== index);
-      setGeometryPairs(newPairs);
-
-      const validPairs = newPairs.filter(pair => pair.position && pair.diameter);
-      const geometryString = validPairs.map(pair => `${pair.position} ${pair.diameter}`).join('\n');
-      setLastGeometry(geometryString); // Update tracking to prevent sync loop
-      onGeometryChange(geometryString);
-    }
-  };
-
-  const handlePasteFromClipboard = async () => {
-    try {
-      const clipboardContent = await Clipboard.getString();
-
-      if (!clipboardContent || !clipboardContent.trim()) {
-        Alert.alert('Aviso', 'A área de transferência está vazia');
-        return;
-      }
-
-      // Parse clipboard content - support various formats
-      const lines = clipboardContent.trim().split('\n');
-      const parsedPairs = [];
-
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine) continue;
-
-        // Try different separators: tab, comma, space, semicolon
-        let parts = trimmedLine.split('\t');
-        if (parts.length < 2) parts = trimmedLine.split(',');
-        if (parts.length < 2) parts = trimmedLine.split(';');
-        if (parts.length < 2) parts = trimmedLine.split(/\s+/);
-
-        if (parts.length >= 2) {
-          const position = parts[0].trim();
-          const diameter = parts[1].trim();
-
-          // Validate that they are numbers
-          if (!isNaN(parseFloat(position)) && !isNaN(parseFloat(diameter))) {
-            parsedPairs.push({ position, diameter });
-          }
-        }
-      }
-
-      if (parsedPairs.length === 0) {
-        Alert.alert(
-          'Erro ao Colar',
-          'Não foi possível extrair medidas válidas. Certifique-se de que cada linha contenha: posição e diâmetro separados por espaço, vírgula ou tab.\n\nExemplo:\n0 30\n100 35\n200 40'
-        );
-        return;
-      }
-
-      // Add empty row at the end
-      parsedPairs.push({ position: '', diameter: '' });
-      setGeometryPairs(parsedPairs);
-
-      // Convert to geometry string
-      const validPairs = parsedPairs.filter(pair => pair.position && pair.diameter);
-      const geometryString = validPairs.map(pair => `${pair.position} ${pair.diameter}`).join('\n');
-      setLastGeometry(geometryString);
-      onGeometryChange(geometryString);
-
-      Alert.alert('Sucesso', `${validPairs.length} medidas coladas com sucesso!`);
-    } catch (error) {
-      console.error('Erro ao colar:', error);
-      Alert.alert('Erro', 'Não foi possível colar os dados');
-    }
-  };
 
   return (
     <View style={[styles.geometryContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
@@ -223,62 +95,24 @@ export const GeometryInput = ({
           : '📏 Posição 0 = bocal, crescente = final. Posição("), Diâmetro(")'}
       </Text>
 
-      {/* Paste Button */}
-      <TouchableOpacity
-        style={[styles.pasteButton, { backgroundColor: colors.primary || '#6366F1', borderColor: colors.border }]}
-        onPress={handlePasteFromClipboard}
-      >
-        <AppIcon name="clipboard" size={16} color="#FFFFFF" />
-        <Text style={styles.pasteButtonText}>📋 Colar Medidas</Text>
-      </TouchableOpacity>
-
-        <View style={[styles.analysisTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-          <View style={[styles.tableHeader, { backgroundColor: colors.primary || '#1F2937' }]}>
-            <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Posição</Text>
-            <Text style={[styles.tableHeaderText, { flex: 1.0 }]}>Diâmetro</Text>
-            <Text style={[styles.tableHeaderText, { flex: 0.7 }]}>Ação</Text>
-          </View>
-          <ScrollView style={styles.tableScrollView} nestedScrollEnabled>
-            {geometryPairs.map((pair, index) => (
-              <View key={index} style={[
-                styles.tableRow,
-                { backgroundColor: index % 2 === 0 ? colors.cardBackground : colors.surfaceBackground },
-                isPositionOrderIncorrect(geometryPairs, index) && styles.tableRowWarning
-              ]}>
-                <TextInput
-                  style={[
-                    styles.tableCellInput,
-                    { flex: 1.0, color: colors.text },
-                    isPositionOrderIncorrect(geometryPairs, index) && styles.inputWarning
-                  ]}
-                  value={pair.position}
-                  onChangeText={(value) => handlePairChange(index, 'position', value)}
-                  placeholder={currentUnit === 'metric' ? '0' : '0'}
-                  placeholderTextColor={colors.textSecondary}
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  style={[styles.tableCellInput, { flex: 1.0, color: colors.text }]}
-                  value={pair.diameter}
-                  onChangeText={(value) => handlePairChange(index, 'diameter', value)}
-                  placeholder={currentUnit === 'metric' ? '25' : '1.0'}
-                  placeholderTextColor={colors.textSecondary}
-                  keyboardType="numeric"
-                />
-                <View style={[styles.tableCell, { flex: 0.7 }]}>
-                  {geometryPairs.length > 1 && index < geometryPairs.length - 1 && (
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removePair(index)}
-                    >
-                      <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: 'bold', lineHeight: 16 }}>✕</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+      {/* Text Input for Geometry */}
+      <TextInput
+        style={[styles.geometryInput, {
+          backgroundColor: colors.surfaceBackground,
+          color: colors.textPrimary,
+          borderColor: colors.border
+        }]}
+        value={geometry}
+        onChangeText={onGeometryChange}
+        placeholder={currentUnit === 'metric'
+          ? "Exemplo:\n0 30\n100 35\n200 40\n...\n\nOu cole suas medidas aqui"
+          : "Exemplo:\n0 1.2\n4 1.4\n8 1.6\n...\n\nOu cole suas medidas aqui"
+        }
+        placeholderTextColor={colors.textSecondary}
+        multiline
+        numberOfLines={12}
+        textAlignVertical="top"
+      />
       
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
@@ -315,11 +149,7 @@ export const GeometryInput = ({
         {geometry.trim() && (
           <TouchableOpacity
             style={[styles.button, styles.resetButton]}
-            onPress={() => {
-              setGeometryPairs([{ position: '', diameter: '' }]);
-              setLastGeometry('');
-              onGeometryChange('');
-            }}
+            onPress={() => onGeometryChange('')}
           >
             <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
               Redefinir
@@ -403,15 +233,18 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   geometryInput: {
-    borderWidth: 0,
-    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FAFBFC',
+    borderRadius: 8,
     color: '#1E293B',
     fontFamily: 'monospace',
     fontSize: typography.small,
     padding: spacing.md,
-    minHeight: dimensions.inputHeight,
+    minHeight: 200,
+    maxHeight: 400,
     textAlignVertical: 'top',
-    lineHeight: typography.small * 1.4,
+    lineHeight: typography.small * 1.5,
   },
   spreadsheetInput: {
     marginTop: 0,

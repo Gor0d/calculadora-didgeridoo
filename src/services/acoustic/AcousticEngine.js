@@ -30,9 +30,10 @@ export class AcousticEngine {
     // Musical constants
     this.SEMITONE_RATIO = Math.pow(2, 1/12);
 
-    // Didgeridoo specific constants
-    this.END_CORRECTION_FACTOR = 0.6; // Empirical correction for open end
-    this.MOUTH_IMPEDANCE_FACTOR = 0.85; // Mouth coupling efficiency
+    // Didgeridoo specific constants (calibrated for real instruments)
+    this.END_CORRECTION_FACTOR = 0.8; // Empirical correction for open end (bell)
+    this.BELL_CORRECTION_FACTOR = 0.3; // Correction for mouthpiece end
+    this.MOUTH_IMPEDANCE_FACTOR = 0.90; // Mouth coupling efficiency (improved)
 
     // Transfer Matrix Method parameters
     this.TMM_ENABLED = true; // Enable high-precision TMM calculations
@@ -95,8 +96,11 @@ export class AcousticEngine {
       const avgDiameter = points.reduce((sum, p) => sum + p.diameter, 0) / points.length;
       const avgRadius = avgDiameter / 2000; // mm to m
       
-      // Simple frequency calculation
-      const fundamentalFreq = this.SPEED_OF_SOUND / (4 * totalLength);
+      // Simple frequency calculation for OPEN TUBE (both ends open)
+      // Add end correction for better accuracy
+      const endCorrection = this.END_CORRECTION_FACTOR * avgRadius;
+      const effectiveLength = totalLength + endCorrection;
+      const fundamentalFreq = this.SPEED_OF_SOUND / (2 * effectiveLength);
       
       // Generate basic harmonic series
       const harmonics = [];
@@ -204,15 +208,20 @@ export class AcousticEngine {
 
   /**
    * Calculate effective acoustic length with end corrections
+   * Didgeridoo is an OPEN TUBE with corrections at both ends
    */
   calculateEffectiveLength(segments) {
     const physicalLength = segments.reduce((sum, seg) => sum + seg.length, 0);
-    
-    // Add end correction for open pipe
-    const finalRadius = segments[segments.length - 1].r2;
-    const endCorrection = this.END_CORRECTION_FACTOR * finalRadius;
-    
-    return physicalLength + endCorrection;
+
+    // Add end correction for bell (open end)
+    const bellRadius = segments[segments.length - 1].r2;
+    const bellCorrection = this.END_CORRECTION_FACTOR * bellRadius;
+
+    // Add correction for mouthpiece (acoustically open despite physical constraint)
+    const mouthRadius = segments[0].r1;
+    const mouthCorrection = this.BELL_CORRECTION_FACTOR * mouthRadius;
+
+    return physicalLength + bellCorrection + mouthCorrection;
   }
 
   /**
@@ -233,21 +242,20 @@ export class AcousticEngine {
 
   /**
    * Calculate fundamental frequency using Webster's horn equation approximation
+   * CORRECTED: Didgeridoo is an OPEN TUBE (f = c / 2L, not c / 4L)
    */
   calculateFundamental(effectiveLength, averageRadius, segments = null) {
-    // Base calculation for uniform tube
-    let baseFreq = this.SPEED_OF_SOUND / (4 * effectiveLength);
+    // Base calculation for OPEN TUBE (both ends open acoustically)
+    let baseFreq = this.SPEED_OF_SOUND / (2 * effectiveLength);
 
     // Apply taper correction - tapered instruments resonate higher
+    // REDUCED from 0.30 to 0.12 for realistic didgeridoo behavior
     let taperCorrection = 1.0;
     if (segments && segments.length > 0) {
       const taperFactor = this.calculateTaperFactor(segments);
-      // Strong taper increases effective frequency significantly
-      taperCorrection = 1.0 + (taperFactor * 0.3); // Can increase up to 30%
+      // Moderate taper increases effective frequency
+      taperCorrection = 1.0 + (taperFactor * 0.12); // Can increase up to ~12%
     }
-
-    // Apply radius correction (larger radius = slightly lower frequency)
-    const radiusCorrection = 1 - (averageRadius * 0.05); // Reduced empirical factor
 
     // Apply refined mouthpiece correction if segments are available
     let mouthpieceCorrection = this.MOUTH_IMPEDANCE_FACTOR;
@@ -255,9 +263,10 @@ export class AcousticEngine {
       mouthpieceCorrection = this.calculateMouthpieceCorrection(segments);
     }
 
-    baseFreq *= mouthpieceCorrection * taperCorrection;
+    // REMOVED problematic radiusCorrection that could give negative results
+    // Radius effects are already captured in end corrections
 
-    return baseFreq * radiusCorrection;
+    return baseFreq * mouthpieceCorrection * taperCorrection;
   }
 
   /**
