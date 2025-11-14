@@ -26,6 +26,7 @@ import { OptimizedScrollView, OptimizedTouchableOpacity, OptimizedText } from '.
 import { AppIcon } from '../components/IconSystem';
 import { TuningSelector } from '../components/TuningSelector';
 import { ImpedanceSpectrumChart } from '../components/ImpedanceSpectrumChart';
+import { SoundSpectrumChart } from '../components/SoundSpectrumChart';
 import { TuningDisplay } from '../components/TuningDisplay';
 import { themeService } from '../services/theme/ThemeService';
 import { useTutorial } from '../hooks/useTutorial';
@@ -1300,6 +1301,7 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
   const [showAdvancedExport, setShowAdvancedExport] = useState(false);
   const [showFirstRunTutorial, setShowFirstRunTutorial] = useState(false);
   const [showImpedanceSpectrum, setShowImpedanceSpectrum] = useState(false);
+  const [showSoundSpectrum, setShowSoundSpectrum] = useState(false);
 
   // Handle edited geometry from GeometryEditor
   useEffect(() => {
@@ -1893,6 +1895,28 @@ export const SimpleHomeScreen = ({ navigation, route, currentUnit, onUnitChange,
         onPlaySound={handlePlaySound}
         metadata={analysisMetadata}
       />
+
+      {/* Sound Spectrum Chart */}
+      {showResults && analysisResults && analysisResults.length > 0 && (
+        <View style={styles.spectrumContainer}>
+          <TouchableOpacity
+            style={[styles.spectrumToggleButton, { backgroundColor: colors.accent }]}
+            onPress={() => setShowSoundSpectrum(!showSoundSpectrum)}
+          >
+            <Text style={styles.spectrumToggleText}>
+              {showSoundSpectrum ? '🔇 Ocultar Espectro' : '🎵 Mostrar Espectro Sonoro'}
+            </Text>
+          </TouchableOpacity>
+
+          {showSoundSpectrum && (
+            <SoundSpectrumChart
+              harmonics={analysisResults}
+              visible={showSoundSpectrum}
+              onClose={() => setShowSoundSpectrum(false)}
+            />
+          )}
+        </View>
+      )}
 
       {/* Impedance Spectrum Chart */}
       {showResults && analysisMetadata?.impedanceSpectrum && (

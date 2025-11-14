@@ -841,6 +841,11 @@ export class AcousticEngine {
 
     console.log('[TMM] Impedance magnitude range:', minMagnitude.toFixed(2), 'to', maxMagnitude.toFixed(2));
 
+    // Log first 20 magnitude values for debugging
+    console.log('[TMM] First 20 magnitudes:', magnitudes.slice(0, 20).map(m => m.toExponential(2)).join(', '));
+    console.log('[TMM] Sample around 65Hz (index ~70):', magnitudes.slice(65, 75).map(m => m.toExponential(2)).join(', '));
+    console.log('[TMM] Sample around 163Hz (index ~266):', magnitudes.slice(261, 271).map(m => m.toExponential(2)).join(', '));
+
     // NEW STRATEGY: Find ALL local maxima first, then sort by prominence
     const localMaxima = [];
 
