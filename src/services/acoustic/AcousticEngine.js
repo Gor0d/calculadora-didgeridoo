@@ -539,14 +539,47 @@ export class AcousticEngine {
   async analyzeGeometryTransferMatrix(points) {
     console.log('[TMM] Starting Transfer Matrix Method analysis');
 
+    // IMPORTANT: Normalize geometry direction - always mouthpiece (small) to bell (large)
+    // DigitalDoo and CADSD expect geometry from mouthpiece to bell
+    const firstDiameter = points[0].diameter;
+    const lastDiameter = points[points.length - 1].diameter;
+
+    let normalizedPoints = points;
+    if (firstDiameter > lastDiameter) {
+      // Geometry is reversed (bell → mouthpiece), need to flip it
+      console.log('[TMM] ⚠️  Geometry is reversed! Flipping from bell→mouth to mouth→bell');
+      console.log('[TMM] Before flip: First diameter =', firstDiameter, 'mm, Last diameter =', lastDiameter, 'mm');
+
+      // Reverse the array and recalculate positions from 0
+      const maxPosition = points[points.length - 1].position;
+      normalizedPoints = [...points].reverse().map(p => ({
+        position: maxPosition - p.position,
+        diameter: p.diameter
+      })).reverse();
+
+      // Ensure position starts at 0
+      const minPos = normalizedPoints[0].position;
+      if (minPos !== 0) {
+        normalizedPoints = normalizedPoints.map(p => ({
+          position: p.position - minPos,
+          diameter: p.diameter
+        }));
+      }
+
+      console.log('[TMM] After flip: First diameter =', normalizedPoints[0].diameter, 'mm, Last diameter =', normalizedPoints[normalizedPoints.length - 1].diameter, 'mm');
+    } else {
+      console.log('[TMM] ✓ Geometry is correctly oriented (mouth→bell)');
+      console.log('[TMM] First diameter =', firstDiameter, 'mm, Last diameter =', lastDiameter, 'mm');
+    }
+
     // Process geometry into segments
-    const segments = this.processGeometryForTMM(points);
+    const segments = this.processGeometryForTMM(normalizedPoints);
     console.log('[TMM] Processed', segments.length, 'segments');
 
-    // Calculate geometry parameters for calibration
-    const mouthRadius = points[0].diameter / 2000;
-    const bellRadius = points[points.length - 1].diameter / 2000;
-    const physicalLength = points[points.length - 1].position / 100;
+    // Calculate geometry parameters for calibration (using normalized points)
+    const mouthRadius = normalizedPoints[0].diameter / 2000;
+    const bellRadius = normalizedPoints[normalizedPoints.length - 1].diameter / 2000;
+    const physicalLength = normalizedPoints[normalizedPoints.length - 1].position / 100;
     const taperRatio = bellRadius / mouthRadius;
 
     // Calculate calibration factor based on DigitalDoo empirical data
@@ -583,8 +616,8 @@ export class AcousticEngine {
 
     console.log('[TMM] Returning', results.length, 'results');
 
-    // Calculate metadata
-    const totalLength = points[points.length - 1].position / 100; // cm to m
+    // Calculate metadata (using normalized points)
+    const totalLength = normalizedPoints[normalizedPoints.length - 1].position / 100; // cm to m
     const avgRadius = this.calculateAverageRadius(segments);
 
     return {

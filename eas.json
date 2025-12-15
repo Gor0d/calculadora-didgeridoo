@@ -48,7 +48,9 @@
       },
       "android": {
         "buildType": "app-bundle",
-        "autoIncrement": "versionCode"
+        "autoIncrement": "versionCode",
+        "enableProguardInReleaseBuilds": true,
+        "enableHermes": true
       }
     },
     "production-apk": {
